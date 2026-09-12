@@ -3,6 +3,7 @@
   "appName": "Money Manager",
   "webDir": "dist",
   "server": {
-    "androidScheme": "https"
+    "androidScheme": "https",
+    "iosScheme": "https"
   }
 }

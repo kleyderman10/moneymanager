@@ -8,7 +8,8 @@
     "build": "vite build",
     "deploy": "npm run build && node scripts/deploy-to-backend.cjs",
     "preview": "vite preview",
-    "cap:sync": "vite build && npx cap sync"
+    "build:native": "vite build --mode capacitor",
+    "cap:sync": "npm run build:native && npx cap sync"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.2",
