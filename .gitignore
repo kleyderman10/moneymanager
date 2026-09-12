@@ -1,2 +1,15 @@
 node_modules/
 dist/
+
+# Android
+android/app/build/
+android/build/
+android/.gradle/
+android/local.properties
+android/app/release/
+android/captures/
+
+# iOS
+ios/App/Pods/
+ios/App/build/
+ios/App/DerivedData/
