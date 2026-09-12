@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Política de Privacidad — Money Manager</title>
+<style>
+  :root { color-scheme: light dark; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 2.5rem 1.25rem 5rem;
+    line-height: 1.6;
+    color: #1c2b2e;
+    background: #F4F7F7;
+  }
+  @media (prefers-color-scheme: dark) {
+    body { color: #e7eeee; background: #0C2630; }
+    a { color: #7fd3c7; }
+    .updated { color: #a7b8ba; }
+    section { border-color: #1c3c47; }
+  }
+  h1 { font-size: 1.6rem; margin-bottom: 0.25rem; }
+  h2 { font-size: 1.1rem; margin-top: 2.25rem; }
+  .updated { color: #56696c; font-size: 0.9rem; margin-bottom: 2rem; }
+  section { border-top: 1px solid #d8e2e2; padding-top: 1.25rem; }
+  ul { padding-left: 1.25rem; }
+  li { margin-bottom: 0.4rem; }
+  a { color: #0C2630; }
+</style>
+</head>
+<body>
+
+<h1>Política de Privacidad de Money Manager</h1>
+<p class="updated">Última actualización: 12 de septiembre de 2026</p>
+
+<p>
+  Esta política explica qué información recopila Money Manager ("la app", "nosotros"),
+  cómo la usamos, con quién la compartimos y qué control tienes sobre ella. Aplica a la
+  versión web y a las apps de Android e iOS.
+</p>
+
+<section>
+<h2>1. Quiénes somos</h2>
+<p>
+  Money Manager es una aplicación de gestión de finanzas personales. Si tienes preguntas
+  sobre esta política o sobre tus datos, puedes escribirnos a
+  <a href="mailto:kleyder10@gmail.com">kleyder10@gmail.com</a>.
+</p>
+</section>
+
+<section>
+<h2>2. Datos que recopilamos</h2>
+<ul>
+  <li><strong>Datos de cuenta:</strong> nombre, correo electrónico y contraseña (almacenada
+    siempre cifrada, nunca en texto plano).</li>
+  <li><strong>Datos financieros que tú ingresas:</strong> billeteras, transacciones,
+    categorías, presupuestos, metas de ahorro, créditos y deudas, transacciones recurrentes
+    y simulaciones financieras.</li>
+  <li><strong>Conexión bancaria (opcional):</strong> si decides vincular una cuenta bancaria
+    mediante nuestro proveedor de open banking (Belvo), se procesan los movimientos y saldos
+    que autorices para importarlos automáticamente a tu registro.</li>
+  <li><strong>Contenido enviado a funciones de inteligencia artificial:</strong> mensajes de
+    chat, texto o voz para categorizar gastos, e imágenes de recibos que decidas escanear.
+    Este contenido se envía a nuestro proveedor de IA (OpenAI o Google Gemini, según
+    configuración) únicamente para generar la respuesta solicitada.</li>
+  <li><strong>Datos de suscripción y pago:</strong> el estado de tu suscripción y el
+    historial de pagos. El procesamiento del pago en sí (número de tarjeta, etc.) lo maneja
+    directamente Mercado Pago; nosotros no almacenamos los datos de tu tarjeta.</li>
+  <li><strong>Datos técnicos mínimos:</strong> dirección IP y registros de acceso, usados
+    únicamente para seguridad (por ejemplo, limitar intentos de inicio de sesión) y
+    diagnóstico de errores.</li>
+</ul>
+</section>
+
+<section>
+<h2>3. Biometría (Face ID / huella dactilar)</h2>
+<p>
+  En la app móvil puedes activar el inicio de sesión con Face ID o huella dactilar. Esta
+  verificación ocurre <strong>enteramente dentro de tu dispositivo</strong>, gestionada por
+  el sistema operativo (Android o iOS). Money Manager <strong>nunca recibe, transmite ni
+  almacena tus datos biométricos</strong>: nuestra app solo recibe una confirmación de éxito
+  o fallo del propio sistema operativo, que se usa para desbloquear una credencial de sesión
+  guardada de forma cifrada en el almacenamiento seguro de tu dispositivo (Keystore en
+  Android, Keychain en iOS). Puedes desactivar esta función en cualquier momento desde tu
+  perfil.
+</p>
+</section>
+
+<section>
+<h2>4. Con quién compartimos datos</h2>
+<p>No vendemos tus datos. Los compartimos únicamente con proveedores que nos ayudan a operar la app:</p>
+<ul>
+  <li><strong>Proveedores de IA</strong> (OpenAI y/o Google Gemini): reciben el contenido
+    puntual que envías a las funciones de IA para procesarlo.</li>
+  <li><strong>Belvo:</strong> procesa la conexión con tu banco solo si activas esa función.</li>
+  <li><strong>Mercado Pago:</strong> procesa los pagos de suscripción.</li>
+  <li><strong>Proveedor de correo (Gmail/SMTP):</strong> envía correos de verificación de
+    cuenta, códigos de doble factor y recuperación de contraseña.</li>
+</ul>
+</section>
+
+<section>
+<h2>5. Seguridad</h2>
+<p>
+  Las contraseñas se almacenan con hash (bcrypt), las sesiones usan tokens JWT de vida
+  corta con renovación segura, toda la comunicación viaja cifrada por HTTPS, y aplicamos
+  cabeceras de seguridad estrictas (Content Security Policy) y límites de intentos de
+  inicio de sesión. Puedes activar verificación en dos pasos por correo desde tu perfil.
+</p>
+</section>
+
+<section>
+<h2>6. Retención y eliminación de datos</h2>
+<p>
+  Conservamos tus datos mientras tu cuenta esté activa. Puedes solicitar la eliminación
+  total de tu cuenta y de todos tus datos financieros escribiendo a
+  <a href="mailto:kleyder10@gmail.com">kleyder10@gmail.com</a>; la eliminación se procesa
+  en un plazo razonable y no puede revertirse.
+</p>
+</section>
+
+<section>
+<h2>7. Tus derechos</h2>
+<p>
+  Tienes derecho a acceder, corregir, exportar y eliminar tus datos personales en cualquier
+  momento, así como a revocar el acceso a tu cuenta bancaria conectada. Estos derechos
+  aplican conforme a la normativa de protección de datos de tu país (por ejemplo, la Ley
+  1581 de 2012 en Colombia para usuarios locales).
+</p>
+</section>
+
+<section>
+<h2>8. Menores de edad</h2>
+<p>
+  Money Manager no está dirigida a menores de 18 años y no recopilamos intencionalmente
+  información de menores.
+</p>
+</section>
+
+<section>
+<h2>9. Cambios a esta política</h2>
+<p>
+  Si actualizamos esta política de forma sustancial, lo notificaremos dentro de la app o
+  por correo electrónico antes de que entre en vigor.
+</p>
+</section>
+
+</body>
+</html>
