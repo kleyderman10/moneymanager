@@ -1,8 +1,16 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { Capacitor } from '@capacitor/core'
 import { authAPI, webauthnAPI } from '@/api'
 import { startRegistration, startAuthentication } from '@simplewebauthn/browser'
 import { useSubscriptionStore } from '@/stores/subscriptions'
+
+// Native apps use the device's own biometric hardware (Keystore/Keychain) to
+// guard the refresh token, since WebAuthn platform authenticators aren't
+// reliably available inside a Capacitor WebView. The web build keeps using
+// WebAuthn passkeys, verified server-side.
+const BIOMETRIC_SERVER = 'com.moneymanager.app'
+const isNative = () => Capacitor.isNativePlatform()
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref(null)
@@ -213,8 +221,14 @@ export const useAuthStore = defineStore('auth', () => {
   const checkBiometricSupport = async () => {
     if (biometricSupported.value !== null) return biometricSupported.value
     try {
-      const { platformAuthenticatorIsAvailable } = await import('@simplewebauthn/browser')
-      biometricSupported.value = await platformAuthenticatorIsAvailable()
+      if (isNative()) {
+        const { NativeBiometric } = await import('@capgo/capacitor-native-biometric')
+        const result = await NativeBiometric.isAvailable()
+        biometricSupported.value = result.isAvailable
+      } else {
+        const { platformAuthenticatorIsAvailable } = await import('@simplewebauthn/browser')
+        biometricSupported.value = await platformAuthenticatorIsAvailable()
+      }
     } catch {
       biometricSupported.value = false
     }
@@ -223,6 +237,12 @@ export const useAuthStore = defineStore('auth', () => {
 
   const checkBiometricStatus = async () => {
     try {
+      if (isNative()) {
+        const { NativeBiometric } = await import('@capgo/capacitor-native-biometric')
+        const result = await NativeBiometric.isCredentialsSaved({ server: BIOMETRIC_SERVER })
+        hasBiometric.value = result.isSaved
+        return
+      }
       const res = await webauthnAPI.status()
       hasBiometric.value = res.data.hasBiometric
     } catch {
@@ -231,6 +251,25 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   const registerBiometric = async () => {
+    if (isNative()) {
+      try {
+        const refreshToken = localStorage.getItem('refreshToken')
+        if (!refreshToken || !user.value?.email) {
+          return { success: false, message: 'Inicia sesión nuevamente antes de activar la biometría' }
+        }
+        const { NativeBiometric, AccessControl } = await import('@capgo/capacitor-native-biometric')
+        await NativeBiometric.setCredentials({
+          username: user.value.email,
+          password: refreshToken,
+          server: BIOMETRIC_SERVER,
+          accessControl: AccessControl.BIOMETRY_ANY,
+        })
+        hasBiometric.value = true
+        return { success: true }
+      } catch (e) {
+        return { success: false, message: e.message || 'No se pudo activar Face ID / Huella' }
+      }
+    }
     try {
       const optsRes = await webauthnAPI.registerOptions()
       const { options, challengeToken } = optsRes.data
@@ -245,6 +284,44 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   const loginWithBiometric = async () => {
+    if (isNative()) {
+      try {
+        const { NativeBiometric, AccessControl } = await import('@capgo/capacitor-native-biometric')
+        const credentials = await NativeBiometric.getSecureCredentials({
+          server: BIOMETRIC_SERVER,
+          reason: 'Inicia sesión con Face ID / Huella',
+        })
+        const res = await authAPI.refreshToken({ refreshToken: credentials.password })
+        setSession(res.data)
+        // The refresh token rotates on every use, so the stored credential must be updated
+        // or the next biometric login will be rejected as an already-used token.
+        await NativeBiometric.setCredentials({
+          username: credentials.username,
+          password: res.data.refreshToken,
+          server: BIOMETRIC_SERVER,
+          accessControl: AccessControl.BIOMETRY_ANY,
+        })
+        hasBiometric.value = true
+        return { success: true }
+      } catch (e) {
+        // A regular logout invalidates the server-side refresh token, which orphans
+        // the one held in the Keystore/Keychain. Clear it so the UI stops offering a
+        // biometric login that can never succeed until the user signs in again.
+        if (e.response?.data?.code === 'INVALID_REFRESH_TOKEN') {
+          try {
+            const { NativeBiometric } = await import('@capgo/capacitor-native-biometric')
+            await NativeBiometric.deleteCredentials({ server: BIOMETRIC_SERVER })
+          } catch {
+            // Best-effort cleanup; ignore failures here and surface the original error below.
+          }
+          hasBiometric.value = false
+          error.value = 'Tu sesión biométrica expiró. Inicia sesión con tu contraseña para reactivarla.'
+          return { success: false }
+        }
+        error.value = e.response?.data?.message || e.message || 'Error al iniciar con Face ID / Huella'
+        return { success: false }
+      }
+    }
     try {
       const credentialId = localStorage.getItem('webauthnCredentialId')
       const optsRes = await webauthnAPI.loginOptions(credentialId)
@@ -261,6 +338,16 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   const removeBiometric = async () => {
+    if (isNative()) {
+      try {
+        const { NativeBiometric } = await import('@capgo/capacitor-native-biometric')
+        await NativeBiometric.deleteCredentials({ server: BIOMETRIC_SERVER })
+        hasBiometric.value = false
+        return { success: true }
+      } catch (e) {
+        return { success: false, message: e.message || 'Error al desactivar' }
+      }
+    }
     try {
       await webauthnAPI.removeAll()
       localStorage.removeItem('webauthnCredentialId')
