@@ -1,0 +1,124 @@
+# Codemagic CI/CD pipeline for Money Manager (Android + iOS via Capacitor).
+#
+# One-time setup required in the Codemagic dashboard before these workflows can run
+# (none of this lives in this file — it's configured per-app in Codemagic's UI):
+#
+# ANDROID
+#   1. App settings > Code signing identities > Android > upload the release keystore
+#      (generate one locally with `keytool -genkey -v -keystore moneymanager.keystore
+#      -alias moneymanager -keyalg RSA -keysize 2048 -validity 10000` if it doesn't exist
+#      yet) and name the reference "moneymanager_keystore" (must match android_signing below).
+#   2. App settings > Environment variables > create a group named "keystore_credentials"
+#      with CM_KEYSTORE_PASSWORD, CM_KEY_ALIAS and CM_KEY_PASSWORD (marked secret).
+#   3. (Optional, for automatic Play Store upload) create a Google Play service account
+#      with API access to the app, add its JSON as GOOGLE_PLAY_SERVICE_ACCOUNT_CREDENTIALS,
+#      then uncomment the google_play publishing block in android-workflow.
+#
+# IOS
+#   1. App settings > Integrations > App Store Connect > add an API key generated from
+#      https://appstoreconnect.apple.com/access/api (needs the Apple Developer Program
+#      membership from Fase 0) and name the integration "moneymanager_asc_key" (must
+#      match the app_store_connect integration below). Codemagic then manages
+#      certificates/profiles automatically — no manual .p12/.mobileprovision handling.
+#   2. Make sure the app (bundle ID com.moneymanager.app) is registered in App Store
+#      Connect before the first build (Codemagic can create the bundle ID, but the app
+#      record itself must exist in App Store Connect).
+#
+# BOTH
+#   - Connect this GitHub repo (kleyderman10/moneymanager) to Codemagic and it will
+#     detect this file automatically.
+#   - Update the notification email below if kleyder10@gmail.com isn't where you want
+#     build results sent.
+
+workflows:
+  android-workflow:
+    name: Android Release
+    max_build_duration: 60
+    instance_type: linux_x2
+    environment:
+      groups:
+        - keystore_credentials
+      android_signing:
+        - moneymanager_keystore
+      node: 20
+      vars:
+        PACKAGE_NAME: "com.moneymanager.app"
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: master
+          include: true
+      cancel_previous_builds: true
+    scripts:
+      - name: Install dependencies
+        script: npm ci
+      - name: Build web app and sync Capacitor (native mode)
+        script: npm run cap:sync
+      - name: Build signed Android App Bundle
+        script: |
+          cd android
+          ./gradlew bundleRelease
+    artifacts:
+      - android/app/build/outputs/**/*.aab
+      - android/app/build/outputs/**/mapping.txt
+    publishing:
+      email:
+        recipients:
+          - kleyder10@gmail.com
+        notify:
+          success: true
+          failure: true
+      # Uncomment once a Google Play service account is configured (see notes above):
+      # google_play:
+      #   credentials: $GOOGLE_PLAY_SERVICE_ACCOUNT_CREDENTIALS
+      #   track: internal
+
+  ios-workflow:
+    name: iOS Release
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.moneymanager.app
+      node: 20
+      xcode: latest
+      cocoapods: default
+    integrations:
+      app_store_connect: moneymanager_asc_key
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: master
+          include: true
+      cancel_previous_builds: true
+    scripts:
+      - name: Install dependencies
+        script: npm ci
+      - name: Build web app and sync Capacitor (native mode)
+        script: npm run cap:sync
+      - name: Install CocoaPods dependencies
+        script: |
+          cd ios/App && pod install
+      - name: Set up code signing
+        script: xcode-project use-profiles
+      - name: Build ipa for distribution
+        script: |
+          xcode-project build-ipa \
+            --workspace ios/App/App.xcworkspace \
+            --scheme App
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      email:
+        recipients:
+          - kleyder10@gmail.com
+        notify:
+          success: true
+          failure: true
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
