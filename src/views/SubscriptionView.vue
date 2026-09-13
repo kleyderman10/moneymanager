@@ -49,7 +49,10 @@
               <v-list-item prepend-icon="mdi-check-circle-outline" title="Movimientos, cuentas y categorías ilimitadas" />
               <v-list-item prepend-icon="mdi-check-circle-outline" title="Presupuestos, metas y transacciones recurrentes" />
               <v-list-item prepend-icon="mdi-check-circle-outline" title="Reportes e insights financieros con IA" />
-              <v-list-item prepend-icon="mdi-shield-lock-outline" title="Pago protegido por Mercado Pago" />
+              <v-list-item
+                prepend-icon="mdi-shield-lock-outline"
+                :title="useAppleIAP ? 'Pago protegido por Apple' : 'Pago protegido por Mercado Pago'"
+              />
             </v-list>
 
             <v-btn
@@ -262,8 +265,12 @@ const paymentColor = (value) => ({
   refunded: 'info', charged_back: 'error',
 }[value] || 'default')
 
+const useAppleIAP = computed(() => billingStore.isAppleIAPAvailable())
+
 const startCheckout = async () => {
-  const result = await billingStore.createCheckout()
+  const result = useAppleIAP.value
+    ? await billingStore.purchaseWithApple()
+    : await billingStore.createCheckout()
   if (!result.success) snackbar.error(result.message)
 }
 

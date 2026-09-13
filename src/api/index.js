@@ -145,6 +145,7 @@ export const subscriptionsAPI = {
   sync: () => api.post('/subscriptions/sync'),
   cancel: () => api.post('/subscriptions/cancel'),
   reactivate: () => api.post('/subscriptions/reactivate'),
+  verifyApplePurchase: (originalTransactionId) => api.post('/subscriptions/apple/verify', { originalTransactionId }),
 }
 
 export const adminAPI = {

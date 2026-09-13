@@ -1,6 +1,7 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { subscriptionsAPI } from '@/api'
+import { isAppleIAPAvailable, purchaseAppleSubscription } from '@/utils/appleIAP'
 
 export const useSubscriptionStore = defineStore('subscriptions', () => {
   const status = ref(null)
@@ -89,6 +90,22 @@ export const useSubscriptionStore = defineStore('subscriptions', () => {
     }
   }
 
+  const purchaseWithApple = async () => {
+    actionLoading.value = true
+    error.value = null
+    try {
+      const result = await purchaseAppleSubscription()
+      if (!result.success) {
+        error.value = result.message
+        return result
+      }
+      await fetchStatus(true)
+      return { success: true }
+    } finally {
+      actionLoading.value = false
+    }
+  }
+
   const cancel = async () => {
     actionLoading.value = true
     error.value = null
@@ -121,6 +138,8 @@ export const useSubscriptionStore = defineStore('subscriptions', () => {
     fetchStatus,
     fetchPayments,
     createCheckout,
+    isAppleIAPAvailable,
+    purchaseWithApple,
     sync,
     cancel,
   }
