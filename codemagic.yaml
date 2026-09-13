@@ -83,7 +83,6 @@ workflows:
         BUNDLE_ID: "online.knexura.moneymanager"
       node: 22
       xcode: latest
-      cocoapods: default
     integrations:
       app_store_connect: moneymanager_asc_key
     triggering:
@@ -98,9 +97,6 @@ workflows:
         script: npm ci
       - name: Build web app and sync Capacitor (native mode)
         script: npm run cap:sync
-      - name: Install CocoaPods dependencies
-        script: |
-          cd ios/App && pod install
       - name: Fetch signing files
         script: |
           app-store-connect fetch-signing-files "$BUNDLE_ID" \
@@ -113,7 +109,7 @@ workflows:
       - name: Build ipa for distribution
         script: |
           xcode-project build-ipa \
-            --workspace ios/App/App.xcworkspace \
+            --project ios/App/App.xcodeproj \
             --scheme App
     artifacts:
       - build/ios/ipa/*.ipa
