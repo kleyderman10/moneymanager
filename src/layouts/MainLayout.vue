@@ -177,7 +177,7 @@ const bottomNav = ref('dashboard')
 const firstName = computed(() => authStore.user?.name?.trim().split(' ')[0] || '')
 const initials = computed(() => {
   const name = authStore.user?.name?.trim()
-  if (!name) return 'MM'
+  if (!name) return 'KF'
   return name.split(/\s+/).slice(0, 2).map(part => part[0]).join('').toUpperCase()
 })
 
