@@ -129,7 +129,7 @@
           <v-card-text>
             <div class="d-flex align-center justify-space-between mb-3">
               <div>
-                <div class="text-subtitle-1 font-weight-bold">Money Manager Personal</div>
+                <div class="text-subtitle-1 font-weight-bold">Knexura Finanzas Personal</div>
                 <div class="text-body-2 text-medium-emphasis">{{ formattedPlanPrice }} cada tres meses</div>
               </div>
               <v-chip :color="billingStatusColor" variant="tonal" size="small">

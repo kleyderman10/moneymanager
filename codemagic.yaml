@@ -1,4 +1,4 @@
-# Codemagic CI/CD pipeline for Money Manager (Android + iOS via Capacitor).
+# Codemagic CI/CD pipeline for Knexura Finanzas (Android + iOS via Capacitor).
 #
 # One-time setup required in the Codemagic dashboard before these workflows can run
 # (none of this lives in this file — it's configured per-app in Codemagic's UI):

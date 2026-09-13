@@ -2,16 +2,16 @@
   <div>
     <div class="page-intro">
       <div class="page-intro__eyebrow">Producto</div>
-      <h1 :class="isMobile ? 'text-h5' : 'text-h4'">Acerca de Money Manager</h1>
+      <h1 :class="isMobile ? 'text-h5' : 'text-h4'">Acerca de Knexura Finanzas</h1>
       <p class="page-intro__subtitle">Una forma más clara e inteligente de construir bienestar financiero.</p>
     </div>
 
     <v-card class="mb-4">
-      <v-card-title class="text-h5 font-weight-bold">Money Manager</v-card-title>
+      <v-card-title class="text-h5 font-weight-bold">Knexura Finanzas</v-card-title>
       <v-card-subtitle class="text-body-1 font-italic">Por K-Nexura: Tu nexo inteligente con la tecnología</v-card-subtitle>
       <v-card-text>
         <p class="text-body-1">
-          Money Manager es un gestor financiero personal desarrollado por <strong>K-Nexura</strong>, diseñado para
+          Knexura Finanzas es un gestor financiero personal desarrollado por <strong>K-Nexura</strong>, diseñado para
           ayudarte a tomar el control de tus finanzas de forma inteligente y sencilla. Conecta todas tus cuentas,
           registra tus movimientos y deja que la inteligencia artificial te guíe hacia una mejor salud financiera.
         </p>

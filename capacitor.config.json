@@ -1,6 +1,6 @@
 {
   "appId": "online.knexura.moneymanager",
-  "appName": "Money Manager",
+  "appName": "Knexura Finanzas",
   "webDir": "dist",
   "server": {
     "androidScheme": "https",

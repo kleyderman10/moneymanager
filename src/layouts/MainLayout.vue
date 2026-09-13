@@ -15,7 +15,7 @@
           <v-icon size="25">mdi-chart-timeline-variant-shimmer</v-icon>
         </div>
         <div>
-          <div class="finance-brand__name">Money Manager</div>
+          <div class="finance-brand__name">Knexura Finanzas</div>
           <div class="finance-brand__tagline">Tu dinero, bajo control</div>
         </div>
       </div>
@@ -212,7 +212,7 @@ const currentRouteTitle = computed(() => {
     Admin: 'Panel administrativo'
   }
   if (route.name === 'Simulators' && route.query.tab === 'capacity') return 'Capacidad crediticia'
-  return map[route.name] || 'Money Manager'
+  return map[route.name] || 'Knexura Finanzas'
 })
 
 const showTrialBanner = computed(() => (

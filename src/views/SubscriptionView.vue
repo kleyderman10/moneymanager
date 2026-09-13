@@ -21,7 +21,7 @@
           <v-card-text class="pa-6 pa-sm-8">
             <div class="d-flex flex-wrap align-start justify-space-between ga-4 mb-6">
               <div>
-                <div class="text-overline text-primary font-weight-bold">Money Manager Personal</div>
+                <div class="text-overline text-primary font-weight-bold">Knexura Finanzas Personal</div>
                 <div class="subscription-price">{{ formattedPrice }}<span>/trimestre</span></div>
               </div>
               <v-chip :color="statusColor" variant="tonal" size="large" :prepend-icon="statusIcon">
@@ -231,7 +231,7 @@ const statusHeadline = computed(() => ({
   exempt: 'Tu cuenta tiene acceso de cortesía',
 }[status.value?.status] || 'Estado de la suscripción'))
 const statusDescription = computed(() => {
-  if (status.value?.status === 'trialing') return `Tienes ${status.value.daysRemaining} días para seguir usando Money Manager sin costo.`
+  if (status.value?.status === 'trialing') return `Tienes ${status.value.daysRemaining} días para seguir usando Knexura Finanzas sin costo.`
   if (status.value?.status === 'active') return `El próximo periodo se renovará por ${formattedPrice.value}.`
   if (status.value?.status === 'past_due') return 'Conservas acceso temporal durante el periodo de gracia mientras solucionas el cobro.'
   if (status.value?.status === 'canceled') return `Tu acceso continuará hasta el ${formatDate(status.value.currentPeriodEnd)}.`

@@ -12,8 +12,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['vite.svg'],
       manifest: {
-        name: 'Money Manager',
-        short_name: 'MoneyMgr',
+        name: 'Knexura Finanzas',
+        short_name: 'Knexura',
         description: 'Gestión de finanzas personales',
         theme_color: '#0C2630',
         background_color: '#F4F7F7',

@@ -8,7 +8,7 @@
               <v-icon size="25">mdi-chart-timeline-variant-shimmer</v-icon>
             </div>
             <div>
-              <div class="finance-brand__name">Money Manager</div>
+              <div class="finance-brand__name">Knexura Finanzas</div>
               <div class="finance-brand__tagline">Tu dinero, bajo control</div>
             </div>
           </div>
@@ -22,7 +22,7 @@
           <div class="auth-card__mobile-brand">
             <div class="finance-brand__mark" aria-hidden="true"><v-icon size="23">mdi-chart-timeline-variant-shimmer</v-icon></div>
             <div>
-              <div class="finance-brand__name">Money Manager</div>
+              <div class="finance-brand__name">Knexura Finanzas</div>
               <div class="finance-brand__tagline">Tu dinero, bajo control</div>
             </div>
           </div>
