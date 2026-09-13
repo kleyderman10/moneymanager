@@ -22,11 +22,34 @@
             <div class="d-flex flex-wrap align-start justify-space-between ga-4 mb-6">
               <div>
                 <div class="text-overline text-primary font-weight-bold">Knexura Finanzas Personal</div>
-                <div class="subscription-price">{{ formattedPrice }}<span>/trimestre</span></div>
+                <div class="subscription-price">{{ formattedPrice }}<span>{{ periodSuffix }}</span></div>
               </div>
               <v-chip :color="statusColor" variant="tonal" size="large" :prepend-icon="statusIcon">
                 {{ statusLabel }}
               </v-chip>
+            </div>
+
+            <div v-if="status.canCheckout && billingStore.plans.length" class="plan-selector mb-6">
+              <v-item-group v-model="selectedPlanCode" mandatory>
+                <v-row dense>
+                  <v-col v-for="plan in billingStore.plans" :key="plan.code" cols="12" sm="4">
+                    <v-item v-slot="{ isSelected, toggle }" :value="plan.code">
+                      <v-card
+                        :variant="isSelected ? 'tonal' : 'outlined'"
+                        :color="isSelected ? 'primary' : undefined"
+                        class="plan-option pa-3"
+                        @click="toggle"
+                      >
+                        <div class="text-caption text-medium-emphasis">{{ planLabel(plan) }}</div>
+                        <div class="text-h6 font-weight-bold">{{ planPrice(plan) }}</div>
+                        <div v-if="plan.intervalCount > 1" class="text-caption text-success">
+                          Ahorras 20% vs. mensual
+                        </div>
+                      </v-card>
+                    </v-item>
+                  </v-col>
+                </v-row>
+              </v-item-group>
             </div>
 
             <v-alert :type="statusAlertType" variant="tonal" class="mb-6">
@@ -99,10 +122,10 @@
               <span>Plan</span><strong>{{ status.plan.name }}</strong>
             </div>
             <div class="summary-row">
-              <span>Precio</span><strong>{{ formattedPrice }} COP</strong>
+              <span>Precio</span><strong>{{ formattedPrice }}</strong>
             </div>
             <div class="summary-row">
-              <span>Periodicidad</span><strong>Trimestral</strong>
+              <span>Periodicidad</span><strong>{{ intervalLabel(status.plan.intervalCount) }}</strong>
             </div>
             <div v-if="status.currentPeriodEnd" class="summary-row">
               <span>{{ status.cancelAtPeriodEnd ? 'Acceso hasta' : 'Próximo cobro' }}</span>
@@ -190,11 +213,27 @@ const billingStore = useSubscriptionStore()
 const snackbar = useSnackbar()
 const cancelDialog = ref(false)
 const status = computed(() => billingStore.status)
+const useAppleIAP = computed(() => billingStore.isAppleIAPAvailable())
+const selectedPlanCode = ref(null)
+const selectedPlan = computed(() => billingStore.plans.find((p) => p.code === selectedPlanCode.value))
 
-const formattedPrice = computed(() => formatCurrency(
-  status.value?.plan?.amount || 15000,
-  status.value?.plan?.currency || 'COP'
-))
+const INTERVAL_LABELS = { 1: 'Mensual', 3: 'Trimestral', 12: 'Anual' }
+const intervalLabel = (count) => INTERVAL_LABELS[count] || `Cada ${count} meses`
+const PERIOD_SUFFIXES = { 1: '/mes', 3: '/trimestre', 12: '/año' }
+const periodSuffixFor = (count) => PERIOD_SUFFIXES[count] || `/${count} meses`
+const planLabel = (plan) => intervalLabel(plan.intervalCount)
+const planPrice = (plan) => (useAppleIAP.value ? `US$${plan.usdAmount}` : formatCurrency(plan.amount, plan.currency))
+
+const formattedPrice = computed(() => {
+  if (status.value?.canCheckout && selectedPlan.value) return planPrice(selectedPlan.value)
+  return formatCurrency(status.value?.plan?.amount || 15000, status.value?.plan?.currency || 'COP')
+})
+const periodSuffix = computed(() => {
+  const count = status.value?.canCheckout
+    ? selectedPlan.value?.intervalCount
+    : status.value?.plan?.intervalCount
+  return periodSuffixFor(count || 3)
+})
 const trialProgress = computed(() => {
   const trialDays = status.value?.trialDays ?? 45
   const remaining = status.value?.daysRemaining ?? trialDays
@@ -265,12 +304,11 @@ const paymentColor = (value) => ({
   refunded: 'info', charged_back: 'error',
 }[value] || 'default')
 
-const useAppleIAP = computed(() => billingStore.isAppleIAPAvailable())
-
 const startCheckout = async () => {
+  const planCode = selectedPlanCode.value
   const result = useAppleIAP.value
-    ? await billingStore.purchaseWithApple()
-    : await billingStore.createCheckout()
+    ? await billingStore.purchaseWithApple(planCode)
+    : await billingStore.createCheckout(planCode)
   if (!result.success) snackbar.error(result.message)
 }
 
@@ -292,6 +330,11 @@ const confirmCancel = async () => {
 onMounted(async () => {
   await billingStore.fetchStatus(true)
   await billingStore.fetchPayments()
+  await billingStore.fetchPlans()
+  selectedPlanCode.value = status.value?.plan?.code
+    || billingStore.plans.find((p) => p.code === 'personal-quarterly')?.code
+    || billingStore.plans[0]?.code
+    || null
   if (route.query.checkout === 'return') {
     await verifyPayment()
     await router.replace({ name: 'Subscription' })
@@ -322,6 +365,11 @@ onMounted(async () => {
 
 .subscription-features :deep(.v-list-item__prepend) {
   color: var(--finance-primary);
+}
+
+.plan-option {
+  cursor: pointer;
+  text-align: center;
 }
 
 .summary-row {

@@ -4,12 +4,17 @@ import { subscriptionsAPI } from '@/api'
 // cordova-plugin-purchase is a Cordova (not Capacitor) plugin: it attaches a global
 // `window.CdvPurchase` at runtime instead of exposing an ES module, so it's referenced
 // directly rather than imported. It's absent entirely on web/dev builds.
-const PRODUCT_ID = import.meta.env.VITE_APPLE_IAP_PRODUCT_ID || null
+const PRODUCT_IDS_BY_PLAN_CODE = {
+  'personal-monthly': import.meta.env.VITE_APPLE_IAP_PRODUCT_ID_MONTHLY || null,
+  'personal-quarterly': import.meta.env.VITE_APPLE_IAP_PRODUCT_ID_QUARTERLY || null,
+  'personal-annual': import.meta.env.VITE_APPLE_IAP_PRODUCT_ID_ANNUAL || null,
+}
+const CONFIGURED_PRODUCT_IDS = Object.values(PRODUCT_IDS_BY_PLAN_CODE).filter(Boolean)
 
 export const isAppleIAPAvailable = () => (
   Capacitor.isNativePlatform()
   && Capacitor.getPlatform() === 'ios'
-  && Boolean(PRODUCT_ID)
+  && CONFIGURED_PRODUCT_IDS.length > 0
   && Boolean(window.CdvPurchase)
 )
 
@@ -22,11 +27,11 @@ const setup = () => {
   setupPromise = (async () => {
     const { store, ProductType, Platform } = window.CdvPurchase
 
-    store.register([{
+    store.register(CONFIGURED_PRODUCT_IDS.map((id) => ({
       type: ProductType.AUTO_RENEWABLE_SUBSCRIPTION,
-      id: PRODUCT_ID,
+      id,
       platform: Platform.APPLE_APPSTORE,
-    }])
+    })))
 
     // Verification happens on our own backend (App Store Server API), not the plugin's
     // built-in receipt-validation service, so we skip transaction.verify()/.verified() and
@@ -53,9 +58,10 @@ const setup = () => {
   return setupPromise
 }
 
-export const purchaseAppleSubscription = async () => {
-  if (!isAppleIAPAvailable()) {
-    return { success: false, message: 'Las compras no están disponibles en este dispositivo' }
+export const purchaseAppleSubscription = async (planCode) => {
+  const productId = PRODUCT_IDS_BY_PLAN_CODE[planCode]
+  if (!isAppleIAPAvailable() || !productId) {
+    return { success: false, message: 'Este plan no está disponible como compra dentro de la app' }
   }
 
   try {
@@ -66,7 +72,7 @@ export const purchaseAppleSubscription = async () => {
   }
 
   const { store } = window.CdvPurchase
-  const product = store.get(PRODUCT_ID)
+  const product = store.get(productId)
   const offer = product?.getOffer()
   if (!offer) {
     return { success: false, message: 'El producto de suscripción no está disponible todavía' }

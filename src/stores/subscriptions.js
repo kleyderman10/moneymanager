@@ -6,6 +6,7 @@ import { isAppleIAPAvailable, purchaseAppleSubscription } from '@/utils/appleIAP
 export const useSubscriptionStore = defineStore('subscriptions', () => {
   const status = ref(null)
   const payments = ref([])
+  const plans = ref([])
   const loading = ref(false)
   const actionLoading = ref(false)
   const error = ref(null)
@@ -59,11 +60,20 @@ export const useSubscriptionStore = defineStore('subscriptions', () => {
     }
   }
 
-  const createCheckout = async () => {
+  const fetchPlans = async () => {
+    try {
+      const response = await subscriptionsAPI.getPlans()
+      plans.value = response.data.plans || []
+    } catch {
+      plans.value = []
+    }
+  }
+
+  const createCheckout = async (planCode) => {
     actionLoading.value = true
     error.value = null
     try {
-      const response = await subscriptionsAPI.createCheckout()
+      const response = await subscriptionsAPI.createCheckout(planCode)
       window.location.assign(response.data.checkoutUrl)
       return { success: true }
     } catch (e) {
@@ -90,11 +100,11 @@ export const useSubscriptionStore = defineStore('subscriptions', () => {
     }
   }
 
-  const purchaseWithApple = async () => {
+  const purchaseWithApple = async (planCode) => {
     actionLoading.value = true
     error.value = null
     try {
-      const result = await purchaseAppleSubscription()
+      const result = await purchaseAppleSubscription(planCode)
       if (!result.success) {
         error.value = result.message
         return result
@@ -125,6 +135,7 @@ export const useSubscriptionStore = defineStore('subscriptions', () => {
   return {
     status,
     payments,
+    plans,
     loading,
     actionLoading,
     error,
@@ -137,6 +148,7 @@ export const useSubscriptionStore = defineStore('subscriptions', () => {
     reset,
     fetchStatus,
     fetchPayments,
+    fetchPlans,
     createCheckout,
     isAppleIAPAvailable,
     purchaseWithApple,
