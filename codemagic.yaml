@@ -20,7 +20,7 @@
 #      membership from Fase 0) and name the integration "moneymanager_asc_key" (must
 #      match the app_store_connect integration below). Codemagic then manages
 #      certificates/profiles automatically — no manual .p12/.mobileprovision handling.
-#   2. Make sure the app (bundle ID com.moneymanager.app) is registered in App Store
+#   2. Make sure the app (bundle ID online.knexura.moneymanager) is registered in App Store
 #      Connect before the first build (Codemagic can create the bundle ID, but the app
 #      record itself must exist in App Store Connect).
 #
@@ -42,7 +42,7 @@ workflows:
         - moneymanager_keystore
       node: 20
       vars:
-        PACKAGE_NAME: "com.moneymanager.app"
+        PACKAGE_NAME: "online.knexura.moneymanager"
     triggering:
       events:
         - push
@@ -81,7 +81,7 @@ workflows:
     environment:
       ios_signing:
         distribution_type: app_store
-        bundle_identifier: com.moneymanager.app
+        bundle_identifier: online.knexura.moneymanager
       node: 20
       xcode: latest
       cocoapods: default

@@ -1,10 +1,10 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace = "com.moneymanager.app"
+    namespace = "online.knexura.moneymanager"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.moneymanager.app"
+        applicationId "online.knexura.moneymanager"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

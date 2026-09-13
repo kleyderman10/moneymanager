@@ -1,5 +1,5 @@
 {
-  "appId": "com.moneymanager.app",
+  "appId": "online.knexura.moneymanager",
   "appName": "Money Manager",
   "webDir": "dist",
   "server": {

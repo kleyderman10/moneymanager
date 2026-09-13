@@ -1,4 +1,4 @@
-package com.moneymanager.app;
+package online.knexura.moneymanager;
 
 import com.getcapacitor.BridgeActivity;
 

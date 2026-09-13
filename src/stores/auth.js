@@ -9,7 +9,7 @@ import { useSubscriptionStore } from '@/stores/subscriptions'
 // guard the refresh token, since WebAuthn platform authenticators aren't
 // reliably available inside a Capacitor WebView. The web build keeps using
 // WebAuthn passkeys, verified server-side.
-const BIOMETRIC_SERVER = 'com.moneymanager.app'
+const BIOMETRIC_SERVER = 'online.knexura.moneymanager'
 const isNative = () => Capacitor.isNativePlatform()
 
 export const useAuthStore = defineStore('auth', () => {
