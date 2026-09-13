@@ -40,7 +40,7 @@ workflows:
         - keystore_credentials
       android_signing:
         - moneymanager_keystore
-      node: 20
+      node: 22
       vars:
         PACKAGE_NAME: "online.knexura.moneymanager"
     triggering:
@@ -81,7 +81,7 @@ workflows:
     environment:
       vars:
         BUNDLE_ID: "online.knexura.moneymanager"
-      node: 20
+      node: 22
       xcode: latest
       cocoapods: default
     integrations:
