@@ -23,6 +23,13 @@
 #   2. Make sure the app (bundle ID online.knexura.moneymanager) is registered in App Store
 #      Connect before the first build (Codemagic can create the bundle ID, but the app
 #      record itself must exist in App Store Connect).
+#   3. App settings > Environment variables > create a group named "ios_signing_credentials"
+#      with a CERTIFICATE_PRIVATE_KEY variable (marked secret): a 2048-bit RSA private key
+#      in PEM format, e.g. generated with
+#      `ssh-keygen -t rsa -b 2048 -m PEM -f ios_distribution_private_key -q -N ""`.
+#      Without this, fetch-signing-files has nowhere to save the private key for a newly
+#      created distribution certificate and fails with "Cannot save Signing Certificates
+#      without certificate private key".
 #
 # BOTH
 #   - Connect this GitHub repo (kleyderman10/moneymanager) to Codemagic and it will
@@ -79,6 +86,8 @@ workflows:
     max_build_duration: 60
     instance_type: mac_mini_m2
     environment:
+      groups:
+        - ios_signing_credentials
       vars:
         BUNDLE_ID: "online.knexura.moneymanager"
       node: 22
