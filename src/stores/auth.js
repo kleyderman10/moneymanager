@@ -46,7 +46,16 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  const messageFrom = (e, fallback = 'Ocurrió un error') => e.response?.data?.message || fallback
+  // TEMPORARY DIAGNOSTIC: when the request never got a server response (e.response is
+  // undefined), surface the raw axios failure — code, message and the exact URL that was
+  // called — instead of the generic fallback. This is the only way to see the real cause on
+  // a device without a Mac/Safari Web Inspector to hand. Revert to the plain fallback once
+  // the native login issue is confirmed fixed.
+  const messageFrom = (e, fallback = 'Ocurrió un error') => {
+    if (e.response?.data?.message) return e.response.data.message
+    const url = `${e.config?.baseURL || ''}${e.config?.url || ''}`
+    return `${fallback} [diag: ${e.code || 'sin código'} · ${e.message || 'sin mensaje'} · ${url}]`
+  }
 
   const register = async (data) => {
     loading.value = true
