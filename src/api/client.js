@@ -1,6 +1,27 @@
 import axios from 'axios'
+import { Capacitor } from '@capacitor/core'
+import { BIOMETRIC_SERVER } from '@/constants/biometric'
 
 const apiBaseURL = import.meta.env.VITE_API_BASE_URL || '/api'
+
+// The refresh token is single-use and rotates on every call, including this silent,
+// store-bypassing refresh. If biometric login is enabled, the copy held in the
+// Keystore/Keychain must be updated too, or it goes stale the moment a session refresh
+// happens through any path other than the biometric login itself — the next Face ID/huella
+// attempt then fails as "expired" even though the session is perfectly alive.
+const syncBiometricRefreshToken = (refreshToken) => {
+  if (!Capacitor.isNativePlatform()) return
+  const username = localStorage.getItem('biometricEmail')
+  if (!username) return
+  import('@capgo/capacitor-native-biometric').then(({ NativeBiometric, AccessControl }) =>
+    NativeBiometric.setCredentials({
+      username,
+      password: refreshToken,
+      server: BIOMETRIC_SERVER,
+      accessControl: AccessControl.BIOMETRY_ANY,
+    })
+  ).catch(() => {})
+}
 
 const api = axios.create({
   baseURL: apiBaseURL,
@@ -43,6 +64,7 @@ api.interceptors.response.use(
           const { data } = await axios.post(`${apiBaseURL}/auth/refresh-token`, { refreshToken })
           localStorage.setItem('accessToken', data.accessToken)
           localStorage.setItem('refreshToken', data.refreshToken)
+          syncBiometricRefreshToken(data.refreshToken)
           originalRequest.headers.Authorization = `Bearer ${data.accessToken}`
           return api(originalRequest)
         } catch {
