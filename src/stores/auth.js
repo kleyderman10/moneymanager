@@ -285,9 +285,10 @@ export const useAuthStore = defineStore('auth', () => {
 
   const loginWithBiometric = async () => {
     if (isNative()) {
+      let credentials
       try {
         const { NativeBiometric, AccessControl } = await import('@capgo/capacitor-native-biometric')
-        const credentials = await NativeBiometric.getSecureCredentials({
+        credentials = await NativeBiometric.getSecureCredentials({
           server: BIOMETRIC_SERVER,
           reason: 'Inicia sesión con Face ID / Huella',
         })
@@ -316,7 +317,9 @@ export const useAuthStore = defineStore('auth', () => {
           }
           hasBiometric.value = false
           error.value = 'Tu sesión biométrica expiró. Inicia sesión con tu contraseña para reactivarla.'
-          return { success: false }
+          // Face ID / huella already confirmed it's the device owner; save them from
+          // retyping the email too, since only the stored refresh token was rejected.
+          return { success: false, prefillEmail: credentials?.username }
         }
         error.value = e.response?.data?.message || e.message || 'Error al iniciar con Face ID / Huella'
         return { success: false }

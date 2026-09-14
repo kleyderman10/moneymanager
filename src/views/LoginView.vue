@@ -220,7 +220,11 @@ const handleBiometricLogin = async () => {
   authStore.error = null
   const result = await authStore.loginWithBiometric()
   bioLoading.value = false
-  if (result.success) router.push('/')
+  if (result.success) {
+    router.push('/')
+  } else if (result.prefillEmail) {
+    email.value = result.prefillEmail
+  }
 }
 
 onMounted(async () => {
