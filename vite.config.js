@@ -4,11 +4,16 @@ import vuetify from 'vite-plugin-vuetify'
 import { VitePWA } from 'vite-plugin-pwa'
 import { fileURLToPath, URL } from 'node:url'
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [
     vue(),
     vuetify({ autoImport: true }),
     VitePWA({
+      // A Capacitor build already ships as a self-contained native bundle: there's no
+      // "install as PWA" benefit, and a service worker persists in the WKWebView's storage
+      // across app updates, silently serving a stale precached bundle after the native
+      // binary is updated. Only the web build should register one.
+      disable: mode === 'capacitor',
       registerType: 'autoUpdate',
       includeAssets: ['vite.svg'],
       manifest: {
@@ -54,4 +59,4 @@ export default defineConfig({
       },
     },
   },
-})
+}))

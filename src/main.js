@@ -4,7 +4,7 @@ import { createVuetify } from 'vuetify'
 import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
 import { aliases, mdi } from 'vuetify/iconsets/mdi'
-import { registerSW } from 'virtual:pwa-register'
+import { Capacitor } from '@capacitor/core'
 import 'vuetify/styles'
 import '@mdi/font/css/materialdesignicons.css'
 import './styles/finance.css'
@@ -12,20 +12,41 @@ import './styles/finance.css'
 import App from './App.vue'
 import router from './router'
 
-registerSW({
-  onNeedRefresh() {
-    if (confirm('Nueva versión disponible. ¿Actualizar?')) {
-      window.location.reload()
-    }
-  },
-  onOfflineReady() {
-    console.log('App lista para uso offline')
-  },
-})
+if (Capacitor.isNativePlatform()) {
+  // The Capacitor build no longer registers a service worker (see vite.config.js), but the
+  // WKWebView/WebView's storage persists across app updates, so an install made before this
+  // change can still have an old one active — silently serving a stale precached JS bundle
+  // (e.g. the pre-fix build that called the API with a relative /api path) even after the
+  // native app itself has been updated. Actively tear it down so the bundle shipped in the
+  // current native build is always what actually runs.
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations()
+      .then((registrations) => Promise.all(registrations.map((r) => r.unregister())))
+      .catch(() => {})
+  }
+  if ('caches' in window) {
+    caches.keys()
+      .then((keys) => Promise.all(keys.map((key) => caches.delete(key))))
+      .catch(() => {})
+  }
+} else {
+  import('virtual:pwa-register').then(({ registerSW }) => {
+    registerSW({
+      onNeedRefresh() {
+        if (confirm('Nueva versión disponible. ¿Actualizar?')) {
+          window.location.reload()
+        }
+      },
+      onOfflineReady() {
+        console.log('App lista para uso offline')
+      },
+    })
+  })
 
-// Remove API responses cached by versions prior to the security hardening release.
-if ('caches' in window) {
-  caches.delete('api-cache').catch(() => {})
+  // Remove API responses cached by versions prior to the security hardening release.
+  if ('caches' in window) {
+    caches.delete('api-cache').catch(() => {})
+  }
 }
 
 const vuetify = createVuetify({

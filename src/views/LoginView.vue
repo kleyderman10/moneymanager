@@ -224,6 +224,10 @@ const handleBiometricLogin = async () => {
 }
 
 onMounted(async () => {
-  biometricAvailable.value = await authStore.checkBiometricSupport()
+  const supported = await authStore.checkBiometricSupport()
+  if (supported) {
+    await authStore.checkBiometricStatus()
+  }
+  biometricAvailable.value = supported && authStore.hasBiometric
 })
 </script>
