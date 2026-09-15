@@ -25,6 +25,11 @@ const syncBiometricRefreshToken = (refreshToken) => {
 
 const api = axios.create({
   baseURL: apiBaseURL,
+  // Without a timeout, a stalled connection (e.g. the API's host waking up from an idle
+  // sleep) leaves axios' promise pending forever — no error, no loading state reset, and
+  // for Face ID/huella login specifically, no chance to re-sync the just-rotated refresh
+  // token into the Keystore/Keychain, so the next attempt is rejected as "expired".
+  timeout: 20_000,
 })
 
 api.interceptors.request.use((config) => {
@@ -61,10 +66,10 @@ api.interceptors.response.use(
       const refreshToken = localStorage.getItem('refreshToken')
       if (refreshToken) {
         try {
-          const { data } = await axios.post(`${apiBaseURL}/auth/refresh-token`, { refreshToken })
+          const { data } = await axios.post(`${apiBaseURL}/auth/refresh-token`, { refreshToken }, { timeout: 20_000 })
           localStorage.setItem('accessToken', data.accessToken)
           localStorage.setItem('refreshToken', data.refreshToken)
-          syncBiometricRefreshToken(data.refreshToken)
+          await syncBiometricRefreshToken(data.refreshToken)
           originalRequest.headers.Authorization = `Bearer ${data.accessToken}`
           return api(originalRequest)
         } catch {

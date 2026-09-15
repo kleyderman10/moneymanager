@@ -218,12 +218,17 @@ const backToCredentials = () => {
 const handleBiometricLogin = async () => {
   bioLoading.value = true
   authStore.error = null
-  const result = await authStore.loginWithBiometric()
-  bioLoading.value = false
-  if (result.success) {
-    router.push('/')
-  } else if (result.prefillEmail) {
-    email.value = result.prefillEmail
+  try {
+    const result = await authStore.loginWithBiometric()
+    if (result.success) {
+      router.push('/')
+    } else if (result.prefillEmail) {
+      email.value = result.prefillEmail
+    }
+  } catch {
+    authStore.error = 'Error al iniciar con Face ID / Huella'
+  } finally {
+    bioLoading.value = false
   }
 }
 

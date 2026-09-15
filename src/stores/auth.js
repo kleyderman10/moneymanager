@@ -52,7 +52,7 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.removeItem('refreshToken')
   }
 
-  const setSession = (data) => {
+  const setSession = async (data) => {
     setTokens(data.accessToken, data.refreshToken)
     useSubscriptionStore().reset()
     user.value = {
@@ -64,7 +64,11 @@ export const useAuthStore = defineStore('auth', () => {
       emailVerified: data.emailVerified,
       twoFactorEnabled: data.twoFactorEnabled,
     }
-    syncBiometricCredential(data.email, data.refreshToken)
+    // Awaited so the Keystore/Keychain always holds the just-issued (still valid) refresh
+    // token before the caller can navigate away or the app gets backgrounded — the refresh
+    // token is single-use, so if this write is left in-flight and never completes, the next
+    // Face ID/huella attempt sends the already-rotated token and is rejected as "expired".
+    await syncBiometricCredential(data.email, data.refreshToken)
   }
 
   const messageFrom = (e, fallback = 'Ocurrió un error') => e.response?.data?.message || fallback
@@ -88,7 +92,7 @@ export const useAuthStore = defineStore('auth', () => {
     error.value = null
     try {
       const res = await authAPI.verifyEmail(data)
-      setSession(res.data)
+      await setSession(res.data)
       return { success: true }
     } catch (e) {
       error.value = messageFrom(e, 'No se pudo verificar el correo')
@@ -113,7 +117,7 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const res = await authAPI.login(data)
       if (res.data.requiresTwoFactor) return { success: true, ...res.data }
-      setSession(res.data)
+      await setSession(res.data)
       return { success: true }
     } catch (e) {
       error.value = messageFrom(e, 'Error al iniciar sesión')
@@ -133,7 +137,7 @@ export const useAuthStore = defineStore('auth', () => {
     error.value = null
     try {
       const res = await authAPI.verifyTwoFactor({ challengeToken, code })
-      setSession(res.data)
+      await setSession(res.data)
       return { success: true }
     } catch (e) {
       error.value = messageFrom(e, 'No se pudo validar el código')
@@ -213,7 +217,7 @@ export const useAuthStore = defineStore('auth', () => {
   const confirmTwoFactorSetup = async (code) => {
     try {
       const res = await authAPI.confirmTwoFactorSetup({ code })
-      setSession(res.data)
+      await setSession(res.data)
       return { success: true }
     } catch (e) {
       return { success: false, message: messageFrom(e, 'No se pudo activar la verificación') }
@@ -232,7 +236,7 @@ export const useAuthStore = defineStore('auth', () => {
   const disableTwoFactor = async (currentPassword, code) => {
     try {
       const res = await authAPI.disableTwoFactor({ currentPassword, code })
-      setSession(res.data)
+      await setSession(res.data)
       return { success: true }
     } catch (e) {
       return { success: false, message: messageFrom(e, 'No se pudo desactivar la verificación') }
@@ -320,7 +324,7 @@ export const useAuthStore = defineStore('auth', () => {
         // setSession() re-saves the freshly rotated refresh token into the Keystore/Keychain
         // itself (via syncBiometricCredential), since 'biometricEmail' is already set from
         // registration — no need to duplicate that write here.
-        setSession(res.data)
+        await setSession(res.data)
         hasBiometric.value = true
         return { success: true }
       } catch (e) {
@@ -351,7 +355,7 @@ export const useAuthStore = defineStore('auth', () => {
       const { options, challengeToken } = optsRes.data
       const credential = await startAuthentication({ optionsJSON: options })
       const res = await webauthnAPI.loginVerify({ credential, challengeToken })
-      setSession(res.data)
+      await setSession(res.data)
       hasBiometric.value = true
       return { success: true }
     } catch (e) {
