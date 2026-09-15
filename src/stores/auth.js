@@ -10,22 +10,29 @@ import { BIOMETRIC_SERVER } from '@/constants/biometric'
 // guard the refresh token, since WebAuthn platform authenticators aren't
 // reliably available inside a Capacitor WebView. The web build keeps using
 // WebAuthn passkeys, verified server-side.
-const isNative = () => Capacitor.isNativePlatform()
-
-// The refresh token is single-use and rotates every time it's redeemed — including a normal
-// password login, not just a biometric one. If biometric is already enabled, keep the
-// Keystore/Keychain copy in sync whenever a fresh token is issued, otherwise it goes stale
-// the moment the session refreshes through any other path and the next Face ID/huella
-// attempt fails as "expired" even though the session itself is fine.
+//
+// Credentials are stored WITHOUT the plugin's `accessControl` (biometric-gated
+// Keystore/Keychain) option, and the biometric prompt is triggered explicitly with
+// verifyIdentity() before reading them back — this is the pattern the plugin's own
+// README recommends ("Secure Usage Pattern"). On Android, storing a credential
+// *with* accessControl always launches a live BiometricPrompt, even for a
+// background write with no user gesture: setCredentials() with BIOMETRY_ANY/
+// BIOMETRY_CURRENT_SET starts an Activity that requires a fresh fingerprint/face
+// scan to encrypt the value, every single call. Since this sync runs silently after
+// every password login and every silent token refresh, that meant an unexpected,
+// easy-to-miss biometric prompt could pop up mid-session; if the user didn't
+// complete it, the write was swallowed by the catch below and the Keystore copy
+// went stale, so the next Face ID/huella login was rejected as "expired". Plain
+// storage keeps the write silent (as intended) on both platforms, and the
+// biometric gate still happens at login time via verifyIdentity().
 const syncBiometricCredential = async (email, refreshToken) => {
   if (!isNative() || localStorage.getItem('biometricEmail') !== email) return
   try {
-    const { NativeBiometric, AccessControl } = await import('@capgo/capacitor-native-biometric')
+    const { NativeBiometric } = await import('@capgo/capacitor-native-biometric')
     await NativeBiometric.setCredentials({
       username: email,
       password: refreshToken,
       server: BIOMETRIC_SERVER,
-      accessControl: AccessControl.BIOMETRY_ANY,
     })
   } catch {
     // Best-effort: a normal login/refresh must never fail because of this.
@@ -282,12 +289,11 @@ export const useAuthStore = defineStore('auth', () => {
         if (!refreshToken || !user.value?.email) {
           return { success: false, message: 'Inicia sesión nuevamente antes de activar la biometría' }
         }
-        const { NativeBiometric, AccessControl } = await import('@capgo/capacitor-native-biometric')
+        const { NativeBiometric } = await import('@capgo/capacitor-native-biometric')
         await NativeBiometric.setCredentials({
           username: user.value.email,
           password: refreshToken,
           server: BIOMETRIC_SERVER,
-          accessControl: AccessControl.BIOMETRY_ANY,
         })
         // Marks this account as biometric-enabled so setSession/client.js keep the
         // Keystore/Keychain copy in sync on every later token rotation, not just this one.
@@ -311,15 +317,57 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  // Wipes the local biometric credential and tells the UI to fall back to a password
+  // login. Used both when the server rejects the stored refresh token as stale, and
+  // when the local credential itself can't be read at all — e.g. an install that
+  // registered biometrics before this app version, whose entry lives under the
+  // plugin's older accessControl-protected storage and is invisible to the plain
+  // getCredentials() read (see syncBiometricCredential above).
+  const resetBiometricCredential = async (prefillEmail) => {
+    try {
+      const { NativeBiometric } = await import('@capgo/capacitor-native-biometric')
+      await NativeBiometric.deleteCredentials({ server: BIOMETRIC_SERVER })
+    } catch {
+      // Best-effort cleanup; the stale local flag below is what actually hides the button.
+    }
+    localStorage.removeItem('biometricEmail')
+    hasBiometric.value = false
+    error.value = 'Tu sesión biométrica expiró. Inicia sesión con tu contraseña para reactivarla.'
+    return { success: false, prefillEmail }
+  }
+
   const loginWithBiometric = async () => {
     if (isNative()) {
+      const { NativeBiometric } = await import('@capgo/capacitor-native-biometric')
+
+      try {
+        // The prompt is the security gate; the credential read right after it is
+        // plain (unprotected) storage, so it doesn't trigger a second, redundant
+        // authentication — see the note on syncBiometricCredential above.
+        await NativeBiometric.verifyIdentity({
+          reason: 'Inicia sesión con Face ID / Huella',
+          title: 'Inicia sesión',
+        })
+      } catch (e) {
+        // The user dismissed the prompt or the OS canceled it (e.g. app backgrounded
+        // mid-authentication) — not a failure worth alarming them about.
+        if (e.code === '15' || e.code === '16') return { success: false, cancelled: true }
+        error.value = e.message || 'Error al iniciar con Face ID / Huella'
+        return { success: false }
+      }
+
       let credentials
       try {
-        const { NativeBiometric } = await import('@capgo/capacitor-native-biometric')
-        credentials = await NativeBiometric.getSecureCredentials({
-          server: BIOMETRIC_SERVER,
-          reason: 'Inicia sesión con Face ID / Huella',
-        })
+        credentials = await NativeBiometric.getCredentials({ server: BIOMETRIC_SERVER })
+      } catch {
+        // Identity is confirmed but there's nothing usable to read — most commonly a
+        // pre-upgrade credential this version can no longer see. Recover it like an
+        // expired one instead of leaving the user stuck on a Face ID button that can
+        // never succeed.
+        return resetBiometricCredential()
+      }
+
+      try {
         const res = await authAPI.refreshToken({ refreshToken: credentials.password })
         // setSession() re-saves the freshly rotated refresh token into the Keystore/Keychain
         // itself (via syncBiometricCredential), since 'biometricEmail' is already set from
@@ -329,21 +377,10 @@ export const useAuthStore = defineStore('auth', () => {
         return { success: true }
       } catch (e) {
         // A regular logout invalidates the server-side refresh token, which orphans
-        // the one held in the Keystore/Keychain. Clear it so the UI stops offering a
-        // biometric login that can never succeed until the user signs in again.
+        // the one held locally. Face ID / huella already confirmed it's the device
+        // owner, so prefill the email too and save them from retyping it.
         if (e.response?.data?.code === 'INVALID_REFRESH_TOKEN') {
-          try {
-            const { NativeBiometric } = await import('@capgo/capacitor-native-biometric')
-            await NativeBiometric.deleteCredentials({ server: BIOMETRIC_SERVER })
-          } catch {
-            // Best-effort cleanup; ignore failures here and surface the original error below.
-          }
-          localStorage.removeItem('biometricEmail')
-          hasBiometric.value = false
-          error.value = 'Tu sesión biométrica expiró. Inicia sesión con tu contraseña para reactivarla.'
-          // Face ID / huella already confirmed it's the device owner; save them from
-          // retyping the email too, since only the stored refresh token was rejected.
-          return { success: false, prefillEmail: credentials?.username }
+          return resetBiometricCredential(credentials.username)
         }
         error.value = e.response?.data?.message || e.message || 'Error al iniciar con Face ID / Huella'
         return { success: false }

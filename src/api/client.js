@@ -9,16 +9,22 @@ const apiBaseURL = import.meta.env.VITE_API_BASE_URL || '/api'
 // Keystore/Keychain must be updated too, or it goes stale the moment a session refresh
 // happens through any path other than the biometric login itself — the next Face ID/huella
 // attempt then fails as "expired" even though the session is perfectly alive.
+//
+// Stored WITHOUT `accessControl`: on Android, setCredentials() with BIOMETRY_ANY/
+// BIOMETRY_CURRENT_SET always pops a live BiometricPrompt to do the write, even here
+// where there's no user gesture behind this call — an axios 401 can fire while the
+// user is just navigating the app. Plain storage keeps this silent, matching the
+// plugin's own recommended pattern of gating access with verifyIdentity() at login
+// time instead of encrypting the write itself (see src/stores/auth.js).
 const syncBiometricRefreshToken = (refreshToken) => {
   if (!Capacitor.isNativePlatform()) return
   const username = localStorage.getItem('biometricEmail')
   if (!username) return
-  import('@capgo/capacitor-native-biometric').then(({ NativeBiometric, AccessControl }) =>
+  import('@capgo/capacitor-native-biometric').then(({ NativeBiometric }) =>
     NativeBiometric.setCredentials({
       username,
       password: refreshToken,
       server: BIOMETRIC_SERVER,
-      accessControl: AccessControl.BIOMETRY_ANY,
     })
   ).catch(() => {})
 }
