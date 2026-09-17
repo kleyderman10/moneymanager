@@ -59,7 +59,7 @@
     </template>
   </v-navigation-drawer>
 
-  <v-app-bar app height="64" class="finance-topbar" :elevation="isMobile ? 1 : 0">
+  <v-app-bar app :height="64 + safeAreaTop" class="finance-topbar" :elevation="isMobile ? 1 : 0">
     <template v-if="!isMobile">
       <div class="ml-4">
         <div class="topbar-greeting">{{ greeting }}{{ firstName ? `, ${firstName}` : '' }}</div>
@@ -168,6 +168,26 @@ const { mobile } = useDisplay()
 const isMobile = computed(() => mobile.value)
 
 const drawer = ref(!mobile.value)
+
+// Vuetify sizes the app bar (and reserves the matching space above the page content)
+// from this `height` prop, not from the element's actual rendered size — so on iOS,
+// where the notch/Dynamic Island's safe area only exists as a CSS env() value, it has
+// to be read into a plain number and added here, or the bar (and its profile/menu
+// icons) end up drawn underneath the status bar, unreachable.
+//
+// Read via a throwaway element's computed `padding-top` rather than
+// getComputedStyle(...).getPropertyValue('--safe-top'): browsers only guarantee
+// env()/var() substitution when it's used directly on a real CSS property, not when
+// reading back a custom property's own value, which can come back as the literal,
+// unresolved "env(...)" string.
+const safeAreaTop = ref(0)
+const readSafeAreaTop = () => {
+  const probe = document.createElement('div')
+  probe.style.cssText = 'position: fixed; top: 0; height: 0; padding-top: env(safe-area-inset-top, 0px); visibility: hidden; pointer-events: none;'
+  document.body.appendChild(probe)
+  safeAreaTop.value = parseInt(getComputedStyle(probe).paddingTop) || 0
+  probe.remove()
+}
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
@@ -247,10 +267,16 @@ const handleLogout = async () => {
 const handleReadOnlyStatus = (event) => billingStore.setStatus(event.detail)
 
 onMounted(async () => {
+  readSafeAreaTop()
+  // Rotating the device swaps which edge has the notch/Dynamic Island inset.
+  window.addEventListener('resize', readSafeAreaTop)
   window.addEventListener('billing:read-only', handleReadOnlyStatus)
   if (!authStore.user && localStorage.getItem('accessToken')) authStore.fetchProfile()
   await billingStore.fetchStatus(true)
 })
 
-onBeforeUnmount(() => window.removeEventListener('billing:read-only', handleReadOnlyStatus))
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', readSafeAreaTop)
+  window.removeEventListener('billing:read-only', handleReadOnlyStatus)
+})
 </script>

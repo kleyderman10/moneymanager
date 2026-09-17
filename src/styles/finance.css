@@ -12,6 +12,7 @@
   --finance-radius: 18px;
   --finance-shadow: 0 12px 32px rgba(15, 48, 55, 0.07);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-top: env(safe-area-inset-top, 0px);
 }
 
 * {
@@ -222,6 +223,13 @@ body {
   padding: 20px 18px 14px;
 }
 
+/* The drawer sits flush against the top edge of the screen (temporary overlay on
+   mobile), so its header needs its own inset — unlike the login/register brand row,
+   which already has room to spare from the surrounding card layout. */
+.finance-sidebar .finance-brand {
+  padding-top: calc(20px + var(--safe-top));
+}
+
 .finance-brand__mark {
   position: relative;
   display: grid;
@@ -338,8 +346,16 @@ body {
   backdrop-filter: blur(16px);
 }
 
+/* On iOS, Capacitor's WKWebView draws content full-bleed under the status bar/notch —
+   without this, the app bar (and the profile/notification-area icons in it) render
+   right on top of the status bar and are unreachable. The bar's `height` prop is bumped
+   by the same --safe-top amount in MainLayout.vue so Vuetify still reserves the right
+   amount of space for the page content below it; here we just keep the 64px row of
+   actual content pinned to the bottom of that taller box, leaving the extra space empty
+   at the top instead of centering everything into the unsafe area. */
 .finance-topbar .v-toolbar__content {
   padding: 0 24px;
+  align-items: flex-end;
 }
 
 .topbar-date {
