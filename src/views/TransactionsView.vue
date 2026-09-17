@@ -291,8 +291,6 @@
           </v-alert>
           <div v-if="statementContext.period && statementContext.period.start" class="text-caption text-grey mb-2">
             Periodo: {{ statementContext.period.start }} al {{ statementContext.period.end }}
-            <span v-if="statementContext.accountHolder"> · Titular: {{ statementContext.accountHolder }}</span>
-            <span v-if="statementContext.accountNumber"> · Cuenta: {{ statementContext.accountNumber }}</span>
           </div>
           <v-list v-if="!isMobile" bg-color="transparent" density="compact" lines="one">
             <v-list-item v-for="(row, i) in statementRows" :key="i" class="mb-1 pa-2" rounded elevation="1" :class="{ 'text-grey': !row.selected }">
@@ -425,8 +423,6 @@ const statementContext = ref({
   statementId: null,
   wallet: null,
   period: {},
-  accountHolder: '',
-  accountNumber: '',
   summary: { detected: 0, duplicates: 0, new: 0 },
 })
 
@@ -595,8 +591,6 @@ const handleStatementFile = async (event) => {
       statementId: data.statementId,
       wallet: data.wallet,
       period: data.period || {},
-      accountHolder: data.accountHolder || '',
-      accountNumber: data.accountNumber || '',
       summary: data.summary || { detected: 0, duplicates: 0, new: 0 },
     }
     statementRows.value = data.rows.map(r => ({
