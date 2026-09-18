@@ -11,12 +11,51 @@ const PRODUCT_IDS_BY_PLAN_CODE = {
 }
 const CONFIGURED_PRODUCT_IDS = Object.values(PRODUCT_IDS_BY_PLAN_CODE).filter(Boolean)
 
+// True on any native iOS build, regardless of whether cordova-plugin-purchase has
+// finished attaching `window.CdvPurchase` yet. The UI must key off this (not
+// isAppleIAPAvailable) to decide whether to ever offer a non-Apple checkout: Apple
+// Guideline 3.1.1 requires digital subscriptions on iOS to go through Apple IAP only,
+// and falling back to an external checkout just because the plugin hasn't loaded yet
+// is itself a rejection risk (and is what likely hid the IAP from App Review).
+export const isIOSNativePlatform = () => (
+  Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios'
+)
+
 export const isAppleIAPAvailable = () => (
-  Capacitor.isNativePlatform()
-  && Capacitor.getPlatform() === 'ios'
+  isIOSNativePlatform()
   && CONFIGURED_PRODUCT_IDS.length > 0
   && Boolean(window.CdvPurchase)
 )
+
+let readyPromise = null
+
+// cordova-plugin-purchase attaches `window.CdvPurchase` asynchronously after the
+// WebView loads, so a synchronous check can race the plugin on cold start. On iOS
+// we wait (poll) for it instead of assuming it's missing.
+export const waitForAppleIAPReady = (timeoutMs = 8000) => {
+  if (!isIOSNativePlatform() || CONFIGURED_PRODUCT_IDS.length === 0) {
+    return Promise.resolve(false)
+  }
+  if (readyPromise) return readyPromise
+
+  readyPromise = new Promise((resolve) => {
+    if (window.CdvPurchase) {
+      resolve(true)
+      return
+    }
+    const start = Date.now()
+    const interval = setInterval(() => {
+      if (window.CdvPurchase) {
+        clearInterval(interval)
+        resolve(true)
+      } else if (Date.now() - start > timeoutMs) {
+        clearInterval(interval)
+        resolve(false)
+      }
+    }, 100)
+  })
+  return readyPromise
+}
 
 let setupPromise = null
 let pendingPurchase = null

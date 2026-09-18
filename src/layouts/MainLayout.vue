@@ -1,5 +1,6 @@
 <template>
-  <AIChatPanel v-if="!billingStore.requiresSubscription" />
+  <AIChatPanel v-if="!billingStore.requiresSubscription && authStore.hasAcceptedAIConsent" />
+  <AIConsentDialog :visible="showAIConsent" @decline="dismissAIConsent" @accept="dismissAIConsent" />
 
   <v-navigation-drawer
     v-model="drawer"
@@ -163,6 +164,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useSubscriptionStore } from '@/stores/subscriptions'
 import { useDisplay } from 'vuetify'
 import AIChatPanel from '@/components/AIChatPanel.vue'
+import AIConsentDialog from '@/components/AIConsentDialog.vue'
 
 const { mobile } = useDisplay()
 const isMobile = computed(() => mobile.value)
@@ -193,6 +195,19 @@ const route = useRoute()
 const authStore = useAuthStore()
 const billingStore = useSubscriptionStore()
 const bottomNav = ref('dashboard')
+
+// Shown once right after login/registration so the user can decide before any AI
+// feature (scan, statement import, chat, suggestions) is reachable. If declined, it
+// won't be shown again automatically this session — the user can reopen it from
+// "Mi perfil" — but AI-powered entry points stay disabled until they accept.
+const aiConsentDismissed = ref(localStorage.getItem('aiConsentDismissed') === '1')
+const showAIConsent = computed(() => (
+  authStore.isAuthenticated && !authStore.hasAcceptedAIConsent && !aiConsentDismissed.value
+))
+const dismissAIConsent = () => {
+  aiConsentDismissed.value = true
+  localStorage.setItem('aiConsentDismissed', '1')
+}
 
 const firstName = computed(() => authStore.user?.name?.trim().split(' ')[0] || '')
 const initials = computed(() => {

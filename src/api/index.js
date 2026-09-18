@@ -12,6 +12,7 @@ export const authAPI = {
   logout: () => api.post('/auth/logout'),
   getMe: () => api.get('/auth/me'),
   updateProfile: (data) => api.put('/auth/profile', data),
+  acceptAIConsent: () => api.put('/auth/ai-consent'),
   changePassword: (data) => api.put('/auth/change-password', data),
   requestTwoFactorSetup: () => api.post('/auth/2fa/setup/send'),
   confirmTwoFactorSetup: (data) => api.post('/auth/2fa/setup/verify', data),

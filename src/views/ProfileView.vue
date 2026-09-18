@@ -143,6 +143,28 @@
           </v-card-text>
         </v-card>
       </v-col>
+      <v-col cols="12" md="6">
+        <v-card title="Privacidad e inteligencia artificial">
+          <v-card-text>
+            <v-alert
+              v-if="authStore.hasAcceptedAIConsent"
+              type="success"
+              density="compact"
+              variant="tonal"
+              class="mb-3"
+              icon="mdi-shield-check"
+            >
+              Aceptaste que tus recibos, extractos y chat puedan enviarse a nuestro proveedor de IA (OpenAI / Google Gemini).
+            </v-alert>
+            <v-alert v-else type="info" density="compact" variant="tonal" class="mb-3">
+              No has aceptado el uso de funciones de IA. Escanear recibos, subir extractos y el chat están deshabilitados.
+            </v-alert>
+            <v-btn color="primary" variant="outlined" block prepend-icon="mdi-robot-outline" @click="showConsentDialog = true">
+              Revisar permisos de IA
+            </v-btn>
+          </v-card-text>
+        </v-card>
+      </v-col>
       <v-col v-if="biometricSupported" cols="12" md="6">
         <v-card title="Autenticación Biométrica">
           <v-card-text>
@@ -189,12 +211,19 @@
         </v-card>
       </v-col>
     </v-row>
+
+    <AIConsentDialog
+      :visible="showConsentDialog"
+      @decline="showConsentDialog = false"
+      @accept="showConsentDialog = false"
+    />
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import AIConsentDialog from '@/components/AIConsentDialog.vue'
 import { useDisplay } from 'vuetify'
 import { useAuthStore } from '@/stores/auth'
 import { useSubscriptionStore } from '@/stores/subscriptions'
@@ -215,6 +244,7 @@ const passMsg = ref('')
 const passSuccess = ref(false)
 const biometricSupported = ref(false)
 const bioLoading = ref(false)
+const showConsentDialog = ref(false)
 const twoFactorMode = ref(null)
 const twoFactorLoading = ref(false)
 const twoFactorCode = ref('')

@@ -368,6 +368,7 @@ import { useDisplay } from 'vuetify'
 import { useRegistersStore } from '@/stores/registers'
 import { useSnackbar } from '@/stores/snackbar'
 import { useSubscriptionStore } from '@/stores/subscriptions'
+import { useAuthStore } from '@/stores/auth'
 import { categoriesAPI, walletsAPI, aiAPI, statementsAPI, recurringAPI } from '@/api'
 import AISuggestCategory from '@/components/AISuggestCategory.vue'
 import VoiceInputButton from '@/components/VoiceInputButton.vue'
@@ -382,6 +383,17 @@ const isMobile = computed(() => mobile.value)
 const store = useRegistersStore()
 const snackbar = useSnackbar()
 const billingStore = useSubscriptionStore()
+const authStore = useAuthStore()
+
+// Escanear/subir extracto envían el archivo a un proveedor de IA de terceros
+// (OpenAI/Gemini) — Apple exige que la app pida permiso antes de eso, no solo que
+// lo documente en la política de privacidad. Ver AIConsentDialog.vue.
+const requireAIConsent = () => {
+  if (authStore.hasAcceptedAIConsent) return true
+  modeDialog.value = false
+  snackbar.error('Acepta el uso de funciones de IA en "Mi perfil" para escanear documentos o subir extractos')
+  return false
+}
 
 const now = new Date()
 const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10)
@@ -513,6 +525,7 @@ const onModeDialogAfterLeave = () => {
 const openCreate = openManualCreate
 
 const startScan = () => {
+  if (!requireAIConsent()) return
   modeDialog.value = false
   scanFileInput.value?.click()
 }
@@ -552,6 +565,7 @@ const readFileAsBase64 = (file) => new Promise((resolve, reject) => {
 const MAX_PDF_MB = 8
 
 const startStatement = () => {
+  if (!requireAIConsent()) return
   modeDialog.value = false
   statementWallet.value = form.value.wallet
   statementWalletDialog.value = true

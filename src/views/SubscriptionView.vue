@@ -84,7 +84,7 @@
               size="large"
               block
               prepend-icon="mdi-credit-card-outline"
-              :loading="billingStore.actionLoading"
+              :loading="billingStore.actionLoading || billingStore.checkingAppleIAP"
               @click="startCheckout"
             >
               {{ status.status === 'incomplete' ? 'Continuar registro del pago' : 'Suscribirme por ' + formattedPrice }}
@@ -213,7 +213,10 @@ const billingStore = useSubscriptionStore()
 const snackbar = useSnackbar()
 const cancelDialog = ref(false)
 const status = computed(() => billingStore.status)
-const useAppleIAP = computed(() => billingStore.isAppleIAPAvailable())
+// Keyed off the platform, not `isAppleIAPAvailable()`: on iOS this must be true even
+// before the purchase plugin finishes loading, so the UI never falls back to showing
+// a non-Apple checkout (see stores/subscriptions.js ensureAppleIAPReady).
+const useAppleIAP = computed(() => billingStore.isIOSNativePlatform())
 const selectedPlanCode = ref(null)
 const selectedPlan = computed(() => billingStore.plans.find((p) => p.code === selectedPlanCode.value))
 
@@ -306,9 +309,17 @@ const paymentColor = (value) => ({
 
 const startCheckout = async () => {
   const planCode = selectedPlanCode.value
-  const result = useAppleIAP.value
-    ? await billingStore.purchaseWithApple(planCode)
-    : await billingStore.createCheckout(planCode)
+  if (useAppleIAP.value) {
+    const ready = billingStore.appleIAPReady || await billingStore.ensureAppleIAPReady()
+    if (!ready) {
+      snackbar.error('No se pudo conectar con App Store. Inténtalo de nuevo en unos segundos.')
+      return
+    }
+    const result = await billingStore.purchaseWithApple(planCode)
+    if (!result.success) snackbar.error(result.message)
+    return
+  }
+  const result = await billingStore.createCheckout(planCode)
   if (!result.success) snackbar.error(result.message)
 }
 
@@ -328,6 +339,7 @@ const confirmCancel = async () => {
 }
 
 onMounted(async () => {
+  if (useAppleIAP.value) billingStore.ensureAppleIAPReady()
   await billingStore.fetchStatus(true)
   await billingStore.fetchPayments()
   await billingStore.fetchPlans()

@@ -1,7 +1,7 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { subscriptionsAPI } from '@/api'
-import { isAppleIAPAvailable, purchaseAppleSubscription } from '@/utils/appleIAP'
+import { isAppleIAPAvailable, isIOSNativePlatform, waitForAppleIAPReady, purchaseAppleSubscription } from '@/utils/appleIAP'
 
 export const useSubscriptionStore = defineStore('subscriptions', () => {
   const status = ref(null)
@@ -11,6 +11,8 @@ export const useSubscriptionStore = defineStore('subscriptions', () => {
   const actionLoading = ref(false)
   const error = ref(null)
   const lastFetchedAt = ref(0)
+  const appleIAPReady = ref(false)
+  const checkingAppleIAP = ref(false)
 
   const requiresSubscription = computed(() => Boolean(status.value?.requiresSubscription))
   const isReadOnly = computed(() => Boolean(status.value?.isReadOnly ?? requiresSubscription.value))
@@ -70,6 +72,14 @@ export const useSubscriptionStore = defineStore('subscriptions', () => {
   }
 
   const createCheckout = async (planCode) => {
+    // Apple Guideline 3.1.1: digital subscriptions on iOS must go through Apple IAP,
+    // never an external checkout. Refuse here as a safety net even if a UI bug ever
+    // tries to call this on a native iOS build.
+    if (isIOSNativePlatform()) {
+      error.value = 'La compra dentro de la app no está disponible en este momento. Inténtalo de nuevo en unos segundos.'
+      return { success: false, message: error.value }
+    }
+
     actionLoading.value = true
     error.value = null
     try {
@@ -81,6 +91,20 @@ export const useSubscriptionStore = defineStore('subscriptions', () => {
       return { success: false, message: error.value }
     } finally {
       actionLoading.value = false
+    }
+  }
+
+  const ensureAppleIAPReady = async () => {
+    if (!isIOSNativePlatform()) {
+      appleIAPReady.value = false
+      return false
+    }
+    checkingAppleIAP.value = true
+    try {
+      appleIAPReady.value = await waitForAppleIAPReady()
+      return appleIAPReady.value
+    } finally {
+      checkingAppleIAP.value = false
     }
   }
 
@@ -139,6 +163,8 @@ export const useSubscriptionStore = defineStore('subscriptions', () => {
     loading,
     actionLoading,
     error,
+    appleIAPReady,
+    checkingAppleIAP,
     requiresSubscription,
     isReadOnly,
     hasEntitlement,
@@ -151,6 +177,8 @@ export const useSubscriptionStore = defineStore('subscriptions', () => {
     fetchPlans,
     createCheckout,
     isAppleIAPAvailable,
+    isIOSNativePlatform,
+    ensureAppleIAPReady,
     purchaseWithApple,
     sync,
     cancel,

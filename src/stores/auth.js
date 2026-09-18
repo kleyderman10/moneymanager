@@ -70,6 +70,7 @@ export const useAuthStore = defineStore('auth', () => {
       role: data.role,
       emailVerified: data.emailVerified,
       twoFactorEnabled: data.twoFactorEnabled,
+      aiConsentAcceptedAt: data.aiConsentAcceptedAt,
     }
     // Awaited so the Keystore/Keychain always holds the just-issued (still valid) refresh
     // token before the caller can navigate away or the app gets backgrounded — the refresh
@@ -188,6 +189,18 @@ export const useAuthStore = defineStore('auth', () => {
       return { success: true }
     } catch (e) {
       return { success: false, message: messageFrom(e, 'Error al actualizar el perfil') }
+    }
+  }
+
+  const hasAcceptedAIConsent = computed(() => Boolean(user.value?.aiConsentAcceptedAt))
+
+  const acceptAIConsent = async () => {
+    try {
+      const res = await authAPI.acceptAIConsent()
+      user.value = res.data
+      return { success: true }
+    } catch (e) {
+      return { success: false, message: messageFrom(e, 'No se pudo guardar tu respuesta') }
     }
   }
 
@@ -431,6 +444,8 @@ export const useAuthStore = defineStore('auth', () => {
     biometricSupported,
     isAuthenticated,
     isAdmin,
+    hasAcceptedAIConsent,
+    acceptAIConsent,
     register,
     verifyEmail,
     resendVerification,
