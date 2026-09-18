@@ -28,6 +28,10 @@
 	<string>Usa Face ID para iniciar sesión de forma más rápida y segura.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Knexura Finanzas usa la cámara para escanear tus recibos y facturas y registrar tus gastos automáticamente.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Knexura Finanzas usa el micrófono para registrar movimientos por voz.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Knexura Finanzas convierte tu voz en texto para registrar movimientos automáticamente.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Knexura Finanzas accede a tus fotos para que puedas seleccionar una imagen de un recibo o factura ya guardada.</string>
 	<key>ITSAppUsesNonExemptEncryption</key>

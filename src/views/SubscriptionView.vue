@@ -91,17 +91,6 @@
             </v-btn>
 
             <v-btn
-              v-else-if="status.status === 'trialing'"
-              color="primary"
-              size="large"
-              block
-              disabled
-              prepend-icon="mdi-clock-outline"
-            >
-              Disponible al finalizar la prueba
-            </v-btn>
-
-            <v-btn
               v-if="status.canCancel"
               variant="outlined"
               color="error"

@@ -215,8 +215,18 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   const logout = async (notifyServer = true) => {
+    // The server only keeps a single refresh token per user (not per device), and
+    // logout wipes it there. If Face ID/huella is enabled, that's the very token
+    // stored in the Keychain/Keystore, so notifying the server here would silently
+    // orphan it — the next biometric login would always fail as "expired", even
+    // though nothing about the local device's biometric enrollment changed. Skip the
+    // server call in that case: this device's copy is already gated by the OS
+    // biometric prompt (verifyIdentity), so leaving it valid server-side doesn't
+    // weaken anything, and it's what makes "log out, then unlock with Face ID" work.
+    const skipServerLogout = isNative() && user.value?.email
+      && localStorage.getItem('biometricEmail') === user.value.email
     try {
-      if (notifyServer && localStorage.getItem('accessToken')) await authAPI.logout()
+      if (notifyServer && !skipServerLogout && localStorage.getItem('accessToken')) await authAPI.logout()
     } catch {
       // Local logout must always succeed, even when the token or network has expired.
     } finally {

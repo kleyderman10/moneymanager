@@ -17,6 +17,7 @@
     "@capacitor/core": "^8.5.2",
     "@capacitor/ios": "^8.5.2",
     "@capgo/capacitor-native-biometric": "^8.6.8",
+    "@capgo/capacitor-speech-recognition": "^8.3.2",
     "@mdi/font": "^7.4.47",
     "@simplewebauthn/browser": "^13.3.0",
     "axios": "^1.7.0",
