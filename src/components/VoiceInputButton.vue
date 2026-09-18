@@ -13,7 +13,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { Capacitor } from '@capacitor/core'
 import { aiAPI } from '@/api'
 import { useSnackbar } from '@/stores/snackbar'
@@ -47,6 +47,16 @@ const parseAndEmit = async (text) => {
 }
 
 // --- Native (iOS/Android), via @capgo/capacitor-speech-recognition ---
+// iOS never auto-stops the session on silence (unlike the browser's SpeechRecognition),
+// so recognition stays open until the user taps to stop it. Awaiting start()'s own
+// promise for a "final" result only works when the recognizer itself ends the session —
+// a manual stop() instead rejects that promise with "Recognition stopped before final
+// results were produced". So instead: enable partialResults, track the transcript as it
+// streams in through the listener, and on manual stop just use whatever was captured so
+// far rather than waiting on a final result that a user-initiated stop will never produce.
+let partialListener = null
+let lastTranscript = ''
+
 const startNative = async () => {
   const { SpeechRecognition } = await import('@capgo/capacitor-speech-recognition')
   try {
@@ -59,20 +69,33 @@ const startNative = async () => {
       return
     }
 
+    lastTranscript = ''
+    partialListener = await SpeechRecognition.addListener('partialResults', (event) => {
+      if (event.matches?.[0]) lastTranscript = event.matches[0]
+    })
+
     listening.value = true
-    const result = await SpeechRecognition.start({ language: 'es-ES', maxResults: 1, popup: false })
-    listening.value = false
-    await parseAndEmit(result?.matches?.[0])
+    // Resolves right away when partialResults is true; it doesn't wait for the user to
+    // finish speaking, so it's only used here to surface a startup error (e.g. mic busy).
+    await SpeechRecognition.start({ language: 'es-ES', partialResults: true, popup: false })
   } catch (e) {
     listening.value = false
+    await partialListener?.remove()
+    partialListener = null
     snackbar.error(e?.message || 'No se pudo iniciar el dictado por voz')
   }
 }
 
 const stopNative = async () => {
   const { SpeechRecognition } = await import('@capgo/capacitor-speech-recognition')
-  await SpeechRecognition.stop().catch(() => {})
+  // forceStop (rather than stop) flushes the cached transcript through the partialResults
+  // listener one last time before tearing the session down, so the tail end of what was
+  // said isn't lost.
+  await SpeechRecognition.forceStop().catch(() => {})
   listening.value = false
+  await partialListener?.remove()
+  partialListener = null
+  await parseAndEmit(lastTranscript)
 }
 
 // --- Web (browser / PWA) ---
@@ -115,5 +138,13 @@ onMounted(async () => {
   } catch {
     isSupported.value = false
   }
+})
+
+onBeforeUnmount(async () => {
+  if (!isNative || !listening.value) return
+  const { SpeechRecognition } = await import('@capgo/capacitor-speech-recognition')
+  await SpeechRecognition.forceStop().catch(() => {})
+  await partialListener?.remove()
+  partialListener = null
 })
 </script>

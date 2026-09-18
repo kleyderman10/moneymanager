@@ -92,6 +92,20 @@ const setup = () => {
     if (errors?.length) {
       throw new Error(errors[0]?.message || 'No se pudo inicializar App Store')
     }
+
+    // initialize() resolves once the platform adapter is set up — it does NOT wait for
+    // Apple to actually return each product's pricing/offer data, which arrives
+    // separately and asynchronously. Checking product.getOffer() right after initialize()
+    // races that fetch and was coming back empty on essentially every first attempt,
+    // surfacing as "El producto de suscripción no está disponible todavía" even for a
+    // correctly configured product. store.ready() is the plugin's own signal that every
+    // registered product has finished loading; wait for it (with a timeout, in case the
+    // App Store Connect side is genuinely unreachable/misconfigured) before returning.
+    await new Promise((resolve) => {
+      if (store.isReady) { resolve(); return }
+      const timeout = setTimeout(resolve, 8000)
+      store.ready(() => { clearTimeout(timeout); resolve() })
+    })
   })()
 
   return setupPromise
@@ -112,9 +126,16 @@ export const purchaseAppleSubscription = async (planCode) => {
 
   const { store } = window.CdvPurchase
   const product = store.get(productId)
-  const offer = product?.getOffer()
+  if (!product) {
+    // Distinct from "no offer yet": the store never returned this product ID at all,
+    // which (now that setup() waits for store.ready()) points to a real App Store
+    // Connect mismatch — wrong/typo'd product ID, product not yet approved, or the
+    // Paid Applications Agreement not active — rather than a loading race.
+    return { success: false, message: `No encontramos el producto "${productId}" en App Store. Verifica que el identificador coincida con el configurado en App Store Connect.` }
+  }
+  const offer = product.getOffer()
   if (!offer) {
-    return { success: false, message: 'El producto de suscripción no está disponible todavía' }
+    return { success: false, message: 'El producto de suscripción no tiene una oferta de precio configurada todavía' }
   }
 
   return new Promise((resolve) => {
