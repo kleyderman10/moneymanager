@@ -392,6 +392,21 @@ body {
   backdrop-filter: blur(18px);
 }
 
+/* Some iOS WKWebView builds under-report env(safe-area-inset-bottom), which leaves a
+   sliver of the page background visible between the bar and the home indicator/screen
+   edge on notched iPhones. Bleed the bar's own background past its bottom edge so that
+   sliver, if it appears, is filled with the same color instead of showing a gap. */
+.finance-bottom-nav::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -40px;
+  height: 40px;
+  background: inherit;
+  pointer-events: none;
+}
+
 .finance-bottom-nav .v-btn {
   min-width: 0 !important;
   color: #718588;

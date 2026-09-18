@@ -10,7 +10,8 @@ import { BIOMETRIC_SERVER } from '@/constants/biometric'
 // guard the refresh token, since WebAuthn platform authenticators aren't
 // reliably available inside a Capacitor WebView. The web build keeps using
 // WebAuthn passkeys, verified server-side.
-//
+const isNative = () => Capacitor.isNativePlatform()
+
 // Credentials are stored WITHOUT the plugin's `accessControl` (biometric-gated
 // Keystore/Keychain) option, and the biometric prompt is triggered explicitly with
 // verifyIdentity() before reading them back — this is the pattern the plugin's own
@@ -26,8 +27,8 @@ import { BIOMETRIC_SERVER } from '@/constants/biometric'
 // storage keeps the write silent (as intended) on both platforms, and the
 // biometric gate still happens at login time via verifyIdentity().
 const syncBiometricCredential = async (email, refreshToken) => {
-  if (!isNative() || localStorage.getItem('biometricEmail') !== email) return
   try {
+    if (!isNative() || localStorage.getItem('biometricEmail') !== email) return
     const { NativeBiometric } = await import('@capgo/capacitor-native-biometric')
     await NativeBiometric.setCredentials({
       username: email,
