@@ -44,20 +44,28 @@
     </v-row>
 
     <v-dialog v-model="dialog" :fullscreen="isMobile" max-width="400">
-      <v-card :title="editing ? 'Editar' : 'Nueva meta'">
+      <v-card :title="editing ? 'Editar meta' : 'Nueva meta'" class="capture-form">
         <v-card-text>
-          <v-text-field v-model="form.name" label="Nombre" density="compact" required />
-          <v-text-field v-model.number="form.targetAmount" label="Monto objetivo" type="number" density="compact" required />
-          <v-text-field v-model="form.deadline" label="Fecha límite (opcional)" type="date" density="compact" />
+          <v-text-field v-model="form.name" label="Nombre" variant="outlined" density="compact" required class="mb-3" />
+          <MoneyField v-model="form.targetAmount" label="Monto objetivo" size="hero" required />
+          <v-text-field v-model="form.deadline" label="Fecha límite (opcional)" type="date" variant="outlined" density="compact" />
         </v-card-text>
-        <v-card-actions><v-spacer /><v-btn variant="text" @click="dialog = false">Cancelar</v-btn><v-btn color="primary" @click="save">Guardar</v-btn></v-card-actions>
+        <v-card-actions class="form-actions">
+          <v-btn variant="text" @click="dialog = false">Cancelar</v-btn>
+          <v-spacer />
+          <v-btn class="form-actions__primary" @click="save">Guardar</v-btn>
+        </v-card-actions>
       </v-card>
     </v-dialog>
 
     <v-dialog v-model="progressDialog" max-width="300">
-      <v-card title="Agregar progreso">
-        <v-card-text><v-text-field v-model.number="progressAmount" label="Monto" type="number" density="compact" required /></v-card-text>
-        <v-card-actions><v-spacer /><v-btn variant="text" @click="progressDialog = false">Cancelar</v-btn><v-btn color="success" @click="saveProgress">Guardar</v-btn></v-card-actions>
+      <v-card title="Agregar progreso" class="capture-form">
+        <v-card-text><MoneyField v-model="progressAmount" label="Monto" size="hero" required /></v-card-text>
+        <v-card-actions class="form-actions">
+          <v-btn variant="text" @click="progressDialog = false">Cancelar</v-btn>
+          <v-spacer />
+          <v-btn class="form-actions__primary" @click="saveProgress">Guardar</v-btn>
+        </v-card-actions>
       </v-card>
     </v-dialog>
 
@@ -76,6 +84,7 @@ import { useDisplay } from 'vuetify'
 import { useGoalsStore } from '@/stores/goals'
 import { useSnackbar } from '@/stores/snackbar'
 import { useSubscriptionStore } from '@/stores/subscriptions'
+import MoneyField from '@/components/MoneyField.vue'
 
 const { mobile } = useDisplay()
 const isMobile = computed(() => mobile.value)

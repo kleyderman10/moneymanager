@@ -19,84 +19,88 @@
     </header>
 
     <v-row v-if="summary" class="mb-3">
-      <v-col cols="12" md="6">
+      <v-col cols="12">
         <v-card class="dashboard-hero">
           <v-card-text class="pa-6 pa-md-7">
-            <div class="d-flex align-start">
-              <div>
-                <div class="dashboard-hero__label">Balance de {{ periodLabel }}</div>
-                <div class="dashboard-hero__amount">
-                  {{ summary.balance < 0 ? '−' : '' }}${{ fmt(Math.abs(summary.balance)) }}
-                </div>
-              </div>
-              <v-spacer />
-              <v-chip
-                size="small"
-                :color="summary.balance >= 0 ? 'success' : 'error'"
-                variant="flat"
-                :prepend-icon="summary.balance >= 0 ? 'mdi-trending-up' : 'mdi-trending-down'"
-              >
-                {{ summary.balance >= 0 ? 'Flujo positivo' : 'Requiere atención' }}
-              </v-chip>
-            </div>
+            <div class="dashboard-hero__label">Patrimonio · cuentas conectadas</div>
+            <div class="dashboard-hero__amount">${{ fmt(netWorth) }}</div>
 
             <div class="dashboard-hero__meta">
               <div>
-                <span>Ingresos</span>
-                <strong>+${{ fmt(summary.totalIncome) }}</strong>
+                <span><v-icon size="14" color="success">mdi-arrow-top-right</v-icon> Ingresos (prom.)</span>
+                <strong>${{ fmt(cashFlow?.averageIncome) }}</strong>
               </div>
               <div>
-                <span>Gastos</span>
-                <strong>−${{ fmt(summary.totalExpenses) }}</strong>
+                <span><v-icon size="14" color="error">mdi-arrow-bottom-right</v-icon> Gastos (prom.)</span>
+                <strong>${{ fmt(cashFlow?.averageExpenses) }}</strong>
               </div>
-              <div>
-                <span>Tasa de ahorro</span>
-                <strong>{{ savingsRate }}%</strong>
-              </div>
+            </div>
+
+            <v-progress-linear
+              v-if="cashFlow"
+              class="dashboard-hero__spend mt-4"
+              :model-value="spentRatio"
+              :color="spentRatioColor"
+              bg-color="rgba(255,255,255,0.16)"
+              height="6"
+              rounded
+            />
+            <div v-if="cashFlow" class="dashboard-hero__surplus">
+              Excedente mensual: ${{ fmt(cashFlow.averageSurplus) }} — {{ surplusMargin }}
             </div>
           </v-card-text>
         </v-card>
       </v-col>
 
-      <v-col cols="12" md="6">
-        <v-row dense class="h-100">
-          <v-col cols="6" sm="6">
-            <v-card class="metric-card metric-card--income">
-              <v-card-text>
-                <div class="metric-card__icon"><v-icon>mdi-arrow-down-left</v-icon></div>
-                <div>
-                  <div class="metric-card__label">Ingresos</div>
-                  <div class="metric-card__value">${{ fmt(summary.totalIncome) }}</div>
-                  <div class="metric-card__hint">{{ summary.incomeCount }} movs</div>
-                </div>
-              </v-card-text>
-            </v-card>
-          </v-col>
-          <v-col cols="6" sm="6">
-            <v-card class="metric-card metric-card--expense">
-              <v-card-text>
-                <div class="metric-card__icon"><v-icon>mdi-arrow-up-right</v-icon></div>
-                <div>
-                  <div class="metric-card__label">Gastos</div>
-                  <div class="metric-card__value">${{ fmt(summary.totalExpenses) }}</div>
-                  <div class="metric-card__hint">{{ summary.expenseCount }} movs</div>
-                </div>
-              </v-card-text>
-            </v-card>
-          </v-col>
-          <v-col cols="12">
-            <v-card class="metric-card metric-card--activity">
-              <v-card-text>
-                <div class="metric-card__icon"><v-icon>mdi-swap-vertical</v-icon></div>
-                <div>
-                  <div class="metric-card__label">Actividad del mes</div>
-                  <div class="metric-card__value">{{ summary.transactionCount }} transacciones</div>
-                  <div class="metric-card__hint">Todos tus ingresos y gastos registrados</div>
-                </div>
-              </v-card-text>
-            </v-card>
-          </v-col>
-        </v-row>
+      <v-col v-if="topInsight" cols="12">
+        <v-alert
+          type="warning"
+          variant="tonal"
+          density="comfortable"
+          icon="mdi-lightbulb-on-outline"
+          closable
+          class="dashboard-tip"
+          @click:close="dismissTopInsight"
+        >
+          {{ topInsight.description || topInsight.title }}
+        </v-alert>
+      </v-col>
+
+      <v-col cols="12" sm="6" md="4">
+        <v-card class="metric-card metric-card--income">
+          <v-card-text>
+            <div class="metric-card__icon"><v-icon>mdi-arrow-down-left</v-icon></div>
+            <div>
+              <div class="metric-card__label">Ingresos</div>
+              <div class="metric-card__value">${{ fmt(summary.totalIncome) }}</div>
+              <div class="metric-card__hint">{{ summary.incomeCount }} movs</div>
+            </div>
+          </v-card-text>
+        </v-card>
+      </v-col>
+      <v-col cols="12" sm="6" md="4">
+        <v-card class="metric-card metric-card--expense">
+          <v-card-text>
+            <div class="metric-card__icon"><v-icon>mdi-arrow-up-right</v-icon></div>
+            <div>
+              <div class="metric-card__label">Gastos</div>
+              <div class="metric-card__value">${{ fmt(summary.totalExpenses) }}</div>
+              <div class="metric-card__hint">{{ summary.expenseCount }} movs</div>
+            </div>
+          </v-card-text>
+        </v-card>
+      </v-col>
+      <v-col cols="12" md="4">
+        <v-card class="metric-card metric-card--activity">
+          <v-card-text>
+            <div class="metric-card__icon"><v-icon>mdi-swap-vertical</v-icon></div>
+            <div>
+              <div class="metric-card__label">Actividad del mes</div>
+              <div class="metric-card__value">{{ summary.transactionCount }} transacciones</div>
+              <div class="metric-card__hint">Todos tus ingresos y gastos registrados</div>
+            </div>
+          </v-card-text>
+        </v-card>
       </v-col>
     </v-row>
 
@@ -198,23 +202,9 @@
               <div class="text-caption">Registra gastos para ver la distribución</div>
             </div>
           </v-card-text>
-          <v-list v-else bg-color="transparent" density="comfortable">
-            <v-list-item
-              v-for="cat in expenseCategories.slice(0, 5)"
-              :key="cat.category?._id"
-              :title="cat.category?.name || 'Sin categoría'"
-              :subtitle="`${cat.count} ${cat.count === 1 ? 'movimiento' : 'movimientos'}`"
-            >
-              <template #prepend>
-                <v-avatar :color="cat.category?.color || 'grey'" size="38">
-                  <span class="text-white">{{ cat.category?.icon || '•' }}</span>
-                </v-avatar>
-              </template>
-              <template #append>
-                <strong class="text-error">${{ fmt(cat.total) }}</strong>
-              </template>
-            </v-list-item>
-          </v-list>
+          <v-card-text v-else>
+            <CategoryDonutChart :categories="expenseCategories.slice(0, 5)" />
+          </v-card-text>
         </v-card>
       </v-col>
     </v-row>
@@ -234,11 +224,12 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useDisplay } from 'vuetify'
-import { summaryAPI, recurringAPI, creditsAPI, walletsAPI } from '@/api'
+import { summaryAPI, recurringAPI, creditsAPI, walletsAPI, simulationsAPI } from '@/api'
 import { useAiInsights } from '@/stores/aiInsights'
 import { useSubscriptionStore } from '@/stores/subscriptions'
 import AIInsightsCard from '@/components/AIInsightsCard.vue'
 import AIHealthScore from '@/components/AIHealthScore.vue'
+import CategoryDonutChart from '@/components/CategoryDonutChart.vue'
 
 const router = useRouter()
 const { mobile } = useDisplay()
@@ -254,6 +245,8 @@ const summary = ref(null)
 const upcoming = ref([])
 const credits = ref([])
 const creditCards = ref([])
+const wallets = ref([])
+const cashFlow = ref(null)
 
 const periodLabel = computed(() => new Intl.DateTimeFormat('es-CO', { month: 'long' }).format(new Date()))
 const savingsRate = computed(() => {
@@ -264,6 +257,37 @@ const savingsRate = computed(() => {
 const expenseCategories = computed(() =>
   summary.value?.byCategory?.filter((category) => category.type === 'expense') || []
 )
+
+// "Patrimonio" only counts real money the person holds (cash/bank), not credit
+// cards — a card's balance is debt, not net worth.
+const netWorth = computed(() => wallets.value
+  .filter((wallet) => wallet.type !== 'credit')
+  .reduce((sum, wallet) => sum + (Number(wallet.balance) || 0), 0))
+
+// Reuses the same average income/expense/surplus the "Capacidad crediticia" simulator
+// computes, instead of deriving a second version of the same numbers here.
+const spentRatio = computed(() => {
+  if (!cashFlow.value?.averageIncome) return 0
+  return Math.min(100, Math.round((cashFlow.value.averageExpenses / cashFlow.value.averageIncome) * 100))
+})
+const spentRatioColor = computed(() => {
+  if (spentRatio.value >= 90) return 'error'
+  if (spentRatio.value >= 70) return 'warning'
+  return 'success'
+})
+const surplusMargin = computed(() => {
+  if (!cashFlow.value?.averageIncome) return ''
+  const ratio = cashFlow.value.averageSurplus / cashFlow.value.averageIncome
+  if (ratio < 0) return 'sin margen, revisa tus gastos'
+  if (ratio < 0.1) return 'margen ajustado'
+  if (ratio < 0.3) return 'margen cómodo'
+  return 'margen amplio'
+})
+
+const topInsight = computed(() => insightsStore.insights[0] || null)
+const dismissTopInsight = () => {
+  if (topInsight.value) insightsStore.dismissInsight(topInsight.value._id)
+}
 
 const UPCOMING_WINDOW_DAYS = 7
 const upcomingPayments = computed(() => {
@@ -326,16 +350,19 @@ const load = async () => {
   const startDate = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
   const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString()
   try {
-    const [summaryResponse, upcomingResponse, creditsResponse, walletsResponse] = await Promise.all([
+    const [summaryResponse, upcomingResponse, creditsResponse, walletsResponse, cashFlowResponse] = await Promise.all([
       summaryAPI.get({ startDate, endDate }),
       recurringAPI.getUpcoming(7),
       creditsAPI.getAll(),
       walletsAPI.getAll(),
+      simulationsAPI.capacity({}).catch(() => null),
     ])
     summary.value = summaryResponse.data
     upcoming.value = upcomingResponse.data
     credits.value = creditsResponse.data
+    wallets.value = walletsResponse.data
     creditCards.value = walletsResponse.data.filter((wallet) => wallet.type === 'credit')
+    cashFlow.value = cashFlowResponse?.data?.capacity || null
     tryProcessRecurring()
   } catch { /* El estado vacío mantiene la pantalla utilizable si no hay conexión. */ }
 }

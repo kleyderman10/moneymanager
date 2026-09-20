@@ -116,30 +116,79 @@
     </v-row>
 
     <v-dialog v-model="dialog" :fullscreen="isMobile" max-width="620">
-      <v-card :title="editing ? 'Editar crédito' : 'Registrar crédito'">
+      <v-card :title="editing ? 'Editar crédito' : 'Registrar crédito'" class="capture-form">
         <v-card-text>
-          <v-row dense>
-            <v-col cols="12" sm="7"><v-text-field v-model="form.name" label="Nombre del crédito" density="compact" required /></v-col>
-            <v-col cols="12" sm="5"><NativeSelectField v-model="form.institutionCode" :items="institutionOptions" item-title="name" item-value="code" label="Entidad financiera" placeholder="Selecciona una entidad" @update:model-value="onInstitutionChange" /></v-col>
-            <v-col v-if="form.institutionCode === 'other'" cols="12" sm="5"><v-text-field v-model="form.institutionName" label="Nombre de la entidad" density="compact" /></v-col>
-            <v-col cols="12" sm="6"><NativeSelectField v-model="form.type" :items="typeOptions" label="Tipo de crédito" /></v-col>
-            <v-col cols="12" sm="3"><v-text-field v-model="form.currency" label="Moneda" density="compact" maxlength="3" /></v-col>
-            <v-col cols="12" sm="3"><v-text-field v-model.number="form.termMonths" label="Plazo (meses)" type="number" min="1" max="360" density="compact" /></v-col>
-            <v-col cols="12" sm="6"><v-text-field v-model.number="form.principalAmount" label="Monto original" type="number" min="0" density="compact" prefix="$" /></v-col>
-            <v-col cols="12" sm="6"><v-text-field v-model.number="form.capitalBalance" label="Saldo de capital actual" type="number" min="0" density="compact" prefix="$" hint="Solo el capital pendiente, sin sumar intereses." persistent-hint /></v-col>
-            <v-col cols="12" sm="6"><v-text-field v-model.number="form.interestBalance" label="Intereses pendientes actuales" type="number" min="0" density="compact" prefix="$" hint="Intereses ya causados que aún no has pagado. El plan calcula los futuros." persistent-hint /></v-col>
-            <v-col cols="12" sm="4"><v-text-field v-model.number="form.installmentAmount" label="Cuota mensual" type="number" min="0" density="compact" prefix="$" /></v-col>
-            <v-col cols="12" sm="4"><v-text-field v-model.number="form.annualInterestRate" label="Tasa" type="number" min="0" step="0.01" density="compact" suffix="%" /></v-col>
-            <v-col cols="12" sm="4"><NativeSelectField v-model="form.ratePeriod" :items="rateOptions" label="Periodo de tasa" /></v-col>
-            <v-col cols="12" sm="4"><v-text-field v-model.number="form.installmentsPaid" label="Cuotas pagadas" type="number" min="0" density="compact" /></v-col>
-            <v-col cols="12" sm="4"><v-text-field v-model="form.startDate" label="Fecha de inicio" type="date" density="compact" /></v-col>
-            <v-col cols="12" sm="4"><v-text-field v-model="form.firstPaymentDate" label="Primer pago" type="date" density="compact" /></v-col>
-            <v-col cols="12" sm="4"><v-text-field v-model="form.nextPaymentDate" label="Próximo pago" type="date" density="compact" /></v-col>
-            <v-col cols="12" sm="4"><v-text-field v-model.number="form.paymentDay" label="Día habitual de pago" type="number" min="1" max="28" density="compact" /></v-col>
-            <v-col cols="12"><v-textarea v-model="form.notes" label="Notas" rows="2" density="compact" /></v-col>
-          </v-row>
+          <div class="wizard-progress">
+            <template v-for="(label, idx) in wizardSteps" :key="label">
+              <div class="wizard-progress__step" :class="{ 'wizard-progress__step--active': wizardStep === idx + 1, 'wizard-progress__step--done': wizardStep > idx + 1 }">
+                <v-icon v-if="wizardStep > idx + 1" size="16">mdi-check</v-icon>
+                <template v-else>{{ idx + 1 }}</template>
+              </div>
+              <div v-if="idx < wizardSteps.length - 1" class="wizard-progress__line" :class="{ 'wizard-progress__line--done': wizardStep > idx + 1 }" />
+            </template>
+          </div>
+          <div class="wizard-step-title">Paso {{ wizardStep }} de {{ wizardSteps.length }} · {{ wizardSteps[wizardStep - 1] }}</div>
+
+          <v-window v-model="wizardStep">
+            <v-window-item :value="1">
+              <v-text-field v-model="form.name" label="Nombre del crédito" variant="outlined" density="compact" required class="mb-3" />
+              <NativeSelectField v-model="form.institutionCode" :items="institutionOptions" item-title="name" item-value="code" label="Entidad financiera" placeholder="Selecciona una entidad" @update:model-value="onInstitutionChange" class="mb-2" />
+              <v-text-field v-if="form.institutionCode === 'other'" v-model="form.institutionName" label="Nombre de la entidad" variant="outlined" density="compact" class="mb-3" />
+              <div class="d-flex align-center ga-1">
+                <label class="form-label mb-0">Tipo de crédito</label>
+                <v-icon size="15" color="grey" class="help-icon">mdi-help-circle-outline</v-icon>
+                <v-tooltip activator="parent" location="top" max-width="260">Personal: libre inversión. Vehicular e hipotecario: financian un bien específico. Rotativo: cupo que se recarga a medida que pagas (como una tarjeta).</v-tooltip>
+              </div>
+              <NativeSelectField v-model="form.type" :items="typeOptions" label="Tipo de crédito" class="mb-2" />
+              <v-row dense>
+                <v-col cols="6"><v-text-field v-model="form.currency" label="Moneda" variant="outlined" density="compact" maxlength="3" /></v-col>
+                <v-col cols="6"><v-text-field v-model.number="form.termMonths" label="Plazo (meses)" type="number" min="1" max="360" variant="outlined" density="compact" /></v-col>
+              </v-row>
+              <MoneyField v-model="form.principalAmount" label="Monto original" size="hero" />
+            </v-window-item>
+
+            <v-window-item :value="2">
+              <MoneyField v-model="form.capitalBalance" label="Saldo de capital actual" size="hero" hint="Solo el capital pendiente, sin sumar intereses." />
+              <MoneyField v-model="form.interestBalance" label="Intereses pendientes actuales" hint="Intereses ya causados que aún no has pagado. El plan calcula los futuros." />
+              <MoneyField v-model="form.installmentAmount" label="Cuota mensual" />
+              <v-row dense class="mt-1">
+                <v-col cols="6"><v-text-field v-model.number="form.annualInterestRate" label="Tasa" type="number" min="0" step="0.01" variant="outlined" density="compact" suffix="%" /></v-col>
+                <v-col cols="6"><v-text-field v-model.number="form.installmentsPaid" label="Cuotas pagadas" type="number" min="0" variant="outlined" density="compact" /></v-col>
+              </v-row>
+              <div class="d-flex align-center ga-1">
+                <label class="form-label mb-0">Periodo de tasa</label>
+                <v-icon size="15" color="grey" class="help-icon">mdi-help-circle-outline</v-icon>
+                <v-tooltip activator="parent" location="top" max-width="260">Efectiva anual (E.A.): la tasa que normalmente informa el banco para todo un año. Mensual: la tasa ya expresada por cada mes, sin convertir.</v-tooltip>
+              </div>
+              <NativeSelectField v-model="form.ratePeriod" :items="rateOptions" label="Periodo de tasa" />
+            </v-window-item>
+
+            <v-window-item :value="3">
+              <v-row dense>
+                <v-col cols="12" sm="6"><v-text-field v-model="form.startDate" label="Fecha de inicio" type="date" variant="outlined" density="compact" /></v-col>
+                <v-col cols="12" sm="6"><v-text-field v-model="form.firstPaymentDate" label="Primer pago" type="date" variant="outlined" density="compact" /></v-col>
+                <v-col cols="12" sm="6"><v-text-field v-model="form.nextPaymentDate" label="Próximo pago" type="date" variant="outlined" density="compact" /></v-col>
+                <v-col cols="12" sm="6"><v-text-field v-model.number="form.paymentDay" label="Día habitual de pago" type="number" min="1" max="28" variant="outlined" density="compact" /></v-col>
+              </v-row>
+              <v-textarea v-model="form.notes" label="Notas" rows="2" variant="outlined" density="compact" class="mt-2" />
+            </v-window-item>
+          </v-window>
         </v-card-text>
-        <v-card-actions><v-spacer /><v-btn variant="text" @click="dialog = false">Cancelar</v-btn><v-btn color="primary" :loading="saving" @click="save">Guardar</v-btn></v-card-actions>
+        <v-card-actions class="form-actions">
+          <v-btn variant="text" @click="dialog = false">Cancelar</v-btn>
+          <v-spacer />
+          <v-btn v-if="wizardStep > 1" variant="text" @click="wizardStep--">Atrás</v-btn>
+          <v-btn
+            v-if="wizardStep < wizardSteps.length"
+            class="form-actions__primary"
+            append-icon="mdi-arrow-right"
+            :disabled="wizardStep === 1 && !form.name"
+            @click="wizardStep++"
+          >
+            Siguiente
+          </v-btn>
+          <v-btn v-else class="form-actions__primary" :loading="saving" @click="save">Guardar</v-btn>
+        </v-card-actions>
       </v-card>
     </v-dialog>
 
@@ -178,6 +227,7 @@ import { useSnackbar } from '@/stores/snackbar'
 import { useSubscriptionStore } from '@/stores/subscriptions'
 import { walletsAPI, financialInstitutionsAPI } from '@/api'
 import NativeSelectField from '@/components/NativeSelectField.vue'
+import MoneyField from '@/components/MoneyField.vue'
 
 const { mobile } = useDisplay()
 const isMobile = computed(() => mobile.value)
@@ -186,6 +236,8 @@ const snackbar = useSnackbar()
 const billingStore = useSubscriptionStore()
 const wallets = ref([])
 const institutions = ref([])
+const wizardSteps = ['Datos del crédito', 'Saldo y tasas', 'Fechas y notas']
+const wizardStep = ref(1)
 const dialog = ref(false)
 const paymentDialog = ref(false)
 const deleteDialog = ref(false)
@@ -225,9 +277,10 @@ const onInstitutionChange = (code) => {
   form.value.lender = form.value.institutionName
 }
 
-const openCreate = () => { editing.value = null; form.value = emptyForm(); dialog.value = true }
+const openCreate = () => { editing.value = null; form.value = emptyForm(); wizardStep.value = 1; dialog.value = true }
 const openEdit = (credit) => {
   editing.value = credit._id
+  wizardStep.value = 1
   form.value = {
     ...emptyForm(),
     name: credit.name,
@@ -314,4 +367,17 @@ onMounted(async () => {
 .credit-advice { margin: 0; padding-left: 18px; font-size: 0.78rem; }
 .plan-scroll { max-height: 460px; overflow: auto; }
 @media (max-width: 600px) { .credit-metrics { grid-template-columns: 1fr; } }
+
+.wizard-step-title {
+  margin-bottom: 18px;
+  color: var(--finance-muted);
+  font-size: 0.78rem;
+  font-weight: 650;
+  text-align: center;
+}
+
+.help-icon {
+  cursor: help;
+}
+
 </style>

@@ -1,15 +1,9 @@
 <template>
-  <v-btn
-    v-if="isSupported"
-    size="small"
-    variant="text"
-    :color="listening ? 'error' : 'primary'"
-    :loading="processing"
-    :prepend-icon="listening ? 'mdi-microphone-off' : 'mdi-microphone'"
-    @click="toggle"
-  >
-    {{ listening ? 'Escuchando...' : 'Voz' }}
-  </v-btn>
+  <button v-if="isSupported" type="button" class="tool-tile" :class="{ 'tool-tile--active': listening }" :disabled="processing" @click="toggle">
+    <v-progress-circular v-if="processing" indeterminate size="20" width="2" color="primary" />
+    <v-icon v-else size="22" :color="listening ? 'error' : 'primary'">{{ listening ? 'mdi-microphone-off' : 'mdi-microphone' }}</v-icon>
+    <span class="tool-tile__label">{{ listening ? 'Escuchando...' : 'Voz' }}</span>
+  </button>
 </template>
 
 <script setup>

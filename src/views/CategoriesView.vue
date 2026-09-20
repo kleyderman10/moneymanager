@@ -46,20 +46,38 @@
     </v-list>
 
     <v-dialog v-model="dialog" :fullscreen="isMobile" max-width="400">
-      <v-card :title="editing ? 'Editar' : 'Nueva categoría'">
+      <v-card :title="editing ? 'Editar categoría' : 'Nueva categoría'" class="capture-form">
         <v-card-text>
-          <NativeSelectField v-model="form.type" :items="[{title:'Ingreso',value:'income'},{title:'Gasto',value:'expense'}]" label="Tipo" required />
-          <v-text-field v-model="form.name" label="Nombre" density="compact" required />
-          <v-text-field v-model="form.icon" label="Ícono (emoji)" density="compact" />
-          <v-text-field v-model="form.color" label="Color" type="color" density="compact" />
+          <label class="form-label">Tipo</label>
+          <div class="segmented-toggle mb-3">
+            <button
+              type="button"
+              class="segmented-toggle__option segmented-toggle__option--expense"
+              :class="{ 'segmented-toggle__option--active': form.type === 'expense' }"
+              @click="form.type = 'expense'"
+            >
+              Gasto
+            </button>
+            <button
+              type="button"
+              class="segmented-toggle__option segmented-toggle__option--income"
+              :class="{ 'segmented-toggle__option--active': form.type === 'income' }"
+              @click="form.type = 'income'"
+            >
+              Ingreso
+            </button>
+          </div>
+          <v-text-field v-model="form.name" label="Nombre" variant="outlined" density="compact" required class="mb-3" />
+          <v-text-field v-model="form.icon" label="Ícono (emoji)" variant="outlined" density="compact" class="mb-3" />
+          <v-text-field v-model="form.color" label="Color" type="color" variant="outlined" density="compact" />
           <div class="d-flex align-center mt-1">
             <AIIconButton :name="form.name" :type="form.type" @generated="onIconGenerated" />
           </div>
         </v-card-text>
-        <v-card-actions>
-          <v-spacer />
+        <v-card-actions class="form-actions">
           <v-btn variant="text" @click="dialog = false">Cancelar</v-btn>
-          <v-btn color="primary" @click="save">Guardar</v-btn>
+          <v-spacer />
+          <v-btn class="form-actions__primary" @click="save">Guardar</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -94,7 +112,6 @@ import { useCategoriesStore } from '@/stores/categories'
 import { useSnackbar } from '@/stores/snackbar'
 import { useSubscriptionStore } from '@/stores/subscriptions'
 import AIIconButton from '@/components/AIIconButton.vue'
-import NativeSelectField from '@/components/NativeSelectField.vue'
 
 const { mobile } = useDisplay()
 const isMobile = computed(() => mobile.value)

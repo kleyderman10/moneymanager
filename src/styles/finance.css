@@ -51,7 +51,9 @@ body {
 .finance-content {
   width: 100%;
   max-width: 1500px;
-  padding: 28px 32px 40px !important;
+  /* Bottom padding clears the .ai-fab (bottom: 24px, 52px tall) plus a margin, so it never
+     sits on top of a table/list's last row of action icons. */
+  padding: 28px 32px 92px !important;
 }
 
 .finance-content h1 {
@@ -255,6 +257,13 @@ body {
   content: "";
 }
 
+.finance-brand__logo {
+  width: 42px;
+  height: 42px;
+  border-radius: 13px;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+}
+
 .finance-brand__name {
   color: #fff;
   font-size: 1.08rem;
@@ -378,8 +387,8 @@ body {
 }
 
 .finance-avatar {
-  background: #dceeea !important;
-  color: var(--finance-primary) !important;
+  background: var(--finance-navy) !important;
+  color: #fff !important;
   font-weight: 800;
 }
 
@@ -452,13 +461,12 @@ body {
 
 .dashboard-hero {
   position: relative;
-  height: 100%;
-  min-height: 220px;
   overflow: hidden;
   border: 0 !important;
+  border-radius: 22px !important;
   background:
-    radial-gradient(circle at 88% 22%, rgba(66, 207, 174, 0.28), transparent 15rem),
-    linear-gradient(132deg, #102e37, #0a4b47) !important;
+    radial-gradient(circle at 88% 22%, rgba(66, 207, 174, 0.18), transparent 15rem),
+    #0C2630 !important;
   box-shadow: 0 20px 42px rgba(10, 65, 65, 0.2) !important;
   color: white;
 }
@@ -511,6 +519,23 @@ body {
   margin-top: 2px;
   color: #fff;
   font-size: 0.92rem;
+}
+
+.dashboard-hero__spend {
+  position: relative;
+  z-index: 1;
+}
+
+.dashboard-hero__surplus {
+  position: relative;
+  z-index: 1;
+  margin-top: 8px;
+  color: #a8c8c4;
+  font-size: 0.72rem;
+}
+
+.dashboard-tip .v-alert__close {
+  align-self: flex-start;
 }
 
 .metric-card {
@@ -750,6 +775,7 @@ body {
 
 .auth-form-side {
   display: flex;
+  flex-direction: column;
   min-height: 100vh;
   align-items: center;
   justify-content: center;
@@ -795,7 +821,7 @@ body {
 
 @media (max-width: 959px) {
   .finance-content {
-    padding: 20px 20px 34px !important;
+    padding: 20px 20px 92px !important;
   }
 
   .topbar-profile .topbar-profile__name {
@@ -803,7 +829,7 @@ body {
   }
 
   .auth-form-side {
-    align-items: flex-start;
+    justify-content: flex-start;
     padding: calc(56px + var(--safe-top)) 20px 40px !important;
   }
 
@@ -852,16 +878,26 @@ body {
 
   .auth-primary-btn {
     border-radius: 16px !important;
+    background: var(--finance-navy) !important;
+    color: #fff !important;
   }
 
   .auth-forgot-link {
     font-weight: 550 !important;
   }
+
+  .auth-register-link {
+    color: var(--finance-gold) !important;
+    font-weight: 750 !important;
+  }
 }
 
 @media (max-width: 600px) {
   .finance-content {
-    padding: 18px 14px calc(94px + var(--safe-bottom)) !important;
+    /* Clears both floating buttons (.finance-fab up to 144px, .ai-fab up to 212px from the
+       viewport bottom) plus a margin, so a short list's last row — and its edit/delete icons —
+       is never stuck rendering underneath them. */
+    padding: 18px 14px calc(228px + var(--safe-bottom)) !important;
   }
 
   .finance-topbar .v-toolbar__content {
@@ -966,6 +1002,270 @@ body {
 
   .auth-card__mobile-brand .finance-brand__tagline {
     color: var(--finance-muted);
+  }
+}
+
+/* Shared building blocks for the capture forms: Nueva transacción, Nueva cuenta,
+   Registrar crédito. Keeping them here (rather than duplicated per-view) is what makes
+   the three forms read as one family instead of three separately-styled dialogs. */
+
+.form-label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--finance-muted);
+  font-size: 0.76rem;
+  font-weight: 650;
+}
+
+.form-actions {
+  padding: 14px 20px 18px !important;
+}
+
+.form-actions__primary {
+  background: #1F8A5C !important;
+  color: #fff !important;
+  border-radius: 12px !important;
+  padding-inline: 22px !important;
+}
+
+/* Marker class for every capture-form dialog (Nueva transacción, Nueva cuenta,
+   Registrar crédito, Nuevo presupuesto, Nueva meta, Nueva categoría, Nueva recurrente):
+   unifies NativeSelectField (a plain <select>, styled separately from Vuetify's own
+   field variants) with the outlined v-text-field used alongside it in the same dialogs. */
+.capture-form .native-select-field {
+  margin-bottom: 18px;
+}
+
+.capture-form .native-select-field__control {
+  height: 44px;
+  padding: 14px 40px 0 14px;
+  border: 1px solid rgba(12, 38, 48, 0.14);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.capture-form .native-select-field:focus-within .native-select-field__control {
+  border-color: #1F8A5C;
+  border-width: 1px;
+}
+
+.tool-tiles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.tool-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 78px;
+  padding: 12px 8px;
+  border: 1px solid rgba(12, 38, 48, 0.14);
+  border-radius: 14px;
+  background: var(--finance-soft);
+  color: var(--finance-ink);
+  cursor: pointer;
+  transition: border-color 160ms ease, background 160ms ease;
+}
+
+.tool-tile:hover {
+  border-color: #1F8A5C;
+}
+
+.tool-tile:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.tool-tile--active {
+  border-color: var(--finance-expense);
+  background: #faeaea;
+}
+
+.tool-tile__label {
+  font-size: 0.72rem;
+  font-weight: 650;
+  text-align: center;
+}
+
+.tool-tiles__hint {
+  margin: 0 0 14px;
+  color: var(--finance-muted);
+  font-size: 0.74rem;
+  text-align: center;
+}
+
+.form-divider {
+  position: relative;
+  margin: 4px 0 18px;
+  text-align: center;
+  border-top: 1px solid rgba(12, 38, 48, 0.14);
+}
+
+.form-divider span {
+  position: relative;
+  top: -10px;
+  padding: 0 10px;
+  background: #fff;
+  color: var(--finance-muted);
+  font-size: 0.72rem;
+}
+
+.segmented-toggle {
+  display: flex;
+  overflow: hidden;
+  border: 1px solid rgba(12, 38, 48, 0.14);
+  border-radius: 12px;
+}
+
+.segmented-toggle__option {
+  flex: 1 1 0;
+  padding: 11px 10px;
+  border: 0;
+  background: #fff;
+  color: var(--finance-muted);
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 140ms ease, color 140ms ease;
+}
+
+.segmented-toggle__option--expense.segmented-toggle__option--active {
+  background: #faeaea;
+  color: #C1443A;
+}
+
+.segmented-toggle__option--income.segmented-toggle__option--active {
+  background: #e6f3ee;
+  color: #1F8A5C;
+}
+
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 7px 14px;
+  border: 1px solid rgba(12, 38, 48, 0.14);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--finance-ink);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 140ms ease, background 140ms ease, color 140ms ease;
+}
+
+.chip-option--active {
+  border-color: #1F8A5C;
+  background: #e6f3ee;
+  color: #1F8A5C;
+}
+
+/* Type/account-type card picker (used by "Nueva cuenta") */
+.type-card-picker {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.type-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 8px;
+  border: 1px solid rgba(12, 38, 48, 0.14);
+  border-radius: 14px;
+  background: #fff;
+  color: var(--finance-ink);
+  cursor: pointer;
+  transition: border-color 140ms ease, background 140ms ease, transform 140ms ease;
+}
+
+.type-card:hover {
+  transform: translateY(-1px);
+}
+
+.type-card--active {
+  border-color: #0C2630;
+  background: #0C2630;
+  color: #fff;
+}
+
+.type-card__label {
+  font-size: 0.76rem;
+  font-weight: 650;
+  text-align: center;
+}
+
+/* Step progress indicator (used by "Registrar crédito") */
+.wizard-progress {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.wizard-progress__step {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #ECEEF0;
+  color: var(--finance-muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.wizard-progress__step--active {
+  background: #0C2630;
+  color: #fff;
+}
+
+.wizard-progress__step--done {
+  background: #1F8A5C;
+  color: #fff;
+}
+
+.wizard-progress__line {
+  width: 40px;
+  height: 2px;
+  background: #ECEEF0;
+}
+
+.wizard-progress__line--done {
+  background: #1F8A5C;
+}
+
+@media (max-width: 600px) {
+  .tool-tiles {
+    gap: 8px;
+  }
+
+  .tool-tile {
+    min-height: 70px;
+    padding: 10px 4px;
+  }
+
+  .type-card-picker {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .wizard-progress__line {
+    width: 24px;
   }
 }
 

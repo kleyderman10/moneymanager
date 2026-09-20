@@ -1,14 +1,9 @@
 <template>
-  <v-btn
-    size="small"
-    variant="text"
-    color="primary"
-    :loading="loading"
-    prepend-icon="mdi-magic-staff"
-    @click="suggest"
-  >
-    Sugerir categoría
-  </v-btn>
+  <button type="button" class="tool-tile" :disabled="loading" @click="suggest">
+    <v-progress-circular v-if="loading" indeterminate size="20" width="2" color="primary" />
+    <v-icon v-else size="22" color="primary">mdi-magic-staff</v-icon>
+    <span class="tool-tile__label">Sugerir categoría</span>
+  </button>
 </template>
 
 <script setup>

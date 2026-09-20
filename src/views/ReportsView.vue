@@ -52,7 +52,7 @@
             <v-col cols="6" sm="3">
               <v-card variant="tonal" color="grey">
                 <v-card-text class="text-center pa-2 pa-md-4">
-                  <div class="text-caption">vs Mes anterior</div>
+                  <div class="text-caption">Gastos vs mes anterior</div>
                   <div :class="isMobile ? 'text-body-1' : 'text-h5'">
                     <span :class="monthlyReport.expenseChange > 0 ? 'text-red' : 'text-green'">
                       {{ monthlyReport.expenseChange !== null ? (monthlyReport.expenseChange > 0 ? '+' : '') + monthlyReport.expenseChange + '%' : 'N/A' }}
@@ -62,6 +62,14 @@
               </v-card>
             </v-col>
           </v-row>
+
+          <div v-if="spendCompositionVisible" class="spend-bar mt-3">
+            <div class="spend-bar__track">
+              <div class="spend-bar__fill" :style="{ width: spentPercentage + '%' }" />
+              <span class="spend-bar__label">Gastado {{ percentDisplay(spentPercentage) }}</span>
+            </div>
+            <p class="spend-bar__caption">{{ spendCaptionText }}</p>
+          </div>
 
           <h3 class="mt-4 mb-1">Presupuestos</h3>
           <v-row v-if="monthlyReport.budgetStatus?.length">
@@ -78,7 +86,12 @@
               </v-card>
             </v-col>
           </v-row>
-          <v-alert v-else type="info" density="compact" class="mt-2">No hay presupuestos para este mes</v-alert>
+          <v-card v-else class="pa-8 text-center text-grey">
+            <v-icon size="x-large" color="grey">mdi-chart-donut</v-icon>
+            <div class="mt-2">No hay presupuestos para {{ monthOptions.find(m => m.value === monthlyMonth)?.title || 'este mes' }}</div>
+            <div class="text-caption mt-1">Crea uno para comparar contra tus gastos reales.</div>
+            <v-btn v-if="!billingStore.isReadOnly" color="primary" variant="text" class="mt-2" @click="goToCreateBudget">+ Crear presupuesto</v-btn>
+          </v-card>
         </template>
       </v-card-text>
     </v-card>
@@ -94,17 +107,23 @@
           </v-col>
         </v-row>
 
-        <v-table v-if="yearlyReport" class="mt-2" density="compact">
-          <thead><tr><th>Mes</th><th>Ingresos</th><th>Gastos</th><th>Balance</th></tr></thead>
-          <tbody>
-            <tr v-for="m in yearlyReport.months" :key="m.month">
-              <td>{{ monthNames[m.month - 1] }}</td>
-              <td class="text-green">${{ fmt(m.totalIncome) }}</td>
-              <td class="text-red">${{ fmt(m.totalExpenses) }}</td>
-              <td :class="m.balance >= 0 ? 'text-green' : 'text-red'">${{ fmt(Math.abs(m.balance)) }}</td>
-            </tr>
-          </tbody>
-        </v-table>
+        <template v-if="yearlyReport">
+          <div class="reports-chart mt-3">
+            <Bar :data="yearlyChartData" :options="yearlyChartOptions" />
+          </div>
+
+          <v-table class="mt-3" density="compact">
+            <thead><tr><th>Mes</th><th>Ingresos</th><th>Gastos</th><th>Balance</th></tr></thead>
+            <tbody>
+              <tr v-for="m in yearlyReport.months" :key="m.month">
+                <td>{{ monthNames[m.month - 1] }}</td>
+                <td class="text-green">${{ fmt(m.totalIncome) }}</td>
+                <td class="text-red">${{ fmt(m.totalExpenses) }}</td>
+                <td :class="m.balance >= 0 ? 'text-green' : 'text-red'">${{ fmt(Math.abs(m.balance)) }}</td>
+              </tr>
+            </tbody>
+          </v-table>
+        </template>
       </v-card-text>
     </v-card>
 
@@ -138,10 +157,12 @@
           <h3 class="text-h6 mb-2">Patrones de gasto</h3>
           <v-row v-if="analysis.spendingPatterns?.length">
             <v-col v-for="p in analysis.spendingPatterns" :key="p.category" cols="12" sm="6" md="4">
-              <v-card variant="tonal" :color="p.trend === 'up' ? 'error' : p.trend === 'down' ? 'success' : 'info'">
+              <v-card :color="getCategoryColor(p.category).bg" :style="{ color: getCategoryColor(p.category).text }">
                 <v-card-text>
-                  <div class="text-body-2">{{ p.category }}</div>
-                  <div class="text-h6">{{ p.trend === 'up' ? '↑' : p.trend === 'down' ? '↓' : '→' }} {{ p.percentage }}%</div>
+                  <div class="text-body-2 font-weight-medium">{{ p.category }}</div>
+                  <div class="text-h6" :class="p.trend === 'up' ? 'text-error' : p.trend === 'down' ? 'text-success' : ''">
+                    {{ p.trend === 'up' ? '↑' : p.trend === 'down' ? '↓' : '→' }} {{ p.percentage }}%
+                  </div>
                   <div class="text-caption">{{ p.description }}</div>
                 </v-card-text>
               </v-card>
@@ -167,11 +188,15 @@
           <h3 v-if="analysis.goalPredictions?.length" class="text-h6 mb-2 mt-3">Predicción de metas</h3>
           <v-row>
             <v-col v-for="g in analysis.goalPredictions" :key="g.name" cols="12" sm="6">
-              <v-card variant="tonal" :color="g.onTrack ? 'success' : 'warning'">
+              <v-card variant="tonal" :color="goalStatusColor(g)">
                 <v-card-text>
                   <div class="text-body-2">{{ g.name }}</div>
                   <div class="text-caption">${{ fmt(g.current) }} / ${{ fmt(g.target) }}</div>
-                  <div class="text-caption">{{ g.onTrack ? 'En camino' : 'Retrasada' }} · Est: {{ g.estimatedCompletion }}</div>
+                  <v-progress-linear :model-value="goalProgress(g)" height="10" rounded class="my-2" :color="goalStatusColor(g)" />
+                  <div class="text-caption d-flex align-center ga-1">
+                    <v-icon v-if="isGoalComplete(g)" size="16">mdi-check-circle</v-icon>
+                    {{ goalStatusLabel(g) }} · Est: {{ g.estimatedCompletion }}
+                  </div>
                 </v-card-text>
               </v-card>
             </v-col>
@@ -195,13 +220,20 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useDisplay } from 'vuetify'
+import { useRouter } from 'vue-router'
+import { Bar } from 'vue-chartjs'
+import { Chart as ChartJS, BarElement, CategoryScale, LinearScale, Tooltip, Legend } from 'chart.js'
 import { reportsAPI, aiAPI } from '@/api'
 import { useSubscriptionStore } from '@/stores/subscriptions'
+import { getCategoryColor } from '@/constants/categoryColors'
 import AIHealthScore from '@/components/AIHealthScore.vue'
+
+ChartJS.register(BarElement, CategoryScale, LinearScale, Tooltip, Legend)
 
 const { mobile } = useDisplay()
 const isMobile = computed(() => mobile.value)
 const billingStore = useSubscriptionStore()
+const router = useRouter()
 const tab = ref('monthly')
 const now = new Date()
 
@@ -215,7 +247,46 @@ const analysisLoading = ref(false)
 
 const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
 const monthOptions = monthNames.map((m, i) => ({ title: m, value: i + 1 }))
-const fmt = (n) => Number(n || 0).toLocaleString('es-CO')
+const fmt = (n) => Number(n || 0).toLocaleString('es-CO', { maximumFractionDigits: 0 })
+const percentDisplay = (value) => `${Number(value || 0).toLocaleString('es-CO', { maximumFractionDigits: 1 })}%`
+
+const goToCreateBudget = () => router.push({ name: 'Budgets' })
+
+const spendCompositionVisible = computed(() => Number(monthlyReport.value?.summary?.totalIncome) > 0)
+const spentPercentage = computed(() => {
+  const income = Number(monthlyReport.value?.summary?.totalIncome) || 0
+  const expenses = Number(monthlyReport.value?.summary?.totalExpenses) || 0
+  if (!income) return 0
+  return Math.min(100, Math.round((expenses / income) * 1000) / 10)
+})
+const spendCaptionText = computed(() => {
+  const balance = Number(monthlyReport.value?.summary?.balance) || 0
+  if (balance < 0) return `Gastaste $${fmt(Math.abs(balance))} más de lo que ingresaste este mes.`
+  const remainingPercentage = Math.max(0, Math.round((100 - spentPercentage.value) * 10) / 10)
+  return `Solo te quedó el ${percentDisplay(remainingPercentage)} de lo que ingresaste ($${fmt(balance)}).`
+})
+
+const yearlyChartData = computed(() => ({
+  labels: (yearlyReport.value?.months || []).map((m) => monthNames[m.month - 1]),
+  datasets: [
+    { label: 'Ingresos', data: (yearlyReport.value?.months || []).map((m) => m.totalIncome), backgroundColor: '#1F8A5C', borderRadius: 4 },
+    { label: 'Gastos', data: (yearlyReport.value?.months || []).map((m) => m.totalExpenses), backgroundColor: '#C1443A', borderRadius: 4 },
+  ],
+}))
+const yearlyChartOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: { legend: { position: 'top', align: 'end' } },
+  scales: {
+    x: { grid: { display: false } },
+    y: { beginAtZero: true, ticks: { callback: (v) => `$${Number(v).toLocaleString('es-CO', { maximumFractionDigits: 0 })}` } },
+  },
+}
+
+const isGoalComplete = (g) => Number(g.current) >= Number(g.target)
+const goalProgress = (g) => (Number(g.target) > 0 ? Math.min(100, Math.round((Number(g.current) / Number(g.target)) * 100)) : 0)
+const goalStatusLabel = (g) => (isGoalComplete(g) ? 'Completada' : g.onTrack ? 'En camino' : 'Retrasada')
+const goalStatusColor = (g) => (isGoalComplete(g) ? 'success' : g.onTrack ? 'success' : 'warning')
 
 const loadMonthly = async () => { try { const res = await reportsAPI.monthly(monthlyYear.value, monthlyMonth.value); monthlyReport.value = res.data } catch { /* ignore */ } }
 const loadYearly = async () => { try { const res = await reportsAPI.yearly(yearlyYear.value); yearlyReport.value = res.data } catch { /* ignore */ } }
@@ -231,3 +302,50 @@ const loadAnalysis = async () => {
 
 onMounted(() => { loadMonthly(); loadYearly() })
 </script>
+
+<style scoped>
+.spend-bar__track {
+  position: relative;
+  height: 28px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--finance-soft, #eef4f3);
+}
+
+.spend-bar__fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: var(--finance-expense, #d94b5b);
+  transition: width 0.35s ease;
+}
+
+.spend-bar__label {
+  position: absolute;
+  top: 50%;
+  right: 14px;
+  transform: translateY(-50%);
+  color: #fff;
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+}
+
+.spend-bar__caption {
+  margin: 8px 0 0;
+  color: var(--finance-muted, #6b7f83);
+  font-size: 0.82rem;
+}
+
+.reports-chart {
+  position: relative;
+  height: 280px;
+}
+
+@media (max-width: 600px) {
+  .reports-chart {
+    height: 220px;
+  }
+}
+</style>

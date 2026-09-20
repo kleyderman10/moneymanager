@@ -46,20 +46,22 @@
     </div>
 
     <v-dialog v-model="dialog" :fullscreen="isMobile" max-width="400">
-      <v-card :title="editing ? 'Editar' : 'Nuevo presupuesto'">
+      <v-card :title="editing ? 'Editar presupuesto' : 'Nuevo presupuesto'" class="budget-form">
         <v-card-text>
-          <NativeSelectField v-model="form.month" :items="monthOptions" label="Mes" required />
-          <v-text-field v-model.number="form.year" label="Año" type="number" density="compact" required />
-          <v-text-field v-model.number="form.amount" label="Monto límite" type="number" density="compact" required />
-          <NativeSelectField v-model="form.category" :items="categories" item-title="name" item-value="_id" label="Categoría (opcional)" placeholder="General" />
+          <MoneyField v-model="form.amount" label="Monto límite" size="hero" required />
+          <v-row dense>
+            <v-col cols="7"><NativeSelectField v-model="form.month" :items="monthOptions" label="Mes" required /></v-col>
+            <v-col cols="5"><v-text-field v-model.number="form.year" label="Año" type="number" variant="outlined" density="compact" required /></v-col>
+          </v-row>
+          <NativeSelectField v-model="form.category" :items="categories" item-title="name" item-value="_id" label="Categoría (opcional)" placeholder="General" class="mb-2" />
           <div class="d-flex align-center mt-1">
             <AIRecommendBudget :category-id="form.category" @predicted="onBudgetPredicted" />
           </div>
         </v-card-text>
-        <v-card-actions>
-          <v-spacer />
+        <v-card-actions class="form-actions">
           <v-btn variant="text" @click="dialog = false">Cancelar</v-btn>
-          <v-btn color="primary" @click="save">Guardar</v-btn>
+          <v-spacer />
+          <v-btn class="form-actions__primary" @click="save">Guardar</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -96,6 +98,7 @@ import { useSubscriptionStore } from '@/stores/subscriptions'
 import { categoriesAPI } from '@/api'
 import AIRecommendBudget from '@/components/AIRecommendBudget.vue'
 import NativeSelectField from '@/components/NativeSelectField.vue'
+import MoneyField from '@/components/MoneyField.vue'
 
 const { mobile } = useDisplay()
 const isMobile = computed(() => mobile.value)

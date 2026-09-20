@@ -230,18 +230,20 @@
     </v-window>
 
     <v-dialog v-model="editDialog" max-width="480">
-      <v-card title="Ajustar suscripción">
+      <v-card title="Ajustar suscripción" class="capture-form">
         <v-card-text>
-          <NativeSelectField v-model="editForm.status" :items="subscriptionStatuses.map((s) => ({ title: statusLabel(s), value: s }))" label="Estado" required />
-          <v-text-field v-model="editForm.statusReason" label="Motivo (opcional)" density="compact" />
-          <v-text-field v-model="editForm.trialEndsAt" label="Vence prueba" type="date" density="compact" />
-          <v-text-field v-model="editForm.currentPeriodEnd" label="Fin de periodo actual" type="date" density="compact" />
-          <v-switch v-model="editForm.cancelAtPeriodEnd" label="Cancelar al finalizar el periodo" density="compact" hide-details />
+          <NativeSelectField v-model="editForm.status" :items="subscriptionStatuses.map((s) => ({ title: statusLabel(s), value: s }))" label="Estado" required class="mb-2" />
+          <v-text-field v-model="editForm.statusReason" label="Motivo (opcional)" variant="outlined" density="compact" class="mb-3" />
+          <v-row dense>
+            <v-col cols="6"><v-text-field v-model="editForm.trialEndsAt" label="Vence prueba" type="date" variant="outlined" density="compact" /></v-col>
+            <v-col cols="6"><v-text-field v-model="editForm.currentPeriodEnd" label="Fin de periodo actual" type="date" variant="outlined" density="compact" /></v-col>
+          </v-row>
+          <v-switch v-model="editForm.cancelAtPeriodEnd" label="Cancelar al finalizar el periodo" density="compact" hide-details class="mt-2" />
         </v-card-text>
-        <v-card-actions>
-          <v-spacer />
+        <v-card-actions class="form-actions">
           <v-btn variant="text" @click="editDialog = false">Cancelar</v-btn>
-          <v-btn color="primary" :loading="saving" @click="saveEdit">Guardar</v-btn>
+          <v-spacer />
+          <v-btn class="form-actions__primary" :loading="saving" @click="saveEdit">Guardar</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>

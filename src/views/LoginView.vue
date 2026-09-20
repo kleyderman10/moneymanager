@@ -4,9 +4,7 @@
       <v-col cols="12" md="7" class="auth-story d-none d-md-flex">
         <div class="auth-story__content">
           <div class="finance-brand pa-0">
-            <div class="finance-brand__mark" aria-hidden="true">
-              <v-icon size="25">mdi-chart-timeline-variant-shimmer</v-icon>
-            </div>
+            <img src="/icon.svg" alt="" aria-hidden="true" class="finance-brand__logo" />
             <div>
               <div class="finance-brand__name">Knexura Finanzas</div>
               <div class="finance-brand__tagline">Tu dinero, bajo control</div>
@@ -31,8 +29,8 @@
 
         <v-card class="auth-card">
           <template v-if="step === 'credentials'">
-            <h2>Bienvenido de nuevo</h2>
-            <p class="auth-card__intro">Ingresa para continuar cuidando tus finanzas.</p>
+            <h2 v-if="!mobile">Bienvenido de nuevo</h2>
+            <p v-if="!mobile" class="auth-card__intro">Ingresa para continuar cuidando tus finanzas.</p>
           </template>
           <template v-else>
             <v-btn variant="text" size="small" prepend-icon="mdi-arrow-left" class="mb-3 px-0" @click="backToCredentials">
@@ -56,7 +54,7 @@
             <v-text-field
               v-model="email"
               placeholder="nombre@correo.com"
-              prepend-inner-icon="mdi-email-outline"
+              :prepend-inner-icon="mobile ? undefined : 'mdi-email-outline'"
               type="email"
               autocomplete="email"
               variant="outlined"
@@ -65,22 +63,23 @@
               class="mb-2"
             />
 
-            <div class="d-flex align-center justify-space-between mb-2">
-              <label class="text-caption font-weight-bold">Contraseña</label>
-              <v-btn variant="text" color="primary" size="x-small" class="auth-forgot-link" to="/forgot-password">¿La olvidaste?</v-btn>
-            </div>
+            <label class="text-caption font-weight-bold d-block mb-2">Contraseña</label>
             <v-text-field
               v-model="password"
               placeholder="Ingresa tu contraseña"
-              prepend-inner-icon="mdi-lock-outline"
+              :prepend-inner-icon="mobile ? undefined : 'mdi-lock-outline'"
               :append-inner-icon="showPassword ? 'mdi-eye-off-outline' : 'mdi-eye-outline'"
               :type="showPassword ? 'text' : 'password'"
               autocomplete="current-password"
               variant="outlined"
               required
               :rules="[rules.required]"
+              class="mb-2"
               @click:append-inner="showPassword = !showPassword"
             />
+            <div class="text-right mb-2">
+              <v-btn variant="text" color="primary" size="x-small" class="auth-forgot-link px-0" to="/forgot-password">¿Olvidaste tu contraseña?</v-btn>
+            </div>
 
             <v-btn type="submit" color="primary" block size="large" class="auth-primary-btn mt-2" :loading="authStore.loading && !bioLoading">
               Iniciar sesión
@@ -130,7 +129,7 @@
 
             <p class="text-center text-body-2 text-medium-emphasis mt-7 mb-0">
               ¿No tienes cuenta?
-              <v-btn variant="text" color="primary" size="small" to="/register">Regístrate</v-btn>
+              <v-btn variant="text" color="primary" size="small" class="auth-register-link" to="/register">Regístrate</v-btn>
             </p>
           </template>
         </v-card>
@@ -140,12 +139,15 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useDisplay } from 'vuetify'
 import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
 const authStore = useAuthStore()
+const { mdAndUp } = useDisplay()
+const mobile = computed(() => !mdAndUp.value)
 
 const email = ref('')
 const password = ref('')

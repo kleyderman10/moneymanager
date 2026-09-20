@@ -17,8 +17,21 @@
       <v-btn v-if="!billingStore.isReadOnly" color="primary" variant="text" class="mt-2" @click="openCreate">Crear cuenta manual</v-btn>
     </v-card>
 
+    <v-card v-if="store.wallets.length > 0" class="net-worth-card mb-4">
+      <v-card-text class="pa-6">
+        <div class="net-worth-card__label">Patrimonio total</div>
+        <div class="net-worth-card__amount">${{ fmt(netWorth) }}</div>
+        <div class="net-worth-card__bar">
+          <div class="net-worth-card__bar-positive" :style="{ width: `${netWorthPositiveShare}%` }" />
+          <div class="net-worth-card__bar-negative" :style="{ width: `${100 - netWorthPositiveShare}%` }" />
+        </div>
+        <v-chip v-if="overdrawnWallets.length" size="small" class="mt-3 net-worth-card__alert" prepend-icon="mdi-alert-circle-outline">
+          {{ overdrawnWallets.map((w) => w.name).join(', ') }} en descubierto
+        </v-chip>
+      </v-card-text>
+    </v-card>
 
-    <v-row v-else>
+    <v-row>
       <v-col v-for="wallet in store.wallets" :key="wallet._id" cols="12" sm="6" md="4">
         <v-card>
           <v-card-title :class="isMobile ? 'text-body-1' : undefined" class="d-flex align-center">
@@ -64,8 +77,11 @@
               </v-alert>
             </template>
             <template v-else>
-              <div :class="isMobile ? 'text-h5' : 'text-h4'">{{ walletMoney(wallet.balance, wallet.currency) }}</div>
-              <v-chip size="small" class="mt-1">{{ walletLabels[wallet.accountKind] || walletLabels[wallet.type] }}</v-chip>
+              <div :class="[isMobile ? 'text-h5' : 'text-h4', wallet.balance < 0 ? 'text-error' : null]">{{ walletMoney(wallet.balance, wallet.currency) }}</div>
+              <div class="d-flex flex-wrap ga-1 mt-1">
+                <v-chip size="small">{{ walletLabels[wallet.accountKind] || walletLabels[wallet.type] }}</v-chip>
+                <v-chip v-if="wallet.balance < 0" size="small" color="error" variant="tonal" prepend-icon="mdi-alert-circle-outline">en descubierto</v-chip>
+              </div>
             </template>
           </v-card-text>
           <v-card-actions>
@@ -78,16 +94,31 @@
       </v-col>
     </v-row>
 
-    <v-dialog v-model="dialog" :fullscreen="isMobile" max-width="400">
-      <v-card :title="editing ? 'Editar' : 'Nueva cuenta'">
+    <v-dialog v-model="dialog" :fullscreen="isMobile" max-width="440">
+      <v-card :title="editing ? 'Editar cuenta' : 'Nueva cuenta'" class="capture-form">
         <v-card-text>
-          <v-text-field v-model="form.name" label="Nombre" density="compact" required />
-          <NativeSelectField v-model="form.type" :items="typeOptions" label="Tipo" required />
-          <NativeSelectField v-model="form.accountKind" :items="accountKindOptions" label="Producto" required />
+          <v-text-field v-model="form.name" label="Nombre" variant="outlined" density="compact" required class="mb-3" />
+
+          <label class="form-label">Tipo de cuenta</label>
+          <div class="type-card-picker mb-2">
+            <button
+              v-for="opt in typeCardOptions"
+              :key="opt.value"
+              type="button"
+              class="type-card"
+              :class="{ 'type-card--active': form.type === opt.value }"
+              @click="form.type = opt.value"
+            >
+              <v-icon size="24">{{ opt.icon }}</v-icon>
+              <span class="type-card__label">{{ opt.label }}</span>
+            </button>
+          </div>
+          <NativeSelectField v-if="accountKindOptions.length > 1" v-model="form.accountKind" :items="accountKindOptions" label="Producto" required class="mb-2" />
+
           <NativeSelectField v-model="form.institutionCode" :items="institutionOptions" item-title="name" item-value="code" label="Entidad financiera" placeholder="Selecciona una entidad" @update:model-value="onInstitutionChange" />
-          <v-text-field v-if="form.institutionCode === 'other'" v-model="form.institutionName" label="Nombre de la entidad" density="compact" hint="Puedes registrar una entidad no incluida en el catálogo." persistent-hint />
-          
-          <BankConnector 
+          <v-text-field v-if="form.institutionCode === 'other'" v-model="form.institutionName" label="Nombre de la entidad" variant="outlined" density="compact" hint="Puedes registrar una entidad no incluida en el catálogo." persistent-hint class="mb-3" />
+
+          <BankConnector
             v-if="['bank', 'credit'].includes(form.type) && !form.belvoLinkId"
             class="mt-2"
             @success="onBelvoLinked"
@@ -96,23 +127,53 @@
             Cuenta vinculada con Belvo exitosamente.
           </v-alert>
 
-          <v-text-field v-model.number="form.balance" :label="form.type === 'credit' ? 'Saldo utilizado actual' : 'Balance'" type="number" density="compact" required :hint="form.type === 'credit' ? 'Se mostrará como deuda de la tarjeta y reducirá el cupo disponible.' : undefined" :persistent-hint="form.type === 'credit'" />
-          <v-text-field v-model="form.currency" label="Moneda" density="compact" />
+          <div class="d-flex align-end ga-4 mb-1">
+            <MoneyField
+              class="flex-grow-1"
+              :model-value="form.balance"
+              @update:model-value="(v) => (form.balance = v)"
+              :label="form.type === 'credit' ? 'Saldo utilizado actual' : 'Balance'"
+              size="hero"
+              required
+            />
+            <div class="currency-toggle">
+              <button type="button" class="currency-toggle__option" :class="{ 'currency-toggle__option--active': form.currency === 'COP' }" @click="form.currency = 'COP'">COP</button>
+              <button type="button" class="currency-toggle__option" :class="{ 'currency-toggle__option--active': form.currency === 'USD' }" @click="form.currency = 'USD'">USD</button>
+            </div>
+          </div>
+          <v-text-field
+            v-if="!['COP', 'USD'].includes(form.currency)"
+            v-model="form.currency"
+            label="Otra moneda"
+            variant="outlined"
+            density="compact"
+            maxlength="3"
+            hint="Esta cuenta usa una moneda distinta a COP/USD; puedes ajustarla aquí."
+            persistent-hint
+            style="max-width: 220px"
+            class="mb-3"
+          />
+          <div v-if="form.type === 'credit'" class="form-hint mb-3">Se mostrará como deuda de la tarjeta y reducirá el cupo disponible.</div>
+
           <template v-if="form.type === 'credit'">
             <v-divider class="my-4" />
             <div class="text-subtitle-2 mb-2">Configuración de la tarjeta</div>
-            <v-text-field v-model.number="form.creditLimit" label="Cupo aprobado" type="number" min="0" density="compact" prefix="$" hint="El cupo total que aprobó el banco." persistent-hint />
-            <v-text-field v-model.number="form.annualInterestRate" label="Interés efectivo anual" type="number" min="0" max="200" step="0.01" density="compact" suffix="% E.A." />
-            <v-text-field v-model.number="form.managementFee" label="Cuota de manejo" type="number" min="0" density="compact" prefix="$" />
-            <NativeSelectField v-model="form.managementFeePeriod" :items="feePeriods" label="Periodicidad de cuota de manejo" />
-            <v-text-field v-model.number="form.minimumPaymentRate" label="Porcentaje de pago mínimo" type="number" min="1" max="100" density="compact" suffix="%" hint="Se usa para estimar la cuota mínima." persistent-hint />
+            <MoneyField v-model="form.creditLimit" label="Cupo aprobado" hint="El cupo total que aprobó el banco." />
+            <v-text-field v-model.number="form.annualInterestRate" label="Interés efectivo anual" type="number" min="0" max="200" step="0.01" variant="outlined" density="compact" suffix="% E.A." class="mb-3" />
+            <MoneyField v-model="form.managementFee" label="Cuota de manejo" />
+            <NativeSelectField v-model="form.managementFeePeriod" :items="feePeriods" label="Periodicidad de cuota de manejo" class="mb-2" />
+            <v-text-field v-model.number="form.minimumPaymentRate" label="Porcentaje de pago mínimo" type="number" min="1" max="100" variant="outlined" density="compact" suffix="%" hint="Se usa para estimar la cuota mínima." persistent-hint class="mb-3" />
             <v-row dense>
-              <v-col cols="6"><v-text-field v-model.number="form.cutOffDay" label="Día de corte" type="number" min="1" max="28" density="compact" suffix="de cada mes" /></v-col>
-              <v-col cols="6"><v-text-field v-model.number="form.paymentDueDay" label="Día límite de pago" type="number" min="1" max="28" density="compact" suffix="de cada mes" /></v-col>
+              <v-col cols="6"><v-text-field v-model.number="form.cutOffDay" label="Día de corte" type="number" min="1" max="28" variant="outlined" density="compact" suffix="de cada mes" /></v-col>
+              <v-col cols="6"><v-text-field v-model.number="form.paymentDueDay" label="Día límite de pago" type="number" min="1" max="28" variant="outlined" density="compact" suffix="de cada mes" /></v-col>
             </v-row>
           </template>
         </v-card-text>
-        <v-card-actions><v-spacer /><v-btn variant="text" @click="dialog = false">Cancelar</v-btn><v-btn color="primary" @click="save">Guardar</v-btn></v-card-actions>
+        <v-card-actions class="form-actions">
+          <v-btn variant="text" @click="dialog = false">Cancelar</v-btn>
+          <v-spacer />
+          <v-btn class="form-actions__primary" @click="save">Guardar</v-btn>
+        </v-card-actions>
       </v-card>
     </v-dialog>
 
@@ -141,15 +202,29 @@ import { useDisplay } from 'vuetify'
 import { useWalletsStore } from '@/stores/wallets'
 import { useSnackbar } from '@/stores/snackbar'
 import { useSubscriptionStore } from '@/stores/subscriptions'
+import { useAuthStore } from '@/stores/auth'
 import { financialInstitutionsAPI } from '@/api'
 import NativeSelectField from '@/components/NativeSelectField.vue'
 import BankConnector from '@/components/BankConnector.vue'
+import MoneyField from '@/components/MoneyField.vue'
 
 const { mobile } = useDisplay()
 const isMobile = computed(() => mobile.value)
 const store = useWalletsStore()
 const snackbar = useSnackbar()
 const billingStore = useSubscriptionStore()
+const authStore = useAuthStore()
+
+// Non-credit wallets only: a card's balance is debt, not part of net worth.
+const cashWallets = computed(() => store.wallets.filter((w) => w.type !== 'credit'))
+const netWorth = computed(() => cashWallets.value.reduce((sum, w) => sum + (Number(w.balance) || 0), 0))
+const overdrawnWallets = computed(() => cashWallets.value.filter((w) => Number(w.balance) < 0))
+const netWorthPositiveShare = computed(() => {
+  const positive = cashWallets.value.filter((w) => Number(w.balance) >= 0).reduce((s, w) => s + Number(w.balance), 0)
+  const negative = overdrawnWallets.value.reduce((s, w) => s + Math.abs(Number(w.balance)), 0)
+  const total = positive + negative
+  return total ? Math.round((positive / total) * 100) : 100
+})
 const dialog = ref(false)
 const transferDialog = ref(false)
 const deleteDialog = ref(false)
@@ -162,7 +237,11 @@ const transferAttempted = ref(false)
 const walletIcons = { cash: 'mdi-cash', bank: 'mdi-bank', credit: 'mdi-credit-card' }
 const walletColors = { cash: 'green', bank: 'blue', credit: 'purple' }
 const walletLabels = { cash: 'Efectivo', bank: 'Banco', credit: 'Crédito', checking: 'Cuenta corriente', savings: 'Cuenta de ahorros', credit_card: 'Tarjeta de crédito', digital_wallet: 'Billetera virtual', low_amount: 'Depósito de bajo monto' }
-const typeOptions = [{ title: 'Efectivo', value: 'cash' }, { title: 'Banco', value: 'bank' }, { title: 'Crédito', value: 'credit' }]
+const typeCardOptions = [
+  { value: 'cash', label: 'Efectivo', icon: 'mdi-cash' },
+  { value: 'bank', label: 'Bancaria', icon: 'mdi-bank' },
+  { value: 'credit', label: 'Crédito', icon: 'mdi-credit-card' },
+]
 const feePeriods = [{ title: 'Mensual', value: 'monthly' }, { title: 'Anual', value: 'annual' }]
 const kindOptions = {
   cash: [{ title: 'Efectivo', value: 'cash' }],
@@ -178,7 +257,7 @@ const emptyForm = () => ({
   institutionName: '',
   institutionLogo: '',
   balance: 0,
-  currency: 'USD',
+  currency: authStore.user?.currency || 'COP',
   creditLimit: 0,
   annualInterestRate: 0,
   managementFee: 0,
@@ -293,6 +372,78 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+.net-worth-card {
+  border: 0 !important;
+  background: #0C2630 !important;
+  color: #fff;
+}
+
+.net-worth-card__label {
+  color: #a8c8c4;
+  font-size: 0.78rem;
+  font-weight: 650;
+}
+
+.net-worth-card__amount {
+  margin: 7px 0 16px;
+  font-size: clamp(1.8rem, 3.6vw, 2.6rem);
+  font-weight: 780;
+  letter-spacing: -0.03em;
+}
+
+.net-worth-card__bar {
+  display: flex;
+  overflow: hidden;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.net-worth-card__bar-positive {
+  background: #4FB587;
+}
+
+.net-worth-card__bar-negative {
+  background: #D9634F;
+}
+
+.net-worth-card__alert {
+  color: #ffd9d0 !important;
+  background: rgba(217, 99, 79, 0.22) !important;
+}
+
+.form-hint {
+  color: var(--finance-muted);
+  font-size: 0.74rem;
+}
+
+.currency-toggle {
+  display: flex;
+  flex: 0 0 auto;
+  padding: 3px;
+  border-radius: 10px;
+  background: #F4F7F7;
+  margin-bottom: 10px;
+}
+
+.currency-toggle__option {
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--finance-muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.currency-toggle__option--active {
+  background: #fff;
+  color: var(--finance-ink);
+  box-shadow: 0 1px 3px rgba(12, 38, 48, 0.16);
+}
+
+
 .credit-metrics {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

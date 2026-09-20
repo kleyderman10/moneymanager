@@ -13,10 +13,45 @@
       </div>
     </div>
 
+    <v-row class="mb-2" dense>
+      <v-col cols="12" sm="4">
+        <v-card class="tx-summary-card">
+          <v-card-text>
+            <div class="tx-summary-card__label">Total mostrado</div>
+            <div class="tx-summary-card__value">{{ totalShown < 0 ? '−' : '' }}${{ fmt(Math.abs(totalShown)) }}</div>
+          </v-card-text>
+        </v-card>
+      </v-col>
+      <v-col cols="6" sm="4">
+        <v-card class="tx-summary-card tx-summary-card--light">
+          <v-card-text>
+            <div class="tx-summary-card__label">Movimientos mostrados</div>
+            <div class="tx-summary-card__value tx-summary-card__value--dark">{{ pagedRegisters.length }} <span class="tx-summary-card__of">de {{ store.registers.length }}</span></div>
+          </v-card-text>
+        </v-card>
+      </v-col>
+      <v-col cols="6" sm="4">
+        <v-card class="tx-summary-card tx-summary-card--light">
+          <v-card-text>
+            <div class="tx-summary-card__label">Promedio por movimiento</div>
+            <div class="tx-summary-card__value tx-summary-card__value--dark">${{ fmt(averagePerMovement) }}</div>
+          </v-card-text>
+        </v-card>
+      </v-col>
+    </v-row>
+
     <v-expansion-panels v-model="filtersOpen" class="mb-2">
       <v-expansion-panel>
         <v-expansion-panel-title>
-          <v-icon class="mr-2">mdi-filter</v-icon> Filtros
+          <div class="d-flex align-center w-100">
+            <v-icon class="mr-2">mdi-filter</v-icon> Filtros
+            <v-spacer />
+            <div v-if="selected.length" class="tx-selection-bar" @click.stop>
+              <span class="text-caption text-medium-emphasis mr-2">{{ selected.length }} seleccionado{{ selected.length === 1 ? '' : 's' }}</span>
+              <v-btn size="small" variant="text" color="primary" @click="exportSelected">Exportar selección</v-btn>
+              <v-btn size="small" variant="text" color="error" @click="confirmBulkDelete">Eliminar</v-btn>
+            </div>
+          </div>
         </v-expansion-panel-title>
         <v-expansion-panel-text>
           <v-row dense>
@@ -51,7 +86,18 @@
 
     <!-- Desktop table -->
     <v-card v-if="!isMobile">
-      <v-data-table :items="store.registers" :headers="headers" :loading="store.loading" items-per-page="15" hover>
+      <v-data-table
+        v-model="selected"
+        :items="pagedRegisters"
+        :headers="headers"
+        :loading="store.loading"
+        item-value="_id"
+        show-select
+        hide-default-footer
+        hover
+        :items-per-page="-1"
+        :row-props="({ index }) => ({ class: index % 2 === 1 ? 'tx-row--alt' : '' })"
+      >
         <template #item.date="{ value }">{{ formatDate(value) }}</template>
         <template #item.type="{ value }">
           <v-chip :color="value === 'income' ? 'income' : 'expense'" size="small" label>{{ value === 'income' ? 'Ingreso' : 'Gasto' }}</v-chip>
@@ -60,16 +106,22 @@
           <span :class="item.type === 'income' ? 'text-green' : 'text-red'">{{ item.type === 'income' ? '+' : '-' }}${{ fmt(value) }}</span>
         </template>
         <template #item.category="{ value }">
-          <v-chip size="small" :color="value?.color">{{ value?.icon }} {{ value?.name }}</v-chip>
+          <v-chip size="small" :color="getCategoryColor(value).bg" :style="{ color: getCategoryColor(value).text }">{{ value?.icon }} {{ value?.name }}</v-chip>
         </template>
-        <template #item.tags="{ value }">
-          <v-chip v-for="tag in value" :key="tag" size="x-small" class="mr-1">{{ tag }}</v-chip>
-        </template>
+        <template #item.wallet="{ value }">{{ value?.name || '—' }}</template>
         <template #item.actions="{ item }">
           <v-icon v-if="!billingStore.isReadOnly" size="small" class="mr-2" @click="openEdit(item)">mdi-pencil</v-icon>
           <v-icon v-if="!billingStore.isReadOnly" size="small" color="error" @click="confirmDelete(item)">mdi-delete</v-icon>
         </template>
       </v-data-table>
+      <div class="tx-pagination">
+        <span class="text-caption text-medium-emphasis">Mostrando {{ pagedRegisters.length }} de {{ store.registers.length }}</span>
+        <div class="d-flex align-center ga-1">
+          <v-btn icon="mdi-chevron-left" size="small" variant="text" :disabled="page <= 1" @click="page--" />
+          <span class="text-caption">{{ page }} / {{ pageCount }}</span>
+          <v-btn icon="mdi-chevron-right" size="small" variant="text" :disabled="page >= pageCount" @click="page++" />
+        </div>
+      </div>
     </v-card>
 
     <!-- Mobile card list -->
@@ -78,32 +130,50 @@
         <v-icon size="x-large" color="grey">mdi-cash-remove</v-icon>
         <div class="mt-2">No hay transacciones</div>
       </v-card>
-      <v-list v-else bg-color="transparent" lines="two">
-        <v-list-item
-          v-for="reg in store.registers"
-          :key="reg._id"
-          @click="!billingStore.isReadOnly && openEdit(reg)"
-        >
-          <template #prepend>
-            <v-avatar :color="reg.type === 'income' ? 'income' : 'expense'" size="40">
-              <span class="text-white text-caption">{{ reg.category?.icon || '?' }}</span>
-            </v-avatar>
-          </template>
-          <v-list-item-title>{{ reg.description || reg.category?.name || 'Sin descripción' }}</v-list-item-title>
-          <v-list-item-subtitle>
-            {{ formatDate(reg.date) }} · {{ reg.category?.name }}
-            <span v-if="reg.wallet" class="text-caption"> · {{ reg.wallet.name }}</span>
-          </v-list-item-subtitle>
-          <template #append>
-            <div class="text-right">
-              <div :class="reg.type === 'income' ? 'text-green' : 'text-red'" class="text-body-1 font-weight-bold">
-                {{ reg.type === 'income' ? '+' : '-' }}${{ fmt(reg.amount) }}
+      <template v-else>
+        <v-list bg-color="transparent" lines="two">
+          <v-list-item
+            v-for="reg in pagedRegisters"
+            :key="reg._id"
+            @click="!billingStore.isReadOnly && openEdit(reg)"
+          >
+            <template #prepend>
+              <v-checkbox
+                :model-value="selected.includes(reg._id)"
+                density="compact"
+                hide-details
+                class="flex-0-0 mr-1"
+                @click.stop
+                @update:model-value="(v) => toggleSelected(reg._id, v)"
+              />
+              <v-avatar :color="reg.type === 'income' ? 'income' : 'expense'" size="40">
+                <span class="text-white text-caption">{{ reg.category?.icon || '?' }}</span>
+              </v-avatar>
+            </template>
+            <v-list-item-title>{{ reg.description || reg.category?.name || 'Sin descripción' }}</v-list-item-title>
+            <v-list-item-subtitle>
+              {{ formatDate(reg.date) }} · {{ reg.category?.name }}
+              <span v-if="reg.wallet" class="text-caption"> · {{ reg.wallet.name }}</span>
+            </v-list-item-subtitle>
+            <template #append>
+              <div class="text-right">
+                <div :class="reg.type === 'income' ? 'text-green' : 'text-red'" class="text-body-1 font-weight-bold">
+                  {{ reg.type === 'income' ? '+' : '-' }}${{ fmt(reg.amount) }}
+                </div>
+                <div class="text-caption text-grey">{{ reg.type === 'income' ? 'Ingreso' : 'Gasto' }}</div>
               </div>
-              <div class="text-caption text-grey">{{ reg.type === 'income' ? 'Ingreso' : 'Gasto' }}</div>
-            </div>
-          </template>
-        </v-list-item>
-      </v-list>
+            </template>
+          </v-list-item>
+        </v-list>
+        <div class="tx-pagination">
+          <span class="text-caption text-medium-emphasis">Mostrando {{ pagedRegisters.length }} de {{ store.registers.length }}</span>
+          <div class="d-flex align-center ga-1">
+            <v-btn icon="mdi-chevron-left" size="small" variant="text" :disabled="page <= 1" @click="page--" />
+            <span class="text-caption">{{ page }} / {{ pageCount }}</span>
+            <v-btn icon="mdi-chevron-right" size="small" variant="text" :disabled="page >= pageCount" @click="page++" />
+          </div>
+        </div>
+      </template>
     </div>
 
     <v-dialog v-model="modeDialog" max-width="460" @after-leave="onModeDialogAfterLeave">
@@ -184,18 +254,70 @@
     </v-dialog>
 
     <v-dialog v-model="dialog" :fullscreen="isMobile" max-width="500">
-      <v-card :title="editing ? 'Editar' : 'Nueva transacción'">
+      <v-card :title="editing ? 'Editar transacción' : 'Nueva transacción'" class="capture-form">
         <v-card-text>
+          <div class="tool-tiles">
+            <AISuggestCategory
+              :description="form.description"
+              :amount="form.amount"
+              :type="form.type"
+              @suggested="onCategorySuggested"
+            />
+            <VoiceInputButton @parsed="onVoiceParsed" />
+            <ReceiptScanner @scanned="onReceiptScanned" />
+          </div>
+          <p class="tool-tiles__hint">Llena el formulario en segundos con estas herramientas.</p>
+
+          <div class="form-divider"><span>o ingresa los datos manualmente</span></div>
+
+          <label class="form-label">Tipo</label>
+          <div class="segmented-toggle mb-3">
+            <button
+              type="button"
+              class="segmented-toggle__option segmented-toggle__option--expense"
+              :class="{ 'segmented-toggle__option--active': form.type === 'expense' }"
+              @click="onTypeChange('expense')"
+            >
+              Gasto
+            </button>
+            <button
+              type="button"
+              class="segmented-toggle__option segmented-toggle__option--income"
+              :class="{ 'segmented-toggle__option--active': form.type === 'income' }"
+              @click="onTypeChange('income')"
+            >
+              Ingreso
+            </button>
+          </div>
+
+          <MoneyField v-model="form.amount" label="Monto" size="hero" required />
+
+          <label class="form-label mt-2">Fecha</label>
+          <div class="chip-row mb-2">
+            <button type="button" class="chip-option" :class="{ 'chip-option--active': !showDatePicker && isToday(form.date) }" @click="setDateToday">Hoy</button>
+            <button type="button" class="chip-option" :class="{ 'chip-option--active': !showDatePicker && isYesterday(form.date) }" @click="setDateYesterday">Ayer</button>
+            <button type="button" class="chip-option" :class="{ 'chip-option--active': showDatePicker }" @click="showDatePicker = true">
+              <v-icon size="14">mdi-calendar</v-icon> Elegir
+            </button>
+          </div>
+          <v-text-field v-if="showDatePicker" v-model="form.date" type="date" variant="outlined" density="compact" required class="mb-2" />
+
+          <label class="form-label">Categoría</label>
+          <div class="chip-row mb-2">
+            <button
+              v-for="cat in frequentCategories"
+              :key="cat._id"
+              type="button"
+              class="chip-option"
+              :class="{ 'chip-option--active': form.category === cat._id }"
+              @click="form.category = cat._id"
+            >
+              <v-icon v-if="form.category === cat._id" size="14">mdi-check</v-icon> {{ cat.name }}
+            </button>
+            <button type="button" class="chip-option" @click="showAllCategories = !showAllCategories">+ Ver todas</button>
+          </div>
           <NativeSelectField
-            :model-value="form.type"
-            @update:model-value="onTypeChange"
-            :items="typeOptions"
-            label="Tipo"
-            required
-          />
-          <v-text-field v-model.number="form.amount" label="Monto" type="number" density="compact" required />
-          <v-text-field v-model="form.date" label="Fecha" type="date" density="compact" required />
-          <NativeSelectField
+            v-if="showAllCategories"
             v-model="form.category"
             :items="filteredCategories"
             :loading="referenceDataLoading"
@@ -208,18 +330,11 @@
             loading-text="Cargando categorías..."
             :error="!!categoriesError || (attemptedSave && !form.category)"
             required
+            class="mb-2"
           />
-          <v-text-field v-model="form.description" label="Descripción" density="compact" />
-          <div class="d-flex flex-wrap align-center gap-1 mb-2">
-            <AISuggestCategory
-              :description="form.description"
-              :amount="form.amount"
-              :type="form.type"
-              @suggested="onCategorySuggested"
-            />
-            <VoiceInputButton @parsed="onVoiceParsed" />
-            <ReceiptScanner @scanned="onReceiptScanned" />
-          </div>
+
+          <v-text-field v-model="form.description" label="Descripción" variant="outlined" density="compact" class="mb-2" />
+
           <NativeSelectField
             v-model="form.wallet"
             :items="walletOptions"
@@ -229,12 +344,16 @@
             placeholder="Sin cuenta"
             :loading="referenceDataLoading"
           />
-          <v-combobox v-model="form.tags" :items="store.tags.map(t => t.name)" label="Etiquetas" density="compact" multiple chips />
+
+          <v-btn v-if="!showTagsField" variant="text" size="small" color="primary" class="px-0 mt-1" prepend-icon="mdi-plus" @click="showTagsField = true">
+            Etiqueta
+          </v-btn>
+          <v-combobox v-else v-model="form.tags" :items="store.tags.map(t => t.name)" label="Etiquetas" variant="outlined" density="compact" multiple chips />
         </v-card-text>
-        <v-card-actions>
-          <v-spacer />
+        <v-card-actions class="form-actions">
           <v-btn variant="text" @click="dialog = false">Cancelar</v-btn>
-          <v-btn color="primary" @click="save" :loading="saving">Guardar</v-btn>
+          <v-spacer />
+          <v-btn class="form-actions__primary" @click="save" :loading="saving">Guardar</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -350,6 +469,18 @@
       </v-card>
     </v-dialog>
 
+    <v-dialog v-model="bulkDeleteDialog" max-width="400">
+      <v-card>
+        <v-card-title>Confirmar</v-card-title>
+        <v-card-text>¿Eliminar {{ selected.length }} movimiento{{ selected.length === 1 ? '' : 's' }} seleccionado{{ selected.length === 1 ? '' : 's' }}?</v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" @click="bulkDeleteDialog = false">Cancelar</v-btn>
+          <v-btn color="error" @click="doBulkDelete" :loading="deleting">Eliminar</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
     <v-btn
       v-if="isMobile && !billingStore.isReadOnly"
       icon="mdi-plus"
@@ -374,7 +505,9 @@ import AISuggestCategory from '@/components/AISuggestCategory.vue'
 import VoiceInputButton from '@/components/VoiceInputButton.vue'
 import ReceiptScanner from '@/components/ReceiptScanner.vue'
 import NativeSelectField from '@/components/NativeSelectField.vue'
+import MoneyField from '@/components/MoneyField.vue'
 import { readAndCompressImage } from '@/utils/imageUtils'
+import { getCategoryColor } from '@/constants/categoryColors'
 
 const route = useRoute()
 const { mobile } = useDisplay()
@@ -402,10 +535,14 @@ const filters = ref({ type: null, category: null, startDate: monthStart, endDate
 const filtersOpen = ref([])
 const dialog = ref(false)
 const deleteDialog = ref(false)
+const bulkDeleteDialog = ref(false)
 const editing = ref(null)
 const saving = ref(false)
 const deleting = ref(false)
 const toDelete = ref(null)
+const selected = ref([])
+const page = ref(1)
+const PAGE_SIZE = 15
 const attemptedSave = ref(false)
 const categories = ref([])
 const wallets = ref([])
@@ -441,7 +578,36 @@ const statementContext = ref({
 const form = ref({ type: 'expense', amount: 0, date: new Date().toISOString().slice(0, 10), category: null, description: '', wallet: null, tags: [] })
 const typeOptions = [{ title: 'Ingreso', value: 'income' }, { title: 'Gasto', value: 'expense' }]
 
+const showAllCategories = ref(false)
+const showDatePicker = ref(false)
+const showTagsField = ref(false)
+
+const LAST_WALLET_KEY = 'mm_last_wallet'
+const getLastWallet = () => localStorage.getItem(LAST_WALLET_KEY)
+const setLastWallet = (id) => { if (id) localStorage.setItem(LAST_WALLET_KEY, id) }
+
+const todayISO = () => new Date().toISOString().slice(0, 10)
+const yesterdayISO = () => { const d = new Date(); d.setDate(d.getDate() - 1); return d.toISOString().slice(0, 10) }
+const isToday = (date) => date === todayISO()
+const isYesterday = (date) => date === yesterdayISO()
+const setDateToday = () => { form.value.date = todayISO(); showDatePicker.value = false }
+const setDateYesterday = () => { form.value.date = yesterdayISO(); showDatePicker.value = false }
+
 const filteredCategories = computed(() => categories.value.filter(c => !form.value.type || c.type === form.value.type))
+// "Más usadas" is derived from the transactions already loaded for the active filter
+// (no per-category usage counter exists in the backend) — a reasonable approximation
+// without adding a new endpoint just for this chip row.
+const frequentCategories = computed(() => {
+  const counts = {}
+  for (const r of store.registers) {
+    if (r.type !== form.value.type || !r.category?._id) continue
+    counts[r.category._id] = (counts[r.category._id] || 0) + 1
+  }
+  const ranked = Object.keys(counts).sort((a, b) => counts[b] - counts[a])
+  const byId = (id) => filteredCategories.value.find((c) => c._id === id)
+  const fromHistory = ranked.map(byId).filter(Boolean)
+  return fromHistory.length ? fromHistory.slice(0, 4) : filteredCategories.value.slice(0, 4)
+})
 const categoryOptions = computed(() => categories.value.filter(c => !filters.value.type || c.type === filters.value.type))
 const categoryNoDataText = computed(() => {
   if (categoriesError.value) return categoriesError.value
@@ -471,8 +637,8 @@ const headers = [
   { title: 'Tipo', key: 'type' },
   { title: 'Categoría', key: 'category' },
   { title: 'Descripción', key: 'description' },
+  { title: 'Cuenta', key: 'wallet' },
   { title: 'Monto', key: 'amount' },
-  { title: 'Etiquetas', key: 'tags' },
   { title: '', key: 'actions', sortable: false, width: 80 },
 ]
 
@@ -487,12 +653,67 @@ const tryProcessRecurring = () => {
 const fmt = (n) => Number(n || 0).toLocaleString('es-CO')
 const formatDate = (d) => d ? new Date(d).toLocaleDateString('es-CO') : ''
 
+const pageCount = computed(() => Math.max(1, Math.ceil(store.registers.length / PAGE_SIZE)))
+const pagedRegisters = computed(() => store.registers.slice((page.value - 1) * PAGE_SIZE, page.value * PAGE_SIZE))
+
+const totalShown = computed(() => store.registers.reduce(
+  (sum, r) => sum + (r.type === 'income' ? Number(r.amount) || 0 : -(Number(r.amount) || 0)), 0
+))
+const averagePerMovement = computed(() => {
+  if (store.registers.length === 0) return 0
+  const totalAbs = store.registers.reduce((sum, r) => sum + Math.abs(Number(r.amount) || 0), 0)
+  return totalAbs / store.registers.length
+})
+
+const toggleSelected = (id, value) => {
+  selected.value = value ? [...selected.value, id] : selected.value.filter((s) => s !== id)
+}
+
+const exportSelected = () => {
+  const rows = store.registers.filter((r) => selected.value.includes(r._id))
+  const escape = (value) => `"${String(value ?? '').replace(/"/g, '""')}"`
+  const header = ['Fecha', 'Tipo', 'Categoría', 'Descripción', 'Cuenta', 'Monto']
+  const lines = rows.map((r) => [
+    formatDate(r.date),
+    r.type === 'income' ? 'Ingreso' : 'Gasto',
+    r.category?.name || '',
+    r.description || '',
+    r.wallet?.name || '',
+    r.amount,
+  ].map(escape).join(','))
+  const csv = [header.join(','), ...lines].join('\n')
+  const url = window.URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }))
+  const link = document.createElement('a')
+  link.href = url
+  link.setAttribute('download', 'movimientos-seleccionados.csv')
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  window.URL.revokeObjectURL(url)
+}
+
+const confirmBulkDelete = () => { bulkDeleteDialog.value = true }
+const doBulkDelete = async () => {
+  deleting.value = true
+  try {
+    for (const id of selected.value) await store.remove(id)
+    snackbar.success(`${selected.value.length} movimientos eliminados`)
+    selected.value = []
+  } catch {
+    snackbar.error('Error al eliminar la selección')
+  }
+  deleting.value = false
+  bulkDeleteDialog.value = false
+}
+
 const load = () => {
   const params = {}
   if (filters.value.type) params.type = filters.value.type
   if (filters.value.category) params.category = filters.value.category
   if (filters.value.startDate) params.startDate = filters.value.startDate
   if (filters.value.endDate) params.endDate = filters.value.endDate
+  page.value = 1
+  selected.value = []
   store.fetchAll(params)
   store.fetchTags()
   tryProcessRecurring()
@@ -507,7 +728,18 @@ const openModeDialog = () => {
 const openManualCreate = () => {
   editing.value = null
   attemptedSave.value = false
-  form.value = { type: 'expense', amount: 0, date: new Date().toISOString().slice(0, 10), category: null, description: '', wallet: null, tags: [] }
+  showAllCategories.value = false
+  showDatePicker.value = false
+  showTagsField.value = false
+  form.value = {
+    type: 'expense',
+    amount: 0,
+    date: todayISO(),
+    category: null,
+    description: '',
+    wallet: getLastWallet() || walletOptions.value[0]?._id || null,
+    tags: [],
+  }
   if (modeDialog.value) {
     pendingManualCreate.value = true
     modeDialog.value = false
@@ -682,12 +914,19 @@ const openEdit = (item) => {
     category: item.category?._id || null, description: item.description,
     wallet: item.wallet?._id || null, tags: item.tags || [],
   }
+  showAllCategories.value = !frequentCategories.value.some((c) => c._id === form.value.category)
+  showDatePicker.value = !isToday(form.value.date) && !isYesterday(form.value.date)
+  showTagsField.value = form.value.tags.length > 0
   dialog.value = true
 }
 
 const save = async () => {
   attemptedSave.value = true
-  if (!form.value.category) { snackbar.error('Selecciona una categoría'); return }
+  if (!form.value.category) {
+    showAllCategories.value = true
+    snackbar.error('Selecciona una categoría')
+    return
+  }
 
   saving.value = true
   try {
@@ -696,6 +935,7 @@ const save = async () => {
       snackbar.success('Transacción actualizada')
     } else {
       await store.create(form.value)
+      setLastWallet(form.value.wallet)
       snackbar.success('Transacción creada')
     }
     dialog.value = false
@@ -840,3 +1080,60 @@ onMounted(async () => {
   }
 })
 </script>
+
+<style scoped>
+.tx-summary-card {
+  border: 0 !important;
+  background: #0C2630 !important;
+}
+
+.tx-summary-card--light {
+  background: #fff !important;
+}
+
+.tx-summary-card__label {
+  color: #a8c8c4;
+  font-size: 0.72rem;
+  font-weight: 650;
+}
+
+.tx-summary-card--light .tx-summary-card__label {
+  color: var(--finance-muted);
+}
+
+.tx-summary-card__value {
+  margin-top: 6px;
+  color: #fff;
+  font-size: 1.35rem;
+  font-weight: 760;
+  letter-spacing: -0.02em;
+}
+
+.tx-summary-card__value--dark {
+  color: var(--finance-ink);
+}
+
+.tx-summary-card__of {
+  color: var(--finance-muted);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.tx-selection-bar {
+  display: flex;
+  align-items: center;
+}
+
+
+.tx-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-top: 1px solid var(--finance-line);
+}
+
+:deep(.tx-row--alt) {
+  background: #F7FAFA;
+}
+</style>

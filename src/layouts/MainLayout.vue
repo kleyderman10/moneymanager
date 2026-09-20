@@ -12,9 +12,7 @@
   >
     <template #prepend>
       <div class="finance-brand">
-        <div class="finance-brand__mark" aria-hidden="true">
-          <v-icon size="25">mdi-chart-timeline-variant-shimmer</v-icon>
-        </div>
+        <img src="/icon.svg" alt="" aria-hidden="true" class="finance-brand__logo" />
         <div>
           <div class="finance-brand__name">Knexura Finanzas</div>
           <div class="finance-brand__tagline">Tu dinero, bajo control</div>

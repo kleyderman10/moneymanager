@@ -84,15 +84,28 @@
                   >
                     Solo hay movimientos en {{ capacityResult.capacity.monthsWithData }} de los {{ capacityResult.capacity.monthsAnalyzed }} meses analizados; interpreta el resultado con cautela.
                   </v-alert>
-                  <div v-if="capacityResult.capacity.currentDebtToIncome !== null" class="capacity-grid">
-                    <div><span>Ingreso promedio</span><strong>{{ money(capacityResult.capacity.averageIncome) }}</strong></div>
-                    <div><span>Gasto promedio</span><strong>{{ money(capacityResult.capacity.averageExpenses) }}</strong></div>
-                    <div><span>Excedente mensual</span><strong :class="capacityResult.capacity.averageSurplus >= 0 ? 'text-success' : 'text-error'">{{ money(capacityResult.capacity.averageSurplus) }}</strong></div>
-                    <div><span>Cuotas actuales / ingreso</span><strong>{{ percent(capacityResult.capacity.currentDebtToIncome) }}</strong></div>
-                    <div><span>Límite por ingreso (30%)</span><strong>{{ money(capacityResult.capacity.maximumByDebtRatio) }}</strong></div>
-                    <div><span>Límite por excedente (70%)</span><strong>{{ money(capacityResult.capacity.maximumByCashFlow) }}</strong></div>
-                    <div><span>Nueva cuota máxima sugerida</span><strong>{{ money(capacityResult.capacity.recommendedMaxPayment) }}</strong></div>
-                    <div><span>Indicador del flujo</span><strong>{{ capacityResult.capacity.readinessScore }}/100</strong></div>
+                  <div v-if="capacityResult.capacity.currentDebtToIncome !== null">
+                    <div class="readiness-gauge">
+                      <CircularGauge
+                        :value="capacityResult.capacity.readinessScore"
+                        size="108"
+                        width="10"
+                        value-class="readiness-gauge__value"
+                      />
+                      <div class="readiness-gauge__text">
+                        <div class="readiness-gauge__label">Indicador del flujo</div>
+                        <div class="readiness-gauge__title">{{ capacityResult.capacity.title }}</div>
+                      </div>
+                    </div>
+                    <div class="capacity-grid">
+                      <div><span>Ingreso promedio</span><strong>{{ money(capacityResult.capacity.averageIncome) }}</strong></div>
+                      <div><span>Gasto promedio</span><strong>{{ money(capacityResult.capacity.averageExpenses) }}</strong></div>
+                      <div><span>Excedente mensual</span><strong :class="capacityResult.capacity.averageSurplus >= 0 ? 'text-success' : 'text-error'">{{ money(capacityResult.capacity.averageSurplus) }}</strong></div>
+                      <div><span>Cuotas actuales / ingreso</span><strong>{{ percent(capacityResult.capacity.currentDebtToIncome) }}</strong></div>
+                      <div><span>Límite por ingreso (30%)</span><strong>{{ money(capacityResult.capacity.maximumByDebtRatio) }}</strong></div>
+                      <div><span>Límite por excedente (70%)</span><strong>{{ money(capacityResult.capacity.maximumByCashFlow) }}</strong></div>
+                      <div><span>Nueva cuota máxima sugerida</span><strong>{{ money(capacityResult.capacity.recommendedMaxPayment) }}</strong></div>
+                    </div>
                   </div>
                   <div v-else class="text-body-2 text-medium-emphasis">
                     Registra movimientos de ingresos y gastos para obtener una evaluación personalizada.
@@ -247,28 +260,50 @@
 
           <v-col cols="12" lg="8">
             <template v-if="loanResult">
+              <div class="loan-result-summary">
+                {{ money(loanResult.amount) }} · {{ loanForm.interestRate }}{{ loanForm.ratePeriod === 'annual_effective' ? '% E.A.' : '% mensual' }} · {{ loanResult.termMonths }} meses
+              </div>
+
+              <div class="loan-hero">
+                <div class="loan-hero__label">Cuota mensual estimada</div>
+                <div class="loan-hero__value">{{ money(loanResult.monthlyPayment) }}</div>
+              </div>
+
+              <div class="loan-composition">
+                <div class="loan-composition__legend">
+                  <span><i class="loan-composition__dot loan-composition__dot--principal" /> Capital</span>
+                  <span><i class="loan-composition__dot loan-composition__dot--interest" /> Interés</span>
+                </div>
+                <div class="loan-composition__bar">
+                  <div class="loan-composition__segment loan-composition__segment--principal" :style="{ width: principalPercent + '%' }" />
+                  <div class="loan-composition__segment loan-composition__segment--interest" :style="{ width: interestPercent + '%' }" />
+                </div>
+                <div class="loan-composition__scale">
+                  <span>{{ percentDisplay(principalPercent) }}</span>
+                  <span>{{ percentDisplay(interestPercent) }}</span>
+                </div>
+              </div>
+
               <v-row dense class="mb-3">
-                <v-col cols="6" md="3">
-                  <v-card class="simulation-metric" color="primary" variant="tonal">
-                    <v-card-text><span>Cuota calculada</span><strong>{{ money(loanResult.monthlyPayment) }}</strong></v-card-text>
-                  </v-card>
+                <v-col cols="6" md="4">
+                  <div class="loan-stat"><span>Costo total del crédito</span><strong>{{ money(loanResult.totalPaid) }}</strong></div>
                 </v-col>
-                <v-col cols="6" md="3">
-                  <v-card class="simulation-metric" color="warning" variant="tonal">
-                    <v-card-text><span>Intereses</span><strong>{{ money(loanResult.totalInterest) }}</strong></v-card-text>
-                  </v-card>
+                <v-col cols="6" md="4">
+                  <div class="loan-stat"><span>Total de intereses</span><strong class="text-error">{{ money(loanResult.totalInterest) }}</strong></div>
                 </v-col>
-                <v-col cols="6" md="3">
-                  <v-card class="simulation-metric" color="secondary" variant="tonal">
-                    <v-card-text><span>Total pagado</span><strong>{{ money(loanResult.totalPaid) }}</strong></v-card-text>
-                  </v-card>
-                </v-col>
-                <v-col cols="6" md="3">
-                  <v-card class="simulation-metric" color="info" variant="tonal">
-                    <v-card-text><span>Tasa mensual</span><strong>{{ percent(loanResult.monthlyRate) }}</strong></v-card-text>
-                  </v-card>
+                <v-col cols="12" md="4">
+                  <div class="loan-stat"><span>Tasa mensual</span><strong>{{ percent(loanResult.monthlyRate) }}</strong></div>
                 </v-col>
               </v-row>
+
+              <v-alert v-if="paymentExceedsCapacity" type="warning" color="error" variant="tonal" class="mb-4" icon="mdi-alert-octagon-outline">
+                <div>
+                  Esta cuota (<strong>{{ money(evaluatedPayment) }}</strong>) supera tu límite sugerido de
+                  <strong>{{ money(suggestedMaxPayment) }}</strong> en {{ money(capacityExcessAmount) }} según tu flujo mensual en Capacidad crediticia.
+                  Con tu excedente actual, este crédito comprometería más de lo recomendado.
+                </div>
+                <v-btn variant="text" size="small" color="error" class="mt-2 px-0" @click="tab = 'capacity'">Ver capacidad crediticia →</v-btn>
+              </v-alert>
 
               <v-alert
                 :type="capacityAlert.type"
@@ -476,6 +511,7 @@ import { simulationsAPI } from '@/api'
 import { useAuthStore } from '@/stores/auth'
 import { useSnackbar } from '@/stores/snackbar'
 import InvestmentProjectionResults from '@/components/InvestmentProjectionResults.vue'
+import CircularGauge from '@/components/CircularGauge.vue'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Filler, Tooltip, Legend)
 
@@ -529,6 +565,30 @@ const formatMonthKey = (value) => {
   if (Number.isNaN(date.getTime())) return value
   return new Intl.DateTimeFormat('es-CO', { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(date)
 }
+
+const percentDisplay = (value) => `${Number(value || 0).toLocaleString('es-CO', { maximumFractionDigits: 1 })}%`
+
+const principalPercent = computed(() => {
+  if (!loanResult.value) return 0
+  const total = Number(loanResult.value.totalPaid) || (Number(loanResult.value.amount) + Number(loanResult.value.totalInterest))
+  if (!total) return 0
+  return Math.round((Number(loanResult.value.amount) / total) * 1000) / 10
+})
+const interestPercent = computed(() => (loanResult.value ? Math.round((100 - principalPercent.value) * 10) / 10 : 0))
+
+// The "cuota máxima sugerida" comes from the Capacidad crediticia tab's own already-fetched
+// result (loaded on mount / when the user evaluates it there), so comparing against it here
+// connects both tabs without recalculating anything.
+const suggestedMaxPayment = computed(() => capacityResult.value?.capacity?.recommendedMaxPayment ?? null)
+const evaluatedPayment = computed(() => loanResult.value?.capacity?.evaluatedMonthlyPayment ?? null)
+const paymentExceedsCapacity = computed(() => (
+  suggestedMaxPayment.value != null
+  && evaluatedPayment.value != null
+  && Number(evaluatedPayment.value) > Number(suggestedMaxPayment.value)
+))
+const capacityExcessAmount = computed(() => (
+  paymentExceedsCapacity.value ? Number(evaluatedPayment.value) - Number(suggestedMaxPayment.value) : 0
+))
 
 const alertFor = (status) => ({
   supported: { type: 'success', color: 'success', icon: 'mdi-shield-check' },
@@ -638,6 +698,141 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.readiness-gauge {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--finance-line);
+}
+
+.readiness-gauge__value {
+  color: var(--finance-ink);
+  font-size: 1.6rem;
+  font-weight: 780;
+}
+
+.readiness-gauge__label {
+  color: var(--finance-muted);
+  font-size: 0.72rem;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.readiness-gauge__title {
+  margin-top: 4px;
+  color: var(--finance-ink);
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.loan-result-summary {
+  margin-bottom: 10px;
+  color: var(--finance-muted);
+  font-size: 0.78rem;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.loan-hero {
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 18px;
+  padding: 22px 24px;
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 88% 20%, rgba(66, 207, 174, 0.16), transparent 12rem),
+    #0C2630;
+  box-shadow: 0 16px 34px rgba(10, 65, 65, 0.18);
+  color: #fff;
+}
+
+.loan-hero__label {
+  color: #b8d6d2;
+  font-size: 0.78rem;
+  font-weight: 650;
+}
+
+.loan-hero__value {
+  margin-top: 6px;
+  font-size: clamp(1.9rem, 4vw, 2.6rem);
+  font-weight: 780;
+  letter-spacing: -0.03em;
+}
+
+.loan-composition {
+  margin-bottom: 18px;
+}
+
+.loan-composition__legend {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 8px;
+  color: var(--finance-muted);
+  font-size: 0.78rem;
+  font-weight: 650;
+}
+
+.loan-composition__dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  margin-right: 6px;
+  border-radius: 50%;
+  vertical-align: middle;
+}
+
+.loan-composition__dot--principal { background: #0C2630; }
+.loan-composition__dot--interest { background: #E3A458; }
+
+.loan-composition__bar {
+  display: flex;
+  height: 16px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--finance-soft);
+}
+
+.loan-composition__segment {
+  height: 100%;
+  transition: width 0.35s ease;
+}
+
+.loan-composition__segment--principal { background: #0C2630; }
+.loan-composition__segment--interest { background: #E3A458; }
+
+.loan-composition__scale {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  color: var(--finance-muted);
+  font-size: 0.72rem;
+}
+
+.loan-stat {
+  height: 100%;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--finance-soft);
+}
+
+.loan-stat span {
+  display: block;
+  color: var(--finance-muted);
+  font-size: 0.72rem;
+}
+
+.loan-stat strong {
+  display: block;
+  margin-top: 5px;
+  color: var(--finance-ink);
+  font-size: clamp(1rem, 2vw, 1.2rem);
+}
+
 .simulation-metric {
   height: 100%;
 }
@@ -703,6 +898,11 @@ onMounted(() => {
 
   .simulation-chart {
     height: 250px;
+  }
+
+  .readiness-gauge {
+    flex-direction: column;
+    text-align: center;
   }
 }
 </style>

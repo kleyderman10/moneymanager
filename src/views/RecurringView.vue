@@ -52,18 +52,44 @@
     </div>
 
     <v-dialog v-model="dialog" :fullscreen="isMobile" max-width="500">
-      <v-card :title="editing ? 'Editar' : 'Nueva recurrente'">
+      <v-card :title="editing ? 'Editar recurrente' : 'Nueva recurrente'" class="capture-form">
         <v-card-text>
-          <NativeSelectField :model-value="form.type" @update:model-value="onTypeChange" :items="[{title:'Ingreso',value:'income'},{title:'Gasto',value:'expense'}]" label="Tipo" required />
-          <v-text-field v-model.number="form.amount" label="Monto" type="number" density="compact" required />
-          <NativeSelectField v-model="form.category" :items="filteredCategories" item-title="name" item-value="_id" label="Categoría" placeholder="Selecciona una categoría" :error="attemptedSave && !form.category" required />
-          <v-text-field v-model="form.description" label="Descripción" density="compact" />
-          <NativeSelectField v-model="form.frequency" :items="freqOptions" label="Frecuencia" required />
-          <v-text-field v-model="form.startDate" label="Fecha inicio" type="date" density="compact" required />
-          <v-text-field v-model="form.endDate" label="Fecha fin (opcional)" type="date" density="compact" />
+          <label class="form-label">Tipo</label>
+          <div class="segmented-toggle mb-3">
+            <button
+              type="button"
+              class="segmented-toggle__option segmented-toggle__option--expense"
+              :class="{ 'segmented-toggle__option--active': form.type === 'expense' }"
+              @click="onTypeChange('expense')"
+            >
+              Gasto
+            </button>
+            <button
+              type="button"
+              class="segmented-toggle__option segmented-toggle__option--income"
+              :class="{ 'segmented-toggle__option--active': form.type === 'income' }"
+              @click="onTypeChange('income')"
+            >
+              Ingreso
+            </button>
+          </div>
+
+          <MoneyField v-model="form.amount" label="Monto" size="hero" required />
+
+          <NativeSelectField v-model="form.category" :items="filteredCategories" item-title="name" item-value="_id" label="Categoría" placeholder="Selecciona una categoría" :error="attemptedSave && !form.category" required class="mb-2" />
+          <v-text-field v-model="form.description" label="Descripción" variant="outlined" density="compact" class="mb-3" />
+          <NativeSelectField v-model="form.frequency" :items="freqOptions" label="Frecuencia" required class="mb-2" />
+          <v-row dense>
+            <v-col cols="6"><v-text-field v-model="form.startDate" label="Fecha inicio" type="date" variant="outlined" density="compact" required /></v-col>
+            <v-col cols="6"><v-text-field v-model="form.endDate" label="Fecha fin (opcional)" type="date" variant="outlined" density="compact" /></v-col>
+          </v-row>
           <NativeSelectField v-model="form.wallet" :items="wallets" item-title="name" item-value="_id" label="Cuenta" placeholder="Sin cuenta" />
         </v-card-text>
-        <v-card-actions><v-spacer /><v-btn variant="text" @click="dialog = false">Cancelar</v-btn><v-btn color="primary" @click="save">Guardar</v-btn></v-card-actions>
+        <v-card-actions class="form-actions">
+          <v-btn variant="text" @click="dialog = false">Cancelar</v-btn>
+          <v-spacer />
+          <v-btn class="form-actions__primary" @click="save">Guardar</v-btn>
+        </v-card-actions>
       </v-card>
     </v-dialog>
 
@@ -84,6 +110,7 @@ import { useSnackbar } from '@/stores/snackbar'
 import { useSubscriptionStore } from '@/stores/subscriptions'
 import { categoriesAPI, walletsAPI } from '@/api'
 import NativeSelectField from '@/components/NativeSelectField.vue'
+import MoneyField from '@/components/MoneyField.vue'
 
 const { mobile } = useDisplay()
 const isMobile = computed(() => mobile.value)
@@ -114,7 +141,23 @@ const formatDate = (d) => d ? new Date(d).toLocaleDateString('es-CO') : ''
 const filteredCategories = computed(() => categories.value.filter(c => !form.value.type || c.type === form.value.type))
 const onTypeChange = (value) => { form.value.type = value; form.value.category = null }
 
-const openCreate = () => { editing.value = null; attemptedSave.value = false; form.value = { type: 'expense', amount: 0, category: null, description: '', frequency: 'monthly', startDate: new Date().toISOString().slice(0, 10), endDate: null, wallet: null }; dialog.value = true }
+const openCreate = () => {
+  editing.value = null
+  attemptedSave.value = false
+  form.value = {
+    type: 'expense',
+    amount: 0,
+    category: null,
+    description: '',
+    frequency: 'monthly',
+    startDate: new Date().toISOString().slice(0, 10),
+    endDate: null,
+    // Same "última cuenta usada" preference Movimientos remembers, so the default is
+    // consistent wherever a wallet needs to be picked.
+    wallet: localStorage.getItem('mm_last_wallet') || wallets.value[0]?._id || null,
+  }
+  dialog.value = true
+}
 const openEdit = (item) => { editing.value = item._id; attemptedSave.value = false; form.value = { type: item.type, amount: item.amount, category: item.category?._id || null, description: item.description, frequency: item.frequency, startDate: item.startDate ? new Date(item.startDate).toISOString().slice(0, 10) : '', endDate: item.endDate ? new Date(item.endDate).toISOString().slice(0, 10) : null, wallet: item.wallet?._id || null }; dialog.value = true }
 
 const save = async () => {

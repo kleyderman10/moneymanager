@@ -102,10 +102,12 @@ import { useAiChatStore } from '@/stores/aiChat'
 const { mobile } = useDisplay()
 const isMobile = computed(() => mobile.value)
 
+// Stacked above the per-view "+ Nuevo" FAB (.finance-fab, bottom: 88px, 56px tall, right: 16px)
+// with a clean 16px gap between them so the two floating buttons never touch or overlap.
 const fabStyle = computed(() => ({
   position: 'fixed',
-  bottom: isMobile.value ? 'calc(145px + var(--safe-bottom))' : 'calc(24px + var(--safe-bottom))',
-  right: '24px',
+  bottom: isMobile.value ? 'calc(160px + var(--safe-bottom))' : 'calc(24px + var(--safe-bottom))',
+  right: isMobile.value ? '16px' : '24px',
   zIndex: '100',
 }))
 

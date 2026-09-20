@@ -1,16 +1,10 @@
 <template>
   <div>
-    <v-btn
-      v-if="isSupported"
-      size="small"
-      variant="text"
-      color="primary"
-      :loading="loading"
-      prepend-icon="mdi-camera"
-      @click="capture"
-    >
-      Escanear recibo
-    </v-btn>
+    <button v-if="isSupported" type="button" class="tool-tile" :disabled="loading" @click="capture">
+      <v-progress-circular v-if="loading" indeterminate size="20" width="2" color="primary" />
+      <v-icon v-else size="22" color="primary">mdi-camera</v-icon>
+      <span class="tool-tile__label">Escanear recibo</span>
+    </button>
     <input
       ref="fileInput"
       type="file"

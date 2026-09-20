@@ -11,13 +11,13 @@
         <v-card title="Información personal">
           <v-card-text>
             <v-form @submit.prevent="saveProfile">
-              <v-text-field v-model="profileForm.name" label="Nombre" density="compact" required />
-              <v-text-field :model-value="authStore.user?.email" label="Email" density="compact" disabled />
+              <v-text-field v-model="profileForm.name" label="Nombre" variant="outlined" density="compact" required class="mb-3" />
+              <v-text-field :model-value="authStore.user?.email" label="Email" variant="outlined" density="compact" disabled class="mb-3" />
               <v-chip color="success" variant="tonal" size="small" prepend-icon="mdi-email-check-outline" class="mb-4">
                 Correo verificado
               </v-chip>
-              <v-text-field v-model="profileForm.currency" label="Moneda preferida" density="compact" />
-              <v-btn type="submit" color="primary" :loading="profileLoading" block>Guardar cambios</v-btn>
+              <v-text-field v-model="profileForm.currency" label="Moneda preferida" variant="outlined" density="compact" class="mb-3" />
+              <v-btn type="submit" class="form-actions__primary" :loading="profileLoading" block>Guardar cambios</v-btn>
             </v-form>
           </v-card-text>
         </v-card>
@@ -27,17 +27,19 @@
           <v-card-text>
             <v-alert v-if="passMsg" :type="passSuccess ? 'success' : 'error'" density="compact" class="mb-2">{{ passMsg }}</v-alert>
             <v-form @submit.prevent="savePassword">
-              <v-text-field v-model="passForm.currentPassword" label="Contraseña actual" type="password" density="compact" required />
+              <v-text-field v-model="passForm.currentPassword" label="Contraseña actual" type="password" variant="outlined" density="compact" required class="mb-3" />
               <v-text-field
                 v-model="passForm.newPassword"
                 label="Nueva contraseña"
                 type="password"
+                variant="outlined"
                 density="compact"
                 hint="Entre 10 y 72 caracteres"
                 :rules="[passwordRule]"
                 required
+                class="mb-3"
               />
-              <v-btn type="submit" color="primary" :loading="passLoading" block>Actualizar contraseña</v-btn>
+              <v-btn type="submit" class="form-actions__primary" :loading="passLoading" block>Actualizar contraseña</v-btn>
             </v-form>
           </v-card-text>
         </v-card>
