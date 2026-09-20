@@ -23,17 +23,13 @@
       </v-col>
 
       <v-col cols="12" md="5" class="auth-form-side">
-        <v-card class="auth-card">
-          <div class="auth-card__mobile-brand">
-            <div class="finance-brand__mark" aria-hidden="true">
-              <v-icon size="23">mdi-chart-timeline-variant-shimmer</v-icon>
-            </div>
-            <div>
-              <div class="finance-brand__name">Knexura Finanzas</div>
-              <div class="finance-brand__tagline">Tu dinero, bajo control</div>
-            </div>
-          </div>
+        <div class="auth-mobile-hero d-flex d-md-none">
+          <img src="/icon.svg" alt="Knexura Finanzas" class="auth-mobile-hero__mark" />
+          <h1 class="auth-mobile-hero__title">Knexura Finanzas</h1>
+          <p class="auth-mobile-hero__subtitle">Controla tus ingresos, gastos, presupuestos y metas en un solo lugar.</p>
+        </div>
 
+        <v-card class="auth-card">
           <template v-if="step === 'credentials'">
             <h2>Bienvenido de nuevo</h2>
             <p class="auth-card__intro">Ingresa para continuar cuidando tus finanzas.</p>
@@ -71,7 +67,7 @@
 
             <div class="d-flex align-center justify-space-between mb-2">
               <label class="text-caption font-weight-bold">Contraseña</label>
-              <v-btn variant="text" color="primary" size="x-small" to="/forgot-password">¿La olvidaste?</v-btn>
+              <v-btn variant="text" color="primary" size="x-small" class="auth-forgot-link" to="/forgot-password">¿La olvidaste?</v-btn>
             </div>
             <v-text-field
               v-model="password"
@@ -87,7 +83,7 @@
             />
 
             <v-btn type="submit" color="primary" block size="large" class="auth-primary-btn mt-2" :loading="authStore.loading && !bioLoading">
-              Entrar a mi cuenta
+              Iniciar sesión
             </v-btn>
           </v-form>
 
@@ -133,8 +129,8 @@
             </v-btn>
 
             <p class="text-center text-body-2 text-medium-emphasis mt-7 mb-0">
-              ¿Aún no tienes cuenta?
-              <v-btn variant="text" color="primary" size="small" to="/register">Créala gratis</v-btn>
+              ¿No tienes cuenta?
+              <v-btn variant="text" color="primary" size="small" to="/register">Regístrate</v-btn>
             </p>
           </template>
         </v-card>

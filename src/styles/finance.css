@@ -763,6 +763,10 @@ body {
   box-shadow: none !important;
 }
 
+.auth-forgot-link {
+  color: var(--finance-muted) !important;
+}
+
 .auth-card__mobile-brand {
   display: none;
 }
@@ -796,6 +800,62 @@ body {
 
   .topbar-profile .topbar-profile__name {
     display: none;
+  }
+
+  .auth-form-side {
+    align-items: flex-start;
+    padding: calc(56px + var(--safe-top)) 20px 40px !important;
+  }
+
+  .auth-mobile-hero {
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    margin-bottom: 32px;
+    text-align: center;
+  }
+
+  .auth-mobile-hero__mark {
+    width: 68px;
+    height: 68px;
+    margin-bottom: 22px;
+    box-shadow: 0 12px 26px rgba(12, 38, 48, 0.22);
+  }
+
+  .auth-mobile-hero__title {
+    margin-bottom: 10px;
+    color: var(--finance-ink);
+    font-size: 1.7rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+  }
+
+  .auth-mobile-hero__subtitle {
+    max-width: 300px;
+    color: var(--finance-muted);
+    font-size: 0.92rem;
+    line-height: 1.55;
+  }
+
+  .auth-card {
+    width: 100%;
+    padding: 26px 20px 30px;
+    border: 1px solid rgba(204, 220, 218, 0.6) !important;
+    border-radius: 26px !important;
+    background: #fff !important;
+    box-shadow: 0 18px 40px rgba(15, 46, 55, 0.08) !important;
+  }
+
+  .auth-card .v-field {
+    border-radius: 14px !important;
+  }
+
+  .auth-primary-btn {
+    border-radius: 16px !important;
+  }
+
+  .auth-forgot-link {
+    font-weight: 550 !important;
   }
 }
 
@@ -890,7 +950,7 @@ body {
   }
 
   .auth-form-side {
-    padding: 28px 20px !important;
+    padding: calc(40px + var(--safe-top)) 18px 32px !important;
   }
 
   .auth-card__mobile-brand {
