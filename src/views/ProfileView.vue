@@ -162,7 +162,16 @@
               No has aceptado el uso de funciones de IA. Escanear recibos, subir extractos y el chat están deshabilitados.
             </v-alert>
             <v-btn color="primary" variant="outlined" block prepend-icon="mdi-robot-outline" @click="showConsentDialog = true">
-              Revisar permisos de IA
+              {{ authStore.hasAcceptedAIConsent ? 'Revisar o revocar permisos de IA' : 'Revisar permisos de IA' }}
+            </v-btn>
+            <v-btn
+              variant="text"
+              block
+              class="mt-2"
+              prepend-icon="mdi-shield-lock-outline"
+              @click="openPrivacyPolicy"
+            >
+              Ver política de privacidad
             </v-btn>
           </v-card-text>
         </v-card>
@@ -212,6 +221,25 @@
           </v-card-text>
         </v-card>
       </v-col>
+      <v-col cols="12">
+        <v-card title="Eliminar cuenta" class="delete-account-card">
+          <v-card-text>
+            <p class="text-body-2 mb-3">
+              Al eliminar tu cuenta borramos permanentemente tu perfil y todos tus datos:
+              movimientos, cuentas, categorías, presupuestos, metas, créditos, extractos e
+              historial de IA. Esta acción no se puede deshacer.
+            </p>
+            <v-alert type="warning" density="compact" variant="tonal" class="mb-3">
+              Si tienes una suscripción activa, cancélala por separado antes de eliminar la
+              cuenta: las suscripciones de App Store se cancelan desde Ajustes &gt; tu nombre &gt;
+              Suscripciones en tu iPhone o iPad.
+            </v-alert>
+            <v-btn color="error" variant="outlined" prepend-icon="mdi-delete-forever-outline" @click="showDeleteDialog = true">
+              Eliminar mi cuenta
+            </v-btn>
+          </v-card-text>
+        </v-card>
+      </v-col>
     </v-row>
 
     <AIConsentDialog
@@ -219,6 +247,39 @@
       @decline="showConsentDialog = false"
       @accept="showConsentDialog = false"
     />
+
+    <v-dialog v-model="showDeleteDialog" max-width="480" persistent>
+      <v-card title="Eliminar cuenta definitivamente">
+        <v-card-text>
+          <p class="text-body-2 mb-4">
+            Se eliminarán tu cuenta y todos tus datos financieros de forma permanente.
+            Escribe tu contraseña para confirmar.
+          </p>
+          <v-text-field
+            v-model="deletePassword"
+            label="Contraseña"
+            type="password"
+            variant="outlined"
+            density="comfortable"
+            autocomplete="current-password"
+            :disabled="deleteLoading"
+          />
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" :disabled="deleteLoading" @click="closeDeleteDialog">Cancelar</v-btn>
+          <v-btn
+            color="error"
+            variant="flat"
+            :loading="deleteLoading"
+            :disabled="!deletePassword"
+            @click="handleDeleteAccount"
+          >
+            Eliminar cuenta
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </div>
 </template>
 
@@ -230,6 +291,7 @@ import { useDisplay } from 'vuetify'
 import { useAuthStore } from '@/stores/auth'
 import { useSubscriptionStore } from '@/stores/subscriptions'
 import { useSnackbar } from '@/stores/snackbar'
+import { openLegalLink, PRIVACY_POLICY_URL } from '@/utils/legalLinks'
 
 const { mobile } = useDisplay()
 const router = useRouter()
@@ -247,6 +309,9 @@ const passSuccess = ref(false)
 const biometricSupported = ref(false)
 const bioLoading = ref(false)
 const showConsentDialog = ref(false)
+const showDeleteDialog = ref(false)
+const deletePassword = ref('')
+const deleteLoading = ref(false)
 const twoFactorMode = ref(null)
 const twoFactorLoading = ref(false)
 const twoFactorCode = ref('')
@@ -311,6 +376,23 @@ const savePassword = async () => {
     await authStore.logout(false)
     router.push('/login')
   }
+}
+
+const openPrivacyPolicy = () => openLegalLink(PRIVACY_POLICY_URL)
+
+const closeDeleteDialog = () => {
+  showDeleteDialog.value = false
+  deletePassword.value = ''
+}
+
+const handleDeleteAccount = async () => {
+  deleteLoading.value = true
+  const result = await authStore.deleteAccount(deletePassword.value)
+  deleteLoading.value = false
+  if (!result.success) return snackbar.error(result.message)
+  closeDeleteDialog()
+  snackbar.success('Tu cuenta y todos tus datos fueron eliminados.')
+  router.push('/login')
 }
 
 const startTwoFactorSetup = async () => {

@@ -19,15 +19,33 @@
         </v-list>
         <p class="text-body-2 mb-0">
           Puedes leer el detalle completo en nuestra
-          <a href="/privacy.html" target="_blank" rel="noopener">política de privacidad</a>.
+          <a href="#" @click.prevent="openPrivacyPolicy">política de privacidad</a>.
           Si no aceptas, puedes seguir usando la app, pero las funciones de IA quedarán deshabilitadas
-          hasta que las actives desde tu perfil.
+          hasta que las actives desde tu perfil. Si ya aceptaste, puedes revocar el permiso
+          en cualquier momento desde aquí.
         </p>
       </v-card-text>
       <v-card-actions>
         <v-spacer />
-        <v-btn variant="text" :loading="loading" @click="decline">No usar IA por ahora</v-btn>
-        <v-btn color="primary" :loading="loading" @click="accept">Aceptar y continuar</v-btn>
+        <v-btn
+          v-if="authStore.hasAcceptedAIConsent"
+          color="error"
+          variant="text"
+          :loading="loading"
+          @click="revoke"
+        >
+          Revocar consentimiento
+        </v-btn>
+        <v-btn v-else variant="text" :loading="loading" @click="decline">No usar IA por ahora</v-btn>
+        <v-btn
+          v-if="!authStore.hasAcceptedAIConsent"
+          color="primary"
+          :loading="loading"
+          @click="accept"
+        >
+          Aceptar y continuar
+        </v-btn>
+        <v-btn v-else variant="text" :loading="loading" @click="decline">Cerrar</v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>
@@ -37,6 +55,7 @@
 import { ref } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useSnackbar } from '@/stores/snackbar'
+import { openLegalLink, PRIVACY_POLICY_URL } from '@/utils/legalLinks'
 
 defineProps({
   visible: { type: Boolean, default: false },
@@ -54,6 +73,17 @@ const accept = async () => {
   if (!result.success) return snackbar.error(result.message)
   emit('accept')
 }
+
+const revoke = async () => {
+  loading.value = true
+  const result = await authStore.revokeAIConsent()
+  loading.value = false
+  if (!result.success) return snackbar.error(result.message)
+  snackbar.success('Consentimiento revocado. Las funciones de IA quedaron deshabilitadas y se borró tu historial de chat.')
+  emit('decline')
+}
+
+const openPrivacyPolicy = () => openLegalLink(PRIVACY_POLICY_URL)
 
 const decline = () => emit('decline')
 </script>

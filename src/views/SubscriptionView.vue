@@ -91,6 +91,17 @@
             </v-btn>
 
             <v-btn
+              v-if="useAppleIAP"
+              variant="text"
+              block
+              class="mt-2"
+              :loading="restoreLoading"
+              @click="restorePurchases"
+            >
+              Restaurar compras
+            </v-btn>
+
+            <v-btn
               v-if="status.canCancel"
               variant="outlined"
               color="error"
@@ -100,6 +111,19 @@
             >
               Cancelar renovación
             </v-btn>
+
+            <div v-if="useAppleIAP" class="text-caption text-medium-emphasis mt-4">
+              <p class="mb-2">
+                {{ status.plan.name }} — {{ formattedPrice }} por
+                {{ intervalLabel(status.plan.intervalCount).toLowerCase() }}. La suscripción se
+                renueva automáticamente y se cobra a tu cuenta de Apple al confirmar la compra.
+                Se renovará salvo que la canceles al menos 24 horas antes del fin del periodo
+                vigente. Puedes administrarla o cancelarla en Ajustes &gt; tu nombre &gt;
+                Suscripciones.
+              </p>
+              <a href="#" class="me-3" @click.prevent="openTerms">Términos de uso (EULA)</a>
+              <a href="#" @click.prevent="openPrivacyPolicy">Política de privacidad</a>
+            </div>
           </v-card-text>
         </v-card>
       </v-col>
@@ -193,6 +217,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useDisplay } from 'vuetify'
 import { useSubscriptionStore } from '@/stores/subscriptions'
 import { useSnackbar } from '@/stores/snackbar'
+import { openLegalLink, PRIVACY_POLICY_URL, TERMS_URL } from '@/utils/legalLinks'
 
 const { mobile } = useDisplay()
 const isMobile = computed(() => mobile.value)
@@ -201,6 +226,7 @@ const router = useRouter()
 const billingStore = useSubscriptionStore()
 const snackbar = useSnackbar()
 const cancelDialog = ref(false)
+const restoreLoading = ref(false)
 const status = computed(() => billingStore.status)
 // Keyed off the platform, not `isAppleIAPAvailable()`: on iOS this must be true even
 // before the purchase plugin finishes loading, so the UI never falls back to showing
@@ -311,6 +337,18 @@ const startCheckout = async () => {
   const result = await billingStore.createCheckout(planCode)
   if (!result.success) snackbar.error(result.message)
 }
+
+const restorePurchases = async () => {
+  restoreLoading.value = true
+  const result = await billingStore.restorePurchases()
+  restoreLoading.value = false
+  if (!result.success) return snackbar.error(result.message)
+  if (result.hasEntitlement) snackbar.success('Restauramos tu suscripción.')
+  else snackbar.info('No encontramos compras anteriores con tu cuenta de Apple.')
+}
+
+const openTerms = () => openLegalLink(TERMS_URL)
+const openPrivacyPolicy = () => openLegalLink(PRIVACY_POLICY_URL)
 
 const verifyPayment = async () => {
   const result = await billingStore.sync()

@@ -198,14 +198,10 @@ const bottomNav = ref('dashboard')
 // feature (scan, statement import, chat, suggestions) is reachable. If declined, it
 // won't be shown again automatically this session — the user can reopen it from
 // "Mi perfil" — but AI-powered entry points stay disabled until they accept.
-const aiConsentDismissed = ref(localStorage.getItem('aiConsentDismissed') === '1')
 const showAIConsent = computed(() => (
-  authStore.isAuthenticated && !authStore.hasAcceptedAIConsent && !aiConsentDismissed.value
+  authStore.isAuthenticated && !authStore.hasAcceptedAIConsent && !authStore.aiConsentDismissed
 ))
-const dismissAIConsent = () => {
-  aiConsentDismissed.value = true
-  localStorage.setItem('aiConsentDismissed', '1')
-}
+const dismissAIConsent = () => authStore.dismissAIConsent()
 
 const firstName = computed(() => authStore.user?.name?.trim().split(' ')[0] || '')
 const initials = computed(() => {

@@ -194,6 +194,7 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   const hasAcceptedAIConsent = computed(() => Boolean(user.value?.aiConsentAcceptedAt))
+  const aiConsentDismissed = ref(localStorage.getItem('aiConsentDismissed') === '1')
 
   const acceptAIConsent = async () => {
     try {
@@ -203,6 +204,52 @@ export const useAuthStore = defineStore('auth', () => {
     } catch (e) {
       return { success: false, message: messageFrom(e, 'No se pudo guardar tu respuesta') }
     }
+  }
+
+  const dismissAIConsent = () => {
+    aiConsentDismissed.value = true
+    localStorage.setItem('aiConsentDismissed', '1')
+  }
+
+  const revokeAIConsent = async () => {
+    try {
+      const res = await authAPI.revokeAIConsent()
+      user.value = res.data
+      // Revoking clears aiConsentAcceptedAt, which would otherwise make the automatic
+      // consent prompt reappear immediately over the app the user just declined on.
+      dismissAIConsent()
+      return { success: true }
+    } catch (e) {
+      return { success: false, message: messageFrom(e, 'No se pudo revocar el consentimiento') }
+    }
+  }
+
+  const deleteAccount = async (password) => {
+    try {
+      await authAPI.deleteAccount({ password })
+    } catch (e) {
+      return { success: false, message: messageFrom(e, 'No se pudo eliminar la cuenta') }
+    }
+
+    // The account no longer exists server-side, so every local trace of it has to go
+    // too — above all the biometric credential in the Keychain/Keystore, which would
+    // otherwise keep offering a Face ID login for a deleted user.
+    try {
+      if (isNative()) {
+        const { NativeBiometric } = await import('@capgo/capacitor-native-biometric')
+        await NativeBiometric.deleteCredentials({ server: BIOMETRIC_SERVER })
+      }
+    } catch {
+      // Best-effort: the local flags cleared below are what actually hide the option.
+    }
+    localStorage.removeItem('biometricEmail')
+    localStorage.removeItem('webauthnCredentialId')
+    localStorage.removeItem('aiConsentDismissed')
+    aiConsentDismissed.value = false
+    hasBiometric.value = false
+
+    await logout(false)
+    return { success: true }
   }
 
   const changePassword = async (data) => {
@@ -457,6 +504,10 @@ export const useAuthStore = defineStore('auth', () => {
     isAdmin,
     hasAcceptedAIConsent,
     acceptAIConsent,
+    revokeAIConsent,
+    aiConsentDismissed,
+    dismissAIConsent,
+    deleteAccount,
     register,
     verifyEmail,
     resendVerification,

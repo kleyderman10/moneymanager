@@ -111,6 +111,30 @@ const setup = () => {
   return setupPromise
 }
 
+// Guideline 3.1.1 requires a way to restore an auto-renewable subscription on a new
+// device or after a reinstall. restorePurchases() replays owned transactions through the
+// same approved() handler above, so our backend re-verifies them and the entitlement
+// comes back without charging again.
+export const restoreApplePurchases = async () => {
+  if (!isAppleIAPAvailable()) {
+    return { success: false, message: 'Las compras de App Store no están disponibles en este dispositivo' }
+  }
+
+  try {
+    await setup()
+  } catch (e) {
+    setupPromise = null
+    return { success: false, message: e.message || 'No se pudo conectar con App Store' }
+  }
+
+  try {
+    await window.CdvPurchase.store.restorePurchases()
+    return { success: true }
+  } catch (e) {
+    return { success: false, message: e.message || 'No se pudieron restaurar tus compras' }
+  }
+}
+
 export const purchaseAppleSubscription = async (planCode) => {
   const productId = PRODUCT_IDS_BY_PLAN_CODE[planCode]
   if (!isAppleIAPAvailable() || !productId) {
