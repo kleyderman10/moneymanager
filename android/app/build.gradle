@@ -1,5 +1,31 @@
 apply plugin: 'com.android.application'
 
+import groovy.json.JsonSlurper
+
+def versionPropsFile = file('version.properties')
+def versionProps = new Properties()
+if (versionPropsFile.exists()) {
+    versionProps.load(new FileInputStream(versionPropsFile))
+} else {
+    versionProps['VERSION_CODE'] = '1'
+}
+def appVersionCode = versionProps['VERSION_CODE'].toInteger()
+def appVersionName = new groovy.json.JsonSlurper().parse(file('../../package.json')).version
+
+task incrementVersionCode {
+    doLast {
+        versionProps['VERSION_CODE'] = (appVersionCode + 1).toString()
+        versionProps.store(versionPropsFile.newWriter(), null)
+        println "versionCode incremented to ${versionProps['VERSION_CODE']} for next release build"
+    }
+}
+
+tasks.whenTaskAdded { task ->
+    if (task.name == 'bundleRelease' || task.name == 'assembleRelease') {
+        task.finalizedBy incrementVersionCode
+    }
+}
+
 android {
     namespace = "online.knexura.moneymanager"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -7,8 +33,8 @@ android {
         applicationId "online.knexura.moneymanager"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 3
-        versionName "1.0.2"
+        versionCode appVersionCode
+        versionName appVersionName
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
