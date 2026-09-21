@@ -2,13 +2,13 @@ import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { subscriptionsAPI } from '@/api'
 import {
-  isAppleIAPAvailable,
-  isIOSNativePlatform,
-  waitForAppleIAPReady,
-  purchaseAppleSubscription,
-  restoreApplePurchases,
-  configureAppleProducts,
-} from '@/utils/appleIAP'
+  isNativeIAPAvailable,
+  isNativePlatform,
+  waitForNativeIAPReady,
+  purchaseNativeSubscription,
+  restoreNativePurchases,
+  configureNativeProducts,
+} from '@/utils/nativeIAP'
 
 export const useSubscriptionStore = defineStore('subscriptions', () => {
   const status = ref(null)
@@ -18,8 +18,8 @@ export const useSubscriptionStore = defineStore('subscriptions', () => {
   const actionLoading = ref(false)
   const error = ref(null)
   const lastFetchedAt = ref(0)
-  const appleIAPReady = ref(false)
-  const checkingAppleIAP = ref(false)
+  const nativeIAPReady = ref(false)
+  const checkingNativeIAP = ref(false)
 
   const requiresSubscription = computed(() => Boolean(status.value?.requiresSubscription))
   const isReadOnly = computed(() => Boolean(status.value?.isReadOnly ?? requiresSubscription.value))
@@ -76,14 +76,16 @@ export const useSubscriptionStore = defineStore('subscriptions', () => {
     } catch {
       plans.value = []
     }
-    configureAppleProducts(plans.value)
+    configureNativeProducts(plans.value)
   }
 
   const createCheckout = async (planCode) => {
-    // Apple Guideline 3.1.1: digital subscriptions on iOS must go through Apple IAP,
+    // Apple Guideline 3.1.1 and Google Play's Payments policy both require digital
+    // subscriptions bought inside a native app to go through that store's billing,
     // never an external checkout. Refuse here as a safety net even if a UI bug ever
-    // tries to call this on a native iOS build.
-    if (isIOSNativePlatform()) {
+    // tries to call this on a native build — sending an Android user to the Mercado
+    // Pago checkout is grounds for removal from Play, not just a rejection.
+    if (isNativePlatform()) {
       error.value = 'La compra dentro de la app no está disponible en este momento. Inténtalo de nuevo en unos segundos.'
       return { success: false, message: error.value }
     }
@@ -102,17 +104,17 @@ export const useSubscriptionStore = defineStore('subscriptions', () => {
     }
   }
 
-  const ensureAppleIAPReady = async () => {
-    if (!isIOSNativePlatform()) {
-      appleIAPReady.value = false
+  const ensureNativeIAPReady = async () => {
+    if (!isNativePlatform()) {
+      nativeIAPReady.value = false
       return false
     }
-    checkingAppleIAP.value = true
+    checkingNativeIAP.value = true
     try {
-      appleIAPReady.value = await waitForAppleIAPReady()
-      return appleIAPReady.value
+      nativeIAPReady.value = await waitForNativeIAPReady()
+      return nativeIAPReady.value
     } finally {
-      checkingAppleIAP.value = false
+      checkingNativeIAP.value = false
     }
   }
 
@@ -132,11 +134,11 @@ export const useSubscriptionStore = defineStore('subscriptions', () => {
     }
   }
 
-  const purchaseWithApple = async (planCode) => {
+  const purchaseWithStore = async (planCode) => {
     actionLoading.value = true
     error.value = null
     try {
-      const result = await purchaseAppleSubscription(planCode)
+      const result = await purchaseNativeSubscription(planCode)
       if (!result.success) {
         error.value = result.message
         return result
@@ -152,8 +154,8 @@ export const useSubscriptionStore = defineStore('subscriptions', () => {
     actionLoading.value = true
     error.value = null
     try {
-      await ensureAppleIAPReady()
-      const result = await restoreApplePurchases()
+      await ensureNativeIAPReady()
+      const result = await restoreNativePurchases()
       if (!result.success) {
         error.value = result.message
         return result
@@ -188,8 +190,8 @@ export const useSubscriptionStore = defineStore('subscriptions', () => {
     loading,
     actionLoading,
     error,
-    appleIAPReady,
-    checkingAppleIAP,
+    nativeIAPReady,
+    checkingNativeIAP,
     requiresSubscription,
     isReadOnly,
     hasEntitlement,
@@ -201,10 +203,10 @@ export const useSubscriptionStore = defineStore('subscriptions', () => {
     fetchPayments,
     fetchPlans,
     createCheckout,
-    isAppleIAPAvailable,
-    isIOSNativePlatform,
-    ensureAppleIAPReady,
-    purchaseWithApple,
+    isNativeIAPAvailable,
+    isNativePlatform,
+    ensureNativeIAPReady,
+    purchaseWithStore,
     restorePurchases,
     sync,
     cancel,

@@ -149,6 +149,7 @@ export const subscriptionsAPI = {
   cancel: () => api.post('/subscriptions/cancel'),
   reactivate: () => api.post('/subscriptions/reactivate'),
   verifyApplePurchase: (originalTransactionId) => api.post('/subscriptions/apple/verify', { originalTransactionId }),
+  verifyGooglePurchase: (purchaseToken) => api.post('/subscriptions/google/verify', { purchaseToken }),
 }
 
 export const adminAPI = {

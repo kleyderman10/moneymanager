@@ -74,7 +74,7 @@
               <v-list-item prepend-icon="mdi-check-circle-outline" title="Reportes e insights financieros con IA" />
               <v-list-item
                 prepend-icon="mdi-shield-lock-outline"
-                :title="useAppleIAP ? 'Pago protegido por Apple' : 'Pago protegido por Mercado Pago'"
+                :title="useNativeIAP ? `Pago protegido por ${storeLabel}` : 'Pago protegido por Mercado Pago'"
               />
             </v-list>
 
@@ -84,14 +84,14 @@
               size="large"
               block
               prepend-icon="mdi-credit-card-outline"
-              :loading="billingStore.actionLoading || billingStore.checkingAppleIAP"
+              :loading="billingStore.actionLoading || billingStore.checkingNativeIAP"
               @click="startCheckout"
             >
               {{ status.status === 'incomplete' ? 'Continuar registro del pago' : 'Suscribirme por ' + formattedPrice }}
             </v-btn>
 
             <v-btn
-              v-if="useAppleIAP"
+              v-if="useNativeIAP"
               variant="text"
               block
               class="mt-2"
@@ -112,16 +112,17 @@
               Cancelar renovación
             </v-btn>
 
-            <div v-if="useAppleIAP" class="text-caption text-medium-emphasis mt-4">
+            <div v-if="useNativeIAP" class="text-caption text-medium-emphasis mt-4">
               <p class="mb-2">
                 {{ status.plan.name }} — {{ formattedPrice }} por
                 {{ intervalLabel(status.plan.intervalCount).toLowerCase() }}. La suscripción se
-                renueva automáticamente y se cobra a tu cuenta de Apple al confirmar la compra.
-                Se renovará salvo que la canceles al menos 24 horas antes del fin del periodo
-                vigente. Puedes administrarla o cancelarla en Ajustes &gt; tu nombre &gt;
-                Suscripciones.
+                renueva automáticamente y se cobra a tu cuenta de {{ storeLabel }} al confirmar
+                la compra. Se renovará salvo que la canceles al menos 24 horas antes del fin del
+                periodo vigente. Puedes administrarla o cancelarla en {{ manageHint }}.
               </p>
-              <a href="#" class="me-3" @click.prevent="openTerms">Términos de uso (EULA)</a>
+              <a v-if="isApplePlatform" href="#" class="me-3" @click.prevent="openTerms">
+                Términos de uso (EULA)
+              </a>
               <a href="#" @click.prevent="openPrivacyPolicy">Política de privacidad</a>
             </div>
           </v-card-text>
@@ -218,6 +219,7 @@ import { useDisplay } from 'vuetify'
 import { useSubscriptionStore } from '@/stores/subscriptions'
 import { useSnackbar } from '@/stores/snackbar'
 import { openLegalLink, PRIVACY_POLICY_URL, TERMS_URL } from '@/utils/legalLinks'
+import { storeName, storeManageHint } from '@/utils/nativeIAP'
 
 const { mobile } = useDisplay()
 const isMobile = computed(() => mobile.value)
@@ -228,10 +230,15 @@ const snackbar = useSnackbar()
 const cancelDialog = ref(false)
 const restoreLoading = ref(false)
 const status = computed(() => billingStore.status)
-// Keyed off the platform, not `isAppleIAPAvailable()`: on iOS this must be true even
+// Keyed off the platform, not `isNativeIAPAvailable()`: on a native build this must be true even
 // before the purchase plugin finishes loading, so the UI never falls back to showing
-// a non-Apple checkout (see stores/subscriptions.js ensureAppleIAPReady).
-const useAppleIAP = computed(() => billingStore.isIOSNativePlatform())
+// an external checkout (see stores/subscriptions.js ensureNativeIAPReady).
+const useNativeIAP = computed(() => billingStore.isNativePlatform())
+const storeLabel = computed(() => storeName())
+const manageHint = computed(() => storeManageHint())
+// Apple requires a link to the licence terms on the paywall; Google does not, and pointing
+// Android users at Apple's standard EULA would be wrong.
+const isApplePlatform = computed(() => storeLabel.value === 'App Store')
 const selectedPlanCode = ref(null)
 const selectedPlan = computed(() => billingStore.plans.find((p) => p.code === selectedPlanCode.value))
 
@@ -240,7 +247,7 @@ const intervalLabel = (count) => INTERVAL_LABELS[count] || `Cada ${count} meses`
 const PERIOD_SUFFIXES = { 1: '/mes', 3: '/trimestre', 12: '/año' }
 const periodSuffixFor = (count) => PERIOD_SUFFIXES[count] || `/${count} meses`
 const planLabel = (plan) => intervalLabel(plan.intervalCount)
-const planPrice = (plan) => (useAppleIAP.value ? `US$${plan.usdAmount}` : formatCurrency(plan.amount, plan.currency))
+const planPrice = (plan) => (useNativeIAP.value ? `US$${plan.usdAmount}` : formatCurrency(plan.amount, plan.currency))
 
 const formattedPrice = computed(() => {
   if (status.value?.canCheckout && selectedPlan.value) return planPrice(selectedPlan.value)
@@ -324,13 +331,13 @@ const paymentColor = (value) => ({
 
 const startCheckout = async () => {
   const planCode = selectedPlanCode.value
-  if (useAppleIAP.value) {
-    const ready = billingStore.appleIAPReady || await billingStore.ensureAppleIAPReady()
+  if (useNativeIAP.value) {
+    const ready = billingStore.nativeIAPReady || await billingStore.ensureNativeIAPReady()
     if (!ready) {
       snackbar.error('No se pudo conectar con App Store. Inténtalo de nuevo en unos segundos.')
       return
     }
-    const result = await billingStore.purchaseWithApple(planCode)
+    const result = await billingStore.purchaseWithStore(planCode)
     if (!result.success) snackbar.error(result.message)
     return
   }
@@ -344,7 +351,7 @@ const restorePurchases = async () => {
   restoreLoading.value = false
   if (!result.success) return snackbar.error(result.message)
   if (result.hasEntitlement) snackbar.success('Restauramos tu suscripción.')
-  else snackbar.info('No encontramos compras anteriores con tu cuenta de Apple.')
+  else snackbar.info(`No encontramos compras anteriores con tu cuenta de ${storeLabel.value}.`)
 }
 
 const openTerms = () => openLegalLink(TERMS_URL)
@@ -366,7 +373,7 @@ const confirmCancel = async () => {
 }
 
 onMounted(async () => {
-  if (useAppleIAP.value) billingStore.ensureAppleIAPReady()
+  if (useNativeIAP.value) billingStore.ensureNativeIAPReady()
   await billingStore.fetchStatus(true)
   await billingStore.fetchPayments()
   await billingStore.fetchPlans()

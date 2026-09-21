@@ -231,8 +231,8 @@
             </p>
             <v-alert type="warning" density="compact" variant="tonal" class="mb-3">
               Si tienes una suscripción activa, cancélala por separado antes de eliminar la
-              cuenta: las suscripciones de App Store se cancelan desde Ajustes &gt; tu nombre &gt;
-              Suscripciones en tu iPhone o iPad.
+              cuenta: <template v-if="manageHint">se cancela desde {{ manageHint }}</template>
+              <template v-else>gestiónala desde donde la contrataste</template>.
             </v-alert>
             <v-btn color="error" variant="outlined" prepend-icon="mdi-delete-forever-outline" @click="showDeleteDialog = true">
               Eliminar mi cuenta
@@ -292,6 +292,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useSubscriptionStore } from '@/stores/subscriptions'
 import { useSnackbar } from '@/stores/snackbar'
 import { openLegalLink, PRIVACY_POLICY_URL } from '@/utils/legalLinks'
+import { storeManageHint } from '@/utils/nativeIAP'
 
 const { mobile } = useDisplay()
 const router = useRouter()
@@ -309,6 +310,7 @@ const passSuccess = ref(false)
 const biometricSupported = ref(false)
 const bioLoading = ref(false)
 const showConsentDialog = ref(false)
+const manageHint = computed(() => storeManageHint())
 const showDeleteDialog = ref(false)
 const deletePassword = ref('')
 const deleteLoading = ref(false)
