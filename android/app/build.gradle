@@ -9,7 +9,12 @@ if (versionPropsFile.exists()) {
 } else {
     versionProps['VERSION_CODE'] = '1'
 }
-def appVersionCode = versionProps['VERSION_CODE'].toInteger()
+// CI passes the next code explicitly (derived from what Google Play already has, see
+// codemagic.yaml). Incrementing the file instead would be lost with the ephemeral
+// workspace, so every CI build would reuse the committed value and Play would reject the
+// upload as "version code already used".
+def ciVersionCode = System.getenv('ANDROID_VERSION_CODE')
+def appVersionCode = (ciVersionCode ?: versionProps['VERSION_CODE']).toString().toInteger()
 def appVersionName = new groovy.json.JsonSlurper().parse(file('../../package.json')).version
 
 task incrementVersionCode {
@@ -21,7 +26,7 @@ task incrementVersionCode {
 }
 
 tasks.whenTaskAdded { task ->
-    if (task.name == 'bundleRelease' || task.name == 'assembleRelease') {
+    if (ciVersionCode == null && (task.name == 'bundleRelease' || task.name == 'assembleRelease')) {
         task.finalizedBy incrementVersionCode
     }
 }
