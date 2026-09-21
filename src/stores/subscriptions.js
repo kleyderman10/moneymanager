@@ -7,6 +7,7 @@ import {
   waitForAppleIAPReady,
   purchaseAppleSubscription,
   restoreApplePurchases,
+  configureAppleProducts,
 } from '@/utils/appleIAP'
 
 export const useSubscriptionStore = defineStore('subscriptions', () => {
@@ -75,6 +76,7 @@ export const useSubscriptionStore = defineStore('subscriptions', () => {
     } catch {
       plans.value = []
     }
+    configureAppleProducts(plans.value)
   }
 
   const createCheckout = async (planCode) => {

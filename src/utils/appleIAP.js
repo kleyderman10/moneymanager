@@ -4,12 +4,20 @@ import { subscriptionsAPI } from '@/api'
 // cordova-plugin-purchase is a Cordova (not Capacitor) plugin: it attaches a global
 // `window.CdvPurchase` at runtime instead of exposing an ES module, so it's referenced
 // directly rather than imported. It's absent entirely on web/dev builds.
-const PRODUCT_IDS_BY_PLAN_CODE = {
-  'personal-monthly': import.meta.env.VITE_APPLE_IAP_PRODUCT_ID_MONTHLY || null,
-  'personal-quarterly': import.meta.env.VITE_APPLE_IAP_PRODUCT_ID_QUARTERLY || null,
-  'personal-annual': import.meta.env.VITE_APPLE_IAP_PRODUCT_ID_ANNUAL || null,
+
+// Product IDs arrive with the plans from our backend rather than being inlined at build
+// time: a missing env file in CI used to compile them away to `undefined` silently, which
+// ships an iOS paywall with no purchasable product and no legal fallback.
+let productIdsByPlanCode = {}
+
+export const configureAppleProducts = (plans = []) => {
+  productIdsByPlanCode = plans.reduce((acc, plan) => {
+    if (plan?.code && plan?.appleProductId) acc[plan.code] = plan.appleProductId
+    return acc
+  }, {})
 }
-const CONFIGURED_PRODUCT_IDS = Object.values(PRODUCT_IDS_BY_PLAN_CODE).filter(Boolean)
+
+const configuredProductIds = () => Object.values(productIdsByPlanCode)
 
 // True on any native iOS build, regardless of whether cordova-plugin-purchase has
 // finished attaching `window.CdvPurchase` yet. The UI must key off this (not
@@ -23,7 +31,7 @@ export const isIOSNativePlatform = () => (
 
 export const isAppleIAPAvailable = () => (
   isIOSNativePlatform()
-  && CONFIGURED_PRODUCT_IDS.length > 0
+  && configuredProductIds().length > 0
   && Boolean(window.CdvPurchase)
 )
 
@@ -33,9 +41,7 @@ let readyPromise = null
 // WebView loads, so a synchronous check can race the plugin on cold start. On iOS
 // we wait (poll) for it instead of assuming it's missing.
 export const waitForAppleIAPReady = (timeoutMs = 8000) => {
-  if (!isIOSNativePlatform() || CONFIGURED_PRODUCT_IDS.length === 0) {
-    return Promise.resolve(false)
-  }
+  if (!isIOSNativePlatform()) return Promise.resolve(false)
   if (readyPromise) return readyPromise
 
   readyPromise = new Promise((resolve) => {
@@ -59,6 +65,22 @@ export const waitForAppleIAPReady = (timeoutMs = 8000) => {
 
 let setupPromise = null
 let pendingPurchase = null
+let registeredProductIds = []
+// Keyed by product ID: what StoreKit said when it refused to load that product.
+const loadErrors = new Map()
+
+// StoreKit reports an unknown identifier by returning it in `invalidProductIdentifiers`,
+// which the plugin surfaces as INVALID_PRODUCT_ID / "Product not found in AppStore. #400".
+// That answer comes from Apple, not from our code, so the fix is always in App Store
+// Connect — say so instead of showing the raw plugin string.
+const describeLoadFailure = (productId) => {
+  const reported = loadErrors.get(productId)
+  const detail = reported ? ` (App Store respondió: ${reported})` : ''
+  return `App Store no reconoce el producto "${productId}"${detail}. `
+    + 'Verifica en App Store Connect que el ID del producto coincida exactamente, que el '
+    + 'Contrato de Aplicaciones de Pago esté activo, que la suscripción esté disponible en '
+    + 'tu país y que se haya enviado junto con una versión de la app.'
+}
 
 const setup = () => {
   if (setupPromise) return setupPromise
@@ -66,11 +88,16 @@ const setup = () => {
   setupPromise = (async () => {
     const { store, ProductType, Platform } = window.CdvPurchase
 
-    store.register(CONFIGURED_PRODUCT_IDS.map((id) => ({
+    registeredProductIds = configuredProductIds()
+    store.register(registeredProductIds.map((id) => ({
       type: ProductType.AUTO_RENEWABLE_SUBSCRIPTION,
       id,
       platform: Platform.APPLE_APPSTORE,
     })))
+
+    store.error((error) => {
+      if (error?.productId) loadErrors.set(error.productId, error.message || `código ${error.code}`)
+    })
 
     // Verification happens on our own backend (App Store Server API), not the plugin's
     // built-in receipt-validation service, so we skip transaction.verify()/.verified() and
@@ -89,8 +116,20 @@ const setup = () => {
     })
 
     const errors = await store.initialize([Platform.APPLE_APPSTORE])
-    if (errors?.length) {
-      throw new Error(errors[0]?.message || 'No se pudo inicializar App Store')
+
+    // initialize() reports per-product load failures alongside genuine platform failures.
+    // A rejected product ID must not abort the whole setup: the other tiers may be fine,
+    // and blowing up here used to surface Apple's "#400" as if the store were unreachable.
+    const { ErrorCode } = window.CdvPurchase
+    const fatal = (errors || []).filter((e) => {
+      if (e?.productId) {
+        loadErrors.set(e.productId, e.message || `código ${e.code}`)
+        return false
+      }
+      return e?.code !== ErrorCode.INVALID_PRODUCT_ID
+    })
+    if (fatal.length) {
+      throw new Error(fatal[0]?.message || 'No se pudo inicializar App Store')
     }
 
     // initialize() resolves once the platform adapter is set up — it does NOT wait for
@@ -136,9 +175,16 @@ export const restoreApplePurchases = async () => {
 }
 
 export const purchaseAppleSubscription = async (planCode) => {
-  const productId = PRODUCT_IDS_BY_PLAN_CODE[planCode]
+  const productId = productIdsByPlanCode[planCode]
   if (!isAppleIAPAvailable() || !productId) {
     return { success: false, message: 'Este plan no está disponible como compra dentro de la app' }
+  }
+
+  // The plan list can arrive after setup() already registered an older (or empty) set of
+  // product IDs, which would leave this product permanently unknown to the store.
+  if (setupPromise && !registeredProductIds.includes(productId)) {
+    setupPromise = null
+    loadErrors.clear()
   }
 
   try {
@@ -153,9 +199,8 @@ export const purchaseAppleSubscription = async (planCode) => {
   if (!product) {
     // Distinct from "no offer yet": the store never returned this product ID at all,
     // which (now that setup() waits for store.ready()) points to a real App Store
-    // Connect mismatch — wrong/typo'd product ID, product not yet approved, or the
-    // Paid Applications Agreement not active — rather than a loading race.
-    return { success: false, message: `No encontramos el producto "${productId}" en App Store. Verifica que el identificador coincida con el configurado en App Store Connect.` }
+    // Connect mismatch rather than a loading race.
+    return { success: false, message: describeLoadFailure(productId) }
   }
   const offer = product.getOffer()
   if (!offer) {
