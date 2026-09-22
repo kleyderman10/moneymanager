@@ -3,9 +3,9 @@
     <v-card-text class="d-flex align-center flex-wrap pa-5">
       <CircularGauge :value="score.score" size="72" width="7" value-class="text-h6 font-weight-bold" />
       <div class="ml-4">
-        <div class="text-caption text-medium-emphasis">Índice financiero</div>
-        <div class="text-body-1 font-weight-bold">Tu salud es {{ scoreLabel.toLowerCase() }}</div>
-        <div class="text-caption text-medium-emphasis mt-1">Una lectura rápida de tus hábitos</div>
+        <div class="text-caption text-medium-emphasis">{{ t('aiHealthScore.financialIndex') }}</div>
+        <div class="text-body-1 font-weight-bold">{{ t('aiHealthScore.yourHealthIs', { label: scoreLabel.toLowerCase() }) }}</div>
+        <div class="text-caption text-medium-emphasis mt-1">{{ t('aiHealthScore.quickRead') }}</div>
       </div>
       <div v-if="score.breakdown" class="health-mini-stats">
         <div v-for="(v, k) in score.breakdown" :key="k" class="health-mini-stats__item">
@@ -19,20 +19,28 @@
 
 <script setup>
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import CircularGauge from '@/components/CircularGauge.vue'
 
 const props = defineProps({ score: { type: Object, default: null } })
 
+const { t } = useI18n()
+
 const scoreLabel = computed(() => {
   if (!props.score?.score) return ''
-  if (props.score.score >= 80) return 'Excelente'
-  if (props.score.score >= 60) return 'Buena'
-  if (props.score.score >= 40) return 'Regular'
-  return 'Necesita atención'
+  if (props.score.score >= 80) return t('aiHealthScore.excellent')
+  if (props.score.score >= 60) return t('aiHealthScore.good')
+  if (props.score.score >= 40) return t('aiHealthScore.fair')
+  return t('aiHealthScore.needsAttention')
 })
 
 const labelFor = (k) => {
-  const m = { incomeExpenseRatio: 'Ingresos/Gastos', savingsRate: 'Ahorro', budgetAdherence: 'Presupuesto', emergencyFund: 'Emergencia' }
+  const m = {
+    incomeExpenseRatio: t('aiHealthScore.incomeExpenseRatio'),
+    savingsRate: t('aiHealthScore.savingsRate'),
+    budgetAdherence: t('aiHealthScore.budgetAdherence'),
+    emergencyFund: t('aiHealthScore.emergencyFund'),
+  }
   return m[k] || k
 }
 </script>

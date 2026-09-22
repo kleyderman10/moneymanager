@@ -1,9 +1,9 @@
 <template>
   <div>
     <div class="page-intro">
-      <div class="page-intro__eyebrow">Tu cuenta</div>
-      <h1 :class="isMobile ? 'text-h5' : 'text-h4'">Plan y facturación</h1>
-      <p class="page-intro__subtitle">Consulta tu prueba, administra la suscripción y revisa los cobros.</p>
+      <div class="page-intro__eyebrow">{{ t('profile.yourAccount') }}</div>
+      <h1 :class="isMobile ? 'text-h5' : 'text-h4'">{{ t('nav.subscription') }}</h1>
+      <p class="page-intro__subtitle">{{ t('subscription.subtitle') }}</p>
     </div>
 
     <v-alert v-if="billingStore.error" type="error" variant="tonal" closable class="mb-5">
@@ -21,7 +21,7 @@
           <v-card-text class="pa-6 pa-sm-8">
             <div class="d-flex flex-wrap align-start justify-space-between ga-4 mb-6">
               <div>
-                <div class="text-overline text-primary font-weight-bold">Knexura Finanzas Personal</div>
+                <div class="text-overline text-primary font-weight-bold">{{ t('layout.brandName') }} Personal</div>
                 <div class="subscription-price">{{ formattedPrice }}<span>{{ periodSuffix }}</span></div>
               </div>
               <v-chip :color="statusColor" variant="tonal" size="large" :prepend-icon="statusIcon">
@@ -43,7 +43,7 @@
                         <div class="text-caption text-medium-emphasis">{{ planLabel(plan) }}</div>
                         <div class="text-h6 font-weight-bold">{{ planPrice(plan) }}</div>
                         <div v-if="plan.intervalCount > 1" class="text-caption text-success">
-                          Ahorras 20% vs. mensual
+                          {{ t('subscription.savePercent') }}
                         </div>
                       </v-card>
                     </v-item>
@@ -59,22 +59,22 @@
 
             <div v-if="status.status === 'trialing'" class="mb-6">
               <div class="d-flex justify-space-between text-body-2 mb-2">
-                <span>Periodo de prueba</span>
-                <strong>{{ status.daysRemaining }} días restantes</strong>
+                <span>{{ t('subscription.trialPeriod') }}</span>
+                <strong>{{ t('subscription.daysRemaining', { days: status.daysRemaining }) }}</strong>
               </div>
               <v-progress-linear :model-value="trialProgress" color="primary" height="10" rounded />
               <div class="text-caption text-medium-emphasis mt-2">
-                Finaliza el {{ formatDate(status.trialEndsAt) }}. No se realizará ningún cobro durante la prueba.
+                {{ t('subscription.endsOn', { date: formatDate(status.trialEndsAt) }) }}
               </div>
             </div>
 
             <v-list density="compact" class="subscription-features pa-0 mb-6">
-              <v-list-item prepend-icon="mdi-check-circle-outline" title="Movimientos, cuentas y categorías ilimitadas" />
-              <v-list-item prepend-icon="mdi-check-circle-outline" title="Presupuestos, metas y transacciones recurrentes" />
-              <v-list-item prepend-icon="mdi-check-circle-outline" title="Reportes e insights financieros con IA" />
+              <v-list-item prepend-icon="mdi-check-circle-outline" :title="t('subscription.featureUnlimited')" />
+              <v-list-item prepend-icon="mdi-check-circle-outline" :title="t('subscription.featureBudgets')" />
+              <v-list-item prepend-icon="mdi-check-circle-outline" :title="t('subscription.featureReports')" />
               <v-list-item
                 prepend-icon="mdi-shield-lock-outline"
-                :title="useNativeIAP ? `Pago protegido por ${storeLabel}` : 'Pago protegido por Mercado Pago'"
+                :title="useNativeIAP ? t('subscription.paymentProtectedBy', { store: storeLabel }) : t('subscription.paymentProtectedByMercadoPago')"
               />
             </v-list>
 
@@ -87,7 +87,7 @@
               :loading="billingStore.actionLoading || billingStore.checkingNativeIAP"
               @click="startCheckout"
             >
-              {{ status.status === 'incomplete' ? 'Continuar registro del pago' : 'Suscribirme por ' + formattedPrice }}
+              {{ status.status === 'incomplete' ? t('subscription.continuePaymentSetup') : t('subscription.subscribeFor', { price: formattedPrice }) }}
             </v-btn>
 
             <v-btn
@@ -98,7 +98,7 @@
               :loading="restoreLoading"
               @click="restorePurchases"
             >
-              Restaurar compras
+              {{ t('subscription.restorePurchases') }}
             </v-btn>
 
             <v-btn
@@ -109,52 +109,48 @@
               class="mt-3"
               @click="cancelDialog = true"
             >
-              Cancelar renovación
+              {{ t('subscription.cancelRenewal') }}
             </v-btn>
 
             <div v-if="useNativeIAP" class="text-caption text-medium-emphasis mt-4">
               <p class="mb-2">
-                {{ status.plan.name }} — {{ formattedPrice }} por
-                {{ intervalLabel(status.plan.intervalCount).toLowerCase() }}. La suscripción se
-                renueva automáticamente y se cobra a tu cuenta de {{ storeLabel }} al confirmar
-                la compra. Se renovará salvo que la canceles al menos 24 horas antes del fin del
-                periodo vigente. Puedes administrarla o cancelarla en {{ manageHint }}.
+                {{ t('subscription.nativeIapDisclosure', { plan: status.plan.name, price: formattedPrice, interval: intervalLabel(status.plan.intervalCount).toLowerCase(), store: storeLabel, manageHint }) }}
               </p>
               <a v-if="isApplePlatform" href="#" class="me-3" @click.prevent="openTerms">
-                Términos de uso (EULA)
+                {{ t('subscription.termsOfUse') }}
               </a>
-              <a href="#" @click.prevent="openPrivacyPolicy">Política de privacidad</a>
+              <a href="#" @click.prevent="openPrivacyPolicy">{{ t('profile.viewPrivacyPolicy') }}</a>
             </div>
           </v-card-text>
         </v-card>
       </v-col>
 
       <v-col cols="12" md="5">
-        <v-card title="Resumen" class="mb-5">
+        <v-card :title="t('subscription.summary')" class="mb-5">
           <v-card-text>
             <div class="summary-row">
-              <span>Plan</span><strong>{{ status.plan.name }}</strong>
+              <span>{{ t('subscription.plan') }}</span><strong>{{ status.plan.name }}</strong>
             </div>
             <div class="summary-row">
-              <span>Precio</span><strong>{{ formattedPrice }}</strong>
+              <span>{{ t('subscription.price') }}</span><strong>{{ formattedPrice }}</strong>
             </div>
             <div class="summary-row">
-              <span>Periodicidad</span><strong>{{ intervalLabel(status.plan.intervalCount) }}</strong>
+              <span>{{ t('subscription.frequency') }}</span><strong>{{ intervalLabel(status.plan.intervalCount) }}</strong>
             </div>
             <div v-if="status.currentPeriodEnd" class="summary-row">
-              <span>{{ status.cancelAtPeriodEnd ? 'Acceso hasta' : 'Próximo cobro' }}</span>
+              <span>{{ status.cancelAtPeriodEnd ? t('subscription.accessUntil') : t('subscription.nextCharge') }}</span>
               <strong>{{ formatDate(status.currentPeriodEnd) }}</strong>
             </div>
             <div v-if="status.graceEndsAt" class="summary-row">
-              <span>Fin del periodo de gracia</span><strong>{{ formatDate(status.graceEndsAt) }}</strong>
+              <span>{{ t('subscription.graceEnds') }}</span><strong>{{ formatDate(status.graceEndsAt) }}</strong>
             </div>
           </v-card-text>
         </v-card>
 
-        <v-card title="¿Acabas de pagar?">
+        <v-card :title="t('subscription.justPaid')">
           <v-card-text>
             <p class="text-body-2 text-medium-emphasis mb-4">
-              La confirmación suele ser automática. También puedes verificar el estado manualmente.
+              {{ t('subscription.confirmationAutoHint') }}
             </p>
             <v-btn
               variant="outlined"
@@ -164,24 +160,24 @@
               :loading="billingStore.actionLoading"
               @click="verifyPayment"
             >
-              Verificar estado
+              {{ t('subscription.checkStatus') }}
             </v-btn>
           </v-card-text>
         </v-card>
       </v-col>
 
       <v-col cols="12">
-        <v-card title="Historial de cobros">
+        <v-card :title="t('subscription.billingHistory')">
           <v-card-text v-if="!billingStore.payments.length" class="text-center text-medium-emphasis py-8">
-            Todavía no hay cobros registrados.
+            {{ t('subscription.noChargesYet') }}
           </v-card-text>
           <v-table v-else>
             <thead>
               <tr>
-                <th>Fecha</th>
-                <th>Estado</th>
-                <th>Importe</th>
-                <th>Referencia</th>
+                <th>{{ t('transactions.date') }}</th>
+                <th>{{ t('subscription.status') }}</th>
+                <th>{{ t('subscription.amount') }}</th>
+                <th>{{ t('subscription.reference') }}</th>
               </tr>
             </thead>
             <tbody>
@@ -198,14 +194,14 @@
     </v-row>
 
     <v-dialog v-model="cancelDialog" max-width="480">
-      <v-card title="Cancelar renovación">
+      <v-card :title="t('subscription.cancelRenewal')">
         <v-card-text>
-          No se realizarán nuevos cobros. Conservarás acceso hasta terminar el periodo que ya pagaste.
+          {{ t('subscription.cancelRenewalBody') }}
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn variant="text" @click="cancelDialog = false">Volver</v-btn>
-          <v-btn color="error" :loading="billingStore.actionLoading" @click="confirmCancel">Confirmar cancelación</v-btn>
+          <v-btn variant="text" @click="cancelDialog = false">{{ t('subscription.goBack') }}</v-btn>
+          <v-btn color="error" :loading="billingStore.actionLoading" @click="confirmCancel">{{ t('subscription.confirmCancellation') }}</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -215,12 +211,16 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useDisplay } from 'vuetify'
 import { useSubscriptionStore } from '@/stores/subscriptions'
 import { useSnackbar } from '@/stores/snackbar'
+import { useLocale } from '@/composables/useLocale'
 import { openLegalLink, PRIVACY_POLICY_URL, TERMS_URL } from '@/utils/legalLinks'
 import { storeName, storeManageHint } from '@/utils/nativeIAP'
 
+const { t } = useI18n()
+const { money, date } = useLocale()
 const { mobile } = useDisplay()
 const isMobile = computed(() => mobile.value)
 const route = useRoute()
@@ -242,10 +242,16 @@ const isApplePlatform = computed(() => storeLabel.value === 'App Store')
 const selectedPlanCode = ref(null)
 const selectedPlan = computed(() => billingStore.plans.find((p) => p.code === selectedPlanCode.value))
 
-const INTERVAL_LABELS = { 1: 'Mensual', 3: 'Trimestral', 12: 'Anual' }
-const intervalLabel = (count) => INTERVAL_LABELS[count] || `Cada ${count} meses`
-const PERIOD_SUFFIXES = { 1: '/mes', 3: '/trimestre', 12: '/año' }
-const periodSuffixFor = (count) => PERIOD_SUFFIXES[count] || `/${count} meses`
+const intervalLabel = (count) => ({
+  1: t('subscription.monthly'),
+  3: t('subscription.quarterly'),
+  12: t('subscription.yearly'),
+}[count] || t('subscription.everyNMonths', { count }))
+const periodSuffixFor = (count) => ({
+  1: t('subscription.perMonth'),
+  3: t('subscription.perQuarter'),
+  12: t('subscription.perYear'),
+}[count] || t('subscription.perNMonths', { count }))
 const planLabel = (plan) => intervalLabel(plan.intervalCount)
 const planPrice = (plan) => (useNativeIAP.value ? `US$${plan.usdAmount}` : formatCurrency(plan.amount, plan.currency))
 
@@ -267,14 +273,14 @@ const trialProgress = computed(() => {
 })
 
 const statusLabel = computed(() => ({
-  trialing: 'Prueba gratuita',
-  active: 'Suscripción activa',
-  past_due: 'Pago pendiente',
-  canceled: 'Renovación cancelada',
-  incomplete: 'Registro pendiente',
-  expired: 'Prueba vencida',
-  exempt: 'Plan de cortesía',
-}[status.value?.status] || 'Sin estado'))
+  trialing: t('subscription.statusTrialing'),
+  active: t('subscription.statusActive'),
+  past_due: t('subscription.statusPastDue'),
+  canceled: t('subscription.statusCanceled'),
+  incomplete: t('subscription.statusIncomplete'),
+  expired: t('subscription.statusExpired'),
+  exempt: t('subscription.statusExempt'),
+}[status.value?.status] || t('subscription.statusNone')))
 const statusColor = computed(() => ({
   trialing: 'info', active: 'success', past_due: 'warning', canceled: 'warning',
   incomplete: 'warning', expired: 'error', exempt: 'success',
@@ -289,40 +295,40 @@ const statusAlertType = computed(() => ({
   canceled: 'warning', incomplete: 'warning', expired: 'error',
 }[status.value?.status] || 'info'))
 const statusHeadline = computed(() => ({
-  trialing: 'Disfruta todas las funciones durante tu prueba',
-  active: 'Tu suscripción está al día',
-  past_due: 'Necesitamos actualizar tu pago',
-  canceled: 'La renovación automática está cancelada',
-  incomplete: 'Falta completar el método de pago',
-  expired: 'Tu periodo de prueba terminó',
-  exempt: 'Tu cuenta tiene acceso de cortesía',
-}[status.value?.status] || 'Estado de la suscripción'))
+  trialing: t('subscription.headlineTrialing'),
+  active: t('subscription.headlineActive'),
+  past_due: t('subscription.headlinePastDue'),
+  canceled: t('subscription.headlineCanceled'),
+  incomplete: t('subscription.headlineIncomplete'),
+  expired: t('subscription.headlineExpired'),
+  exempt: t('subscription.headlineExempt'),
+}[status.value?.status] || t('subscription.headlineDefault')))
 const statusDescription = computed(() => {
-  if (status.value?.status === 'trialing') return `Tienes ${status.value.daysRemaining} días para seguir usando Knexura Finanzas sin costo.`
-  if (status.value?.status === 'active') return `El próximo periodo se renovará por ${formattedPrice.value}.`
-  if (status.value?.status === 'past_due') return 'Conservas acceso temporal durante el periodo de gracia mientras solucionas el cobro.'
-  if (status.value?.status === 'canceled') return `Tu acceso continuará hasta el ${formatDate(status.value.currentPeriodEnd)}.`
-  if (status.value?.status === 'incomplete') return 'Regresa al checkout seguro para finalizar la suscripción.'
-  if (status.value?.status === 'expired') return 'Suscríbete para recuperar el acceso a tus funciones financieras. Tus datos siguen guardados.'
-  return status.value?.statusReason || 'Tu acceso está habilitado.'
+  if (status.value?.status === 'trialing') return t('subscription.descTrialing', { days: status.value.daysRemaining, brand: t('layout.brandName') })
+  if (status.value?.status === 'active') return t('subscription.descActive', { price: formattedPrice.value })
+  if (status.value?.status === 'past_due') return t('subscription.descPastDue')
+  if (status.value?.status === 'canceled') return t('subscription.descCanceled', { date: formatDate(status.value.currentPeriodEnd) })
+  if (status.value?.status === 'incomplete') return t('subscription.descIncomplete')
+  if (status.value?.status === 'expired') return t('subscription.descExpired')
+  return status.value?.statusReason || t('subscription.descDefault')
 })
 
-function formatCurrency(amount, currency = 'COP') {
-  return new Intl.NumberFormat('es-CO', {
-    style: 'currency', currency, maximumFractionDigits: 0,
-  }).format(amount || 0)
+function formatCurrency(amount, currency) {
+  return money(amount || 0, currency)
 }
 
 function formatDate(value) {
   if (!value) return '—'
-  return new Intl.DateTimeFormat('es-CO', {
-    day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC',
-  }).format(new Date(value))
+  return date(value, { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })
 }
 
 const paymentLabel = (value) => ({
-  approved: 'Aprobado', pending: 'Pendiente', rejected: 'Rechazado', canceled: 'Cancelado',
-  refunded: 'Reembolsado', charged_back: 'Contracargo',
+  approved: t('subscription.paymentApproved'),
+  pending: t('subscription.paymentPending'),
+  rejected: t('subscription.paymentRejected'),
+  canceled: t('subscription.paymentCanceled'),
+  refunded: t('subscription.paymentRefunded'),
+  charged_back: t('subscription.paymentChargedBack'),
 }[value] || value)
 const paymentColor = (value) => ({
   approved: 'success', pending: 'warning', rejected: 'error', canceled: 'default',
@@ -334,7 +340,7 @@ const startCheckout = async () => {
   if (useNativeIAP.value) {
     const ready = billingStore.nativeIAPReady || await billingStore.ensureNativeIAPReady()
     if (!ready) {
-      snackbar.error('No se pudo conectar con App Store. Inténtalo de nuevo en unos segundos.')
+      snackbar.error(t('subscription.appStoreConnectError'))
       return
     }
     const result = await billingStore.purchaseWithStore(planCode)
@@ -350,8 +356,8 @@ const restorePurchases = async () => {
   const result = await billingStore.restorePurchases()
   restoreLoading.value = false
   if (!result.success) return snackbar.error(result.message)
-  if (result.hasEntitlement) snackbar.success('Restauramos tu suscripción.')
-  else snackbar.info(`No encontramos compras anteriores con tu cuenta de ${storeLabel.value}.`)
+  if (result.hasEntitlement) snackbar.success(t('subscription.restored'))
+  else snackbar.info(t('subscription.noPreviousPurchases', { store: storeLabel.value }))
 }
 
 const openTerms = () => openLegalLink(TERMS_URL)
@@ -361,14 +367,14 @@ const verifyPayment = async () => {
   const result = await billingStore.sync()
   await billingStore.fetchPayments()
   if (!result.success) return snackbar.error(result.message)
-  if (result.status.status === 'active') snackbar.success('Pago confirmado. Tu suscripción está activa.')
-  else snackbar.info('El pago todavía está en proceso. Intenta nuevamente en unos minutos.')
+  if (result.status.status === 'active') snackbar.success(t('subscription.paymentConfirmed'))
+  else snackbar.info(t('subscription.paymentStillProcessing'))
 }
 
 const confirmCancel = async () => {
   const result = await billingStore.cancel()
   cancelDialog.value = false
-  if (result.success) snackbar.success('La renovación fue cancelada')
+  if (result.success) snackbar.success(t('subscription.renewalCanceled'))
   else snackbar.error(result.message)
 }
 

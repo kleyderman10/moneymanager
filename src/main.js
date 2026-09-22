@@ -11,6 +11,7 @@ import './styles/finance.css'
 
 import App from './App.vue'
 import router from './router'
+import { i18n } from './i18n'
 
 if (Capacitor.isNativePlatform()) {
   // The Capacitor build no longer registers a service worker (see vite.config.js), but the
@@ -33,12 +34,12 @@ if (Capacitor.isNativePlatform()) {
   import('virtual:pwa-register').then(({ registerSW }) => {
     registerSW({
       onNeedRefresh() {
-        if (confirm('Nueva versión disponible. ¿Actualizar?')) {
+        if (confirm(i18n.global.t('app.newVersionAvailable'))) {
           window.location.reload()
         }
       },
       onOfflineReady() {
-        console.log('App lista para uso offline')
+        console.log('App ready for offline use')
       },
     })
   })
@@ -102,4 +103,5 @@ const app = createApp(App)
 app.use(createPinia())
 app.use(router)
 app.use(vuetify)
+app.use(i18n)
 app.mount('#app')

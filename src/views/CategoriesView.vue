@@ -2,24 +2,24 @@
   <div>
     <div class="page-intro d-flex align-start align-sm-center flex-column flex-sm-row ga-3">
       <div>
-        <div class="page-intro__eyebrow">Organización</div>
-        <h1 :class="isMobile ? 'text-h5' : 'text-h4'">Categorías</h1>
-        <p class="page-intro__subtitle">Agrupa tus movimientos para entender mejor en qué entra y sale tu dinero.</p>
+        <div class="page-intro__eyebrow">{{ t('categories.organization') }}</div>
+        <h1 :class="isMobile ? 'text-h5' : 'text-h4'">{{ t('nav.categories') }}</h1>
+        <p class="page-intro__subtitle">{{ t('categories.subtitle') }}</p>
       </div>
       <v-spacer />
-      <v-btn v-if="!isMobile && !billingStore.isReadOnly" color="primary" prepend-icon="mdi-plus" @click="openCreate">Nueva categoría</v-btn>
+      <v-btn v-if="!isMobile && !billingStore.isReadOnly" color="primary" prepend-icon="mdi-plus" @click="openCreate">{{ t('categories.newCategory') }}</v-btn>
     </div>
 
     <v-tabs v-model="tab" color="primary" class="mb-2">
-      <v-tab value="all">Todas</v-tab>
-      <v-tab value="income">Ingresos</v-tab>
-      <v-tab value="expense">Gastos</v-tab>
+      <v-tab value="all">{{ t('common.all') }}</v-tab>
+      <v-tab value="income">{{ t('categories.incomes') }}</v-tab>
+      <v-tab value="expense">{{ t('dashboard.expenses') }}</v-tab>
     </v-tabs>
 
     <v-card v-if="filteredCategories.length === 0" class="pa-8 text-center text-grey">
       <v-icon size="x-large" color="grey">mdi-shape-plus</v-icon>
-      <div class="mt-2">No hay categorías</div>
-      <v-btn v-if="!billingStore.isReadOnly" color="primary" variant="text" class="mt-2" @click="openCreate">Crear primera categoría</v-btn>
+      <div class="mt-2">{{ t('categories.noCategories') }}</div>
+      <v-btn v-if="!billingStore.isReadOnly" color="primary" variant="text" class="mt-2" @click="openCreate">{{ t('categories.createFirst') }}</v-btn>
     </v-card>
 
     <v-list v-else bg-color="transparent" lines="one">
@@ -36,7 +36,7 @@
         </template>
         <template #append>
           <v-chip :color="cat.type === 'income' ? 'green' : 'red'" size="x-small" label class="mr-1">
-            {{ cat.type === 'income' ? 'Ingreso' : 'Gasto' }}
+            {{ cat.type === 'income' ? t('transactions.income') : t('transactions.expense') }}
           </v-chip>
           <v-btn v-if="!billingStore.isReadOnly" icon size="small" variant="text" color="error" @click.stop="confirmDelete(cat)">
             <v-icon size="18">mdi-delete</v-icon>
@@ -46,9 +46,9 @@
     </v-list>
 
     <v-dialog v-model="dialog" :fullscreen="isMobile" max-width="400">
-      <v-card :title="editing ? 'Editar categoría' : 'Nueva categoría'" class="capture-form">
+      <v-card :title="editing ? t('categories.editCategory') : t('categories.newCategory')" class="capture-form">
         <v-card-text>
-          <label class="form-label">Tipo</label>
+          <label class="form-label">{{ t('transactions.type') }}</label>
           <div class="segmented-toggle mb-3">
             <button
               type="button"
@@ -56,7 +56,7 @@
               :class="{ 'segmented-toggle__option--active': form.type === 'expense' }"
               @click="form.type = 'expense'"
             >
-              Gasto
+              {{ t('transactions.expense') }}
             </button>
             <button
               type="button"
@@ -64,32 +64,32 @@
               :class="{ 'segmented-toggle__option--active': form.type === 'income' }"
               @click="form.type = 'income'"
             >
-              Ingreso
+              {{ t('transactions.income') }}
             </button>
           </div>
-          <v-text-field v-model="form.name" label="Nombre" variant="outlined" density="compact" required class="mb-3" />
-          <v-text-field v-model="form.icon" label="Ícono (emoji)" variant="outlined" density="compact" class="mb-3" />
-          <v-text-field v-model="form.color" label="Color" type="color" variant="outlined" density="compact" />
+          <v-text-field v-model="form.name" :label="t('profile.name')" variant="outlined" density="compact" required class="mb-3" />
+          <v-text-field v-model="form.icon" :label="t('categories.iconEmoji')" variant="outlined" density="compact" class="mb-3" />
+          <v-text-field v-model="form.color" :label="t('categories.color')" type="color" variant="outlined" density="compact" />
           <div class="d-flex align-center mt-1">
             <AIIconButton :name="form.name" :type="form.type" @generated="onIconGenerated" />
           </div>
         </v-card-text>
         <v-card-actions class="form-actions">
-          <v-btn variant="text" @click="dialog = false">Cancelar</v-btn>
+          <v-btn variant="text" @click="dialog = false">{{ t('common.cancel') }}</v-btn>
           <v-spacer />
-          <v-btn class="form-actions__primary" @click="save">Guardar</v-btn>
+          <v-btn class="form-actions__primary" @click="save">{{ t('common.save') }}</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
 
     <v-dialog v-model="deleteDialog" max-width="400">
       <v-card>
-        <v-card-title>Confirmar</v-card-title>
-        <v-card-text>¿Eliminar esta categoría?</v-card-text>
+        <v-card-title>{{ t('wallets.confirm') }}</v-card-title>
+        <v-card-text>{{ t('categories.deleteConfirm') }}</v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn variant="text" @click="deleteDialog = false">Cancelar</v-btn>
-          <v-btn color="error" @click="doDelete">Eliminar</v-btn>
+          <v-btn variant="text" @click="deleteDialog = false">{{ t('common.cancel') }}</v-btn>
+          <v-btn color="error" @click="doDelete">{{ t('common.delete') }}</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -108,11 +108,13 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useDisplay } from 'vuetify'
+import { useI18n } from 'vue-i18n'
 import { useCategoriesStore } from '@/stores/categories'
 import { useSnackbar } from '@/stores/snackbar'
 import { useSubscriptionStore } from '@/stores/subscriptions'
 import AIIconButton from '@/components/AIIconButton.vue'
 
+const { t } = useI18n()
 const { mobile } = useDisplay()
 const isMobile = computed(() => mobile.value)
 
@@ -147,13 +149,13 @@ const save = async () => {
   try {
     if (editing.value) {
       await store.update(editing.value, form.value)
-      snackbar.success('Categoría actualizada')
+      snackbar.success(t('categories.categoryUpdated'))
     } else {
       await store.create(form.value)
-      snackbar.success('Categoría creada')
+      snackbar.success(t('categories.categoryCreated'))
     }
     dialog.value = false
-  } catch { snackbar.error('Error al guardar') }
+  } catch { snackbar.error(t('transactions.saveError')) }
 }
 
 const confirmDelete = (cat) => { toDelete.value = cat._id; deleteDialog.value = true }
@@ -163,7 +165,7 @@ const onIconGenerated = (data) => {
   if (data.color) form.value.color = data.color
 }
 const doDelete = async () => {
-  try { await store.remove(toDelete.value); snackbar.success('Categoría eliminada') } catch { snackbar.error('Error') }
+  try { await store.remove(toDelete.value); snackbar.success(t('categories.categoryDeleted')) } catch { snackbar.error(t('common.error')) }
   deleteDialog.value = false
 }
 

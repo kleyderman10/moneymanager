@@ -14,7 +14,7 @@
       @click="startBelvoFlow"
       prepend-icon="mdi-bank-transfer"
     >
-      {{ buttonText || 'Vincular con el Banco (Belvo)' }}
+      {{ buttonText || t('bankConnector.linkBank') }}
     </v-btn>
 
   </div>
@@ -22,7 +22,10 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import api from '../api/client.js'
+
+const { t } = useI18n()
 
 const props = defineProps({
   buttonText: {
@@ -59,7 +62,7 @@ onMounted(() => {
 
 const startBelvoFlow = async () => {
   if (typeof window.belvoSDK === 'undefined') {
-    error.value = 'El widget de Belvo aún no ha cargado. Por favor espera un momento.'
+    error.value = t('bankConnector.widgetNotLoaded')
     return
   }
 
@@ -72,7 +75,7 @@ const startBelvoFlow = async () => {
     const widgetToken = data.token
 
     if (!widgetToken) {
-      throw new Error('No se recibió el token del widget')
+      throw new Error(t('bankConnector.noWidgetToken'))
     }
 
     // 2. Inicializar el widget de Belvo
@@ -95,7 +98,7 @@ const startBelvoFlow = async () => {
     
   } catch (err) {
     console.error('Error al iniciar flujo de Belvo:', err)
-    error.value = 'No se pudo iniciar la conexión con el banco. Intenta nuevamente.'
+    error.value = t('bankConnector.connectionError')
     isLoading.value = false
   }
 }

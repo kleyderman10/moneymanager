@@ -6,39 +6,39 @@
           <div class="finance-brand pa-0">
             <img src="/icon.svg" alt="" aria-hidden="true" class="finance-brand__logo" />
             <div>
-              <div class="finance-brand__name">Knexura Finanzas</div>
-              <div class="finance-brand__tagline">Tu dinero, bajo control</div>
+              <div class="finance-brand__name">{{ t('layout.brandName') }}</div>
+              <div class="finance-brand__tagline">{{ t('layout.brandTagline') }}</div>
             </div>
           </div>
-          <h1>Entiende tu dinero. Diseña tu futuro.</h1>
-          <p>Organiza tus movimientos, anticipa tus gastos y convierte tus metas en un plan financiero claro.</p>
+          <h1>{{ t('auth.heroTitle') }}</h1>
+          <p>{{ t('auth.heroSubtitle') }}</p>
           <div class="auth-proof">
-            <div class="auth-proof__item"><v-icon color="success" size="19">mdi-shield-check</v-icon> Acceso protegido</div>
-            <div class="auth-proof__item"><v-icon color="success" size="19">mdi-check-circle</v-icon> Datos seguros</div>
-            <div class="auth-proof__item"><v-icon color="success" size="19">mdi-check-circle</v-icon> Insights con IA</div>
+            <div class="auth-proof__item"><v-icon color="success" size="19">mdi-shield-check</v-icon> {{ t('auth.proofProtectedAccess') }}</div>
+            <div class="auth-proof__item"><v-icon color="success" size="19">mdi-check-circle</v-icon> {{ t('auth.proofSecureData') }}</div>
+            <div class="auth-proof__item"><v-icon color="success" size="19">mdi-check-circle</v-icon> {{ t('auth.proofAiInsights') }}</div>
           </div>
         </div>
       </v-col>
 
       <v-col cols="12" md="5" class="auth-form-side">
         <div class="auth-mobile-hero d-flex d-md-none">
-          <img src="/icon.svg" alt="Knexura Finanzas" class="auth-mobile-hero__mark" />
-          <h1 class="auth-mobile-hero__title">Knexura Finanzas</h1>
-          <p class="auth-mobile-hero__subtitle">Controla tus ingresos, gastos, presupuestos y metas en un solo lugar.</p>
+          <img src="/icon.svg" :alt="t('layout.brandName')" class="auth-mobile-hero__mark" />
+          <h1 class="auth-mobile-hero__title">{{ t('layout.brandName') }}</h1>
+          <p class="auth-mobile-hero__subtitle">{{ t('auth.mobileHeroSubtitle') }}</p>
         </div>
 
         <v-card class="auth-card">
           <template v-if="step === 'credentials'">
-            <h2 v-if="!mobile">Bienvenido de nuevo</h2>
-            <p v-if="!mobile" class="auth-card__intro">Ingresa para continuar cuidando tus finanzas.</p>
+            <h2 v-if="!mobile">{{ t('auth.welcomeBack') }}</h2>
+            <p v-if="!mobile" class="auth-card__intro">{{ t('auth.welcomeBackIntro') }}</p>
           </template>
           <template v-else>
             <v-btn variant="text" size="small" prepend-icon="mdi-arrow-left" class="mb-3 px-0" @click="backToCredentials">
-              Volver
+              {{ t('common.back') }}
             </v-btn>
-            <h2>Confirma que eres tú</h2>
+            <h2>{{ t('auth.confirmItsYou') }}</h2>
             <p class="auth-card__intro">
-              Escribe el código de 6 dígitos enviado a <strong>{{ email }}</strong>. Expira en 10 minutos.
+              {{ t('auth.codeSentIntro') }} <strong>{{ email }}</strong>. {{ t('auth.codeExpires') }}
             </p>
           </template>
 
@@ -50,7 +50,7 @@
           </v-alert>
 
           <v-form v-if="step === 'credentials'" @submit.prevent="handleLogin">
-            <label class="text-caption font-weight-bold d-block mb-2">Correo electrónico</label>
+            <label class="text-caption font-weight-bold d-block mb-2">{{ t('auth.email') }}</label>
             <v-text-field
               v-model="email"
               placeholder="nombre@correo.com"
@@ -63,10 +63,10 @@
               class="mb-2"
             />
 
-            <label class="text-caption font-weight-bold d-block mb-2">Contraseña</label>
+            <label class="text-caption font-weight-bold d-block mb-2">{{ t('auth.password') }}</label>
             <v-text-field
               v-model="password"
-              placeholder="Ingresa tu contraseña"
+              :placeholder="t('auth.passwordPlaceholder')"
               :prepend-inner-icon="mobile ? undefined : 'mdi-lock-outline'"
               :append-inner-icon="showPassword ? 'mdi-eye-off-outline' : 'mdi-eye-outline'"
               :type="showPassword ? 'text' : 'password'"
@@ -78,16 +78,16 @@
               @click:append-inner="showPassword = !showPassword"
             />
             <div class="text-right mb-2">
-              <v-btn variant="text" color="primary" size="x-small" class="auth-forgot-link px-0" to="/forgot-password">¿Olvidaste tu contraseña?</v-btn>
+              <v-btn variant="text" color="primary" size="x-small" class="auth-forgot-link px-0" to="/forgot-password">{{ t('auth.forgotPassword') }}</v-btn>
             </div>
 
             <v-btn type="submit" color="primary" block size="large" class="auth-primary-btn mt-2" :loading="authStore.loading && !bioLoading">
-              Iniciar sesión
+              {{ t('auth.signIn') }}
             </v-btn>
           </v-form>
 
           <v-form v-else @submit.prevent="handleCodeVerification">
-            <label class="text-caption font-weight-bold d-block mb-2">Código de seguridad</label>
+            <label class="text-caption font-weight-bold d-block mb-2">{{ t('auth.securityCode') }}</label>
             <v-text-field
               v-model="code"
               placeholder="000000"
@@ -100,17 +100,17 @@
               :rules="[rules.code]"
             />
             <v-btn type="submit" color="primary" block size="large" :loading="authStore.loading">
-              Verificar y continuar
+              {{ t('auth.verifyAndContinue') }}
             </v-btn>
             <v-btn variant="text" color="primary" block class="mt-3" :loading="resendLoading" @click="resendCode">
-              Reenviar código
+              {{ t('profile.resendCode') }}
             </v-btn>
           </v-form>
 
           <template v-if="step === 'credentials'">
             <div v-if="biometricAvailable" class="d-flex align-center my-5">
               <v-divider />
-              <span class="text-caption text-medium-emphasis px-3">o continúa con</span>
+              <span class="text-caption text-medium-emphasis px-3">{{ t('auth.orContinueWith') }}</span>
               <v-divider />
             </div>
 
@@ -124,12 +124,12 @@
               prepend-icon="mdi-face-recognition"
               @click="handleBiometricLogin"
             >
-              Face ID o huella
+              {{ t('auth.faceIdOrFingerprint') }}
             </v-btn>
 
             <p class="text-center text-body-2 text-medium-emphasis mt-7 mb-0">
-              ¿No tienes cuenta?
-              <v-btn variant="text" color="primary" size="small" class="auth-register-link" to="/register">Regístrate</v-btn>
+              {{ t('auth.noAccount') }}
+              <v-btn variant="text" color="primary" size="small" class="auth-register-link" to="/register">{{ t('auth.signUp') }}</v-btn>
             </p>
           </template>
         </v-card>
@@ -141,9 +141,11 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useDisplay } from 'vuetify'
 import { useAuthStore } from '@/stores/auth'
 
+const { t } = useI18n()
 const router = useRouter()
 const authStore = useAuthStore()
 const { mdAndUp } = useDisplay()
@@ -161,9 +163,9 @@ const bioLoading = ref(false)
 const resendLoading = ref(false)
 
 const rules = {
-  required: (value) => !!value || 'Campo obligatorio',
-  email: (value) => /.+@.+\..+/.test(value) || 'Correo inválido',
-  code: (value) => /^\d{6}$/.test(value) || 'Ingresa los 6 dígitos',
+  required: (value) => !!value || t('auth.requiredField'),
+  email: (value) => /.+@.+\..+/.test(value) || t('auth.invalidEmail'),
+  code: (value) => /^\d{6}$/.test(value) || t('profile.codeRuleError'),
 }
 
 const handleLogin = async () => {
@@ -199,7 +201,7 @@ const resendCode = async () => {
 
   if (result.success) {
     if (result.challengeToken) challengeToken.value = result.challengeToken
-    notice.value = result.message || 'Enviamos un código nuevo.'
+    notice.value = result.message || t('auth.newCodeSent')
   } else {
     authStore.error = result.message
   }
@@ -224,7 +226,7 @@ const handleBiometricLogin = async () => {
       email.value = result.prefillEmail
     }
   } catch {
-    authStore.error = 'Error al iniciar con Face ID / Huella'
+    authStore.error = t('auth.biometricLoginError')
   } finally {
     bioLoading.value = false
   }

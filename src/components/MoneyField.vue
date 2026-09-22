@@ -2,7 +2,7 @@
   <div class="money-field" :class="`money-field--${size}`">
     <label v-if="label" class="money-field__label">{{ label }}<span v-if="required" class="money-field__required">*</span></label>
     <div class="money-field__row">
-      <span class="money-field__prefix">{{ prefix }}</span>
+      <span class="money-field__prefix">{{ displayPrefix }}</span>
       <input
         class="money-field__input"
         type="text"
@@ -19,30 +19,52 @@
 
 <script setup>
 import { computed } from 'vue'
+import { useLocale } from '@/composables/useLocale'
 
 const props = defineProps({
   modelValue: { type: Number, default: null },
   label: { type: String, default: '' },
   hint: { type: String, default: '' },
   placeholder: { type: String, default: '0' },
-  prefix: { type: String, default: '$' },
+  prefix: { type: String, default: null },
+  currency: { type: String, default: null },
   size: { type: String, default: 'compact' }, // 'hero' | 'compact'
   required: { type: Boolean, default: false },
 })
 
 const emit = defineEmits(['update:modelValue'])
 
+const { currency: userCurrency, locale } = useLocale()
+const activeCurrency = computed(() => props.currency || userCurrency.value)
+const activeLocale = computed(() => locale.value)
+
+// Deriva el símbolo ($ , S/, Bs., etc.) de la moneda activa en vez de asumir "$".
+const currencySymbol = computed(() => {
+  try {
+    const parts = new Intl.NumberFormat(activeLocale.value, {
+      style: 'currency',
+      currency: activeCurrency.value,
+      currencyDisplay: 'narrowSymbol',
+      maximumFractionDigits: 0,
+    }).formatToParts(0)
+    return parts.filter((p) => p.type === 'currency').map((p) => p.value).join('') || activeCurrency.value
+  } catch {
+    return activeCurrency.value
+  }
+})
+const displayPrefix = computed(() => props.prefix ?? currencySymbol.value)
+
 const displayValue = computed(() => (
   props.modelValue === null || props.modelValue === undefined || Number.isNaN(props.modelValue)
     ? ''
-    : Number(props.modelValue).toLocaleString('es-CO')
+    : Number(props.modelValue).toLocaleString(activeLocale.value)
 ))
 
 const onInput = (event) => {
   const digitsOnly = event.target.value.replace(/[^\d]/g, '')
   const value = digitsOnly === '' ? null : Number(digitsOnly)
   emit('update:modelValue', value)
-  event.target.value = value === null ? '' : value.toLocaleString('es-CO')
+  event.target.value = value === null ? '' : value.toLocaleString(activeLocale.value)
 }
 </script>
 

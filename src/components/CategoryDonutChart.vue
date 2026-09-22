@@ -8,9 +8,9 @@
         <span class="category-donut__dot" :style="{ background: row.color }" />
         <div class="category-donut__info">
           <div class="category-donut__name">{{ row.name }}</div>
-          <div class="category-donut__count">{{ row.count }} {{ row.count === 1 ? 'movimiento' : 'movimientos' }}</div>
+          <div class="category-donut__count">{{ t('categoryDonut.movementCount', { count: row.count }, row.count) }}</div>
         </div>
-        <strong class="category-donut__amount">${{ row.amountLabel }}</strong>
+        <strong class="category-donut__amount">{{ row.amountLabel }}</strong>
       </div>
     </div>
   </div>
@@ -18,9 +18,11 @@
 
 <script setup>
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Doughnut } from 'vue-chartjs'
 import { Chart as ChartJS, ArcElement, Tooltip } from 'chart.js'
 import { categoryMarkColor } from '@/constants/categoryColors'
+import { useLocale } from '@/composables/useLocale'
 
 ChartJS.register(ArcElement, Tooltip)
 
@@ -28,11 +30,14 @@ const props = defineProps({
   categories: { type: Array, default: () => [] },
 })
 
+const { t } = useI18n()
+const { money } = useLocale()
+
 const items = computed(() => props.categories.map((cat) => ({
   key: cat.category?._id || cat.category?.name || Math.random(),
-  name: cat.category?.name || 'Sin categoría',
+  name: cat.category?.name || t('categoryDonut.noCategory'),
   count: cat.count,
-  amountLabel: Number(cat.total || 0).toLocaleString('es-CO', { maximumFractionDigits: 0 }),
+  amountLabel: money(cat.total || 0),
   color: categoryMarkColor(cat.category),
 })))
 
@@ -46,7 +51,7 @@ const chartData = computed(() => ({
   }],
 }))
 
-const chartOptions = {
+const chartOptions = computed(() => ({
   responsive: true,
   maintainAspectRatio: false,
   cutout: '70%',
@@ -54,11 +59,11 @@ const chartOptions = {
     legend: { display: false },
     tooltip: {
       callbacks: {
-        label: (ctx) => `${ctx.label}: $${Number(ctx.raw || 0).toLocaleString('es-CO', { maximumFractionDigits: 0 })}`,
+        label: (ctx) => `${ctx.label}: ${money(ctx.raw || 0)}`,
       },
     },
   },
-}
+}))
 </script>
 
 <style scoped>

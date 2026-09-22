@@ -2,13 +2,16 @@
   <button type="button" class="tool-tile" :disabled="loading" @click="suggest">
     <v-progress-circular v-if="loading" indeterminate size="20" width="2" color="primary" />
     <v-icon v-else size="22" color="primary">mdi-magic-staff</v-icon>
-    <span class="tool-tile__label">Sugerir categoría</span>
+    <span class="tool-tile__label">{{ t('aiSuggestCategory.suggestCategory') }}</span>
   </button>
 </template>
 
 <script setup>
 import { ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { aiAPI } from '@/api'
+
+const { t } = useI18n()
 
 const emit = defineEmits(['suggested'])
 const props = defineProps({ description: String, amount: Number, type: { type: String, default: 'expense' } })

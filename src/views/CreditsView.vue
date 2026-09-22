@@ -2,19 +2,19 @@
   <div>
     <div class="page-intro d-flex align-start align-sm-center flex-column flex-sm-row ga-3">
       <div>
-        <div class="page-intro__eyebrow">Deudas bajo control</div>
-        <h1 :class="isMobile ? 'text-h5' : 'text-h4'">Mis créditos</h1>
-        <p class="page-intro__subtitle">Registra tus obligaciones, sigue el saldo y decide cuándo hacer abonos extra.</p>
+        <div class="page-intro__eyebrow">{{ t('credits.debtUnderControl') }}</div>
+        <h1 :class="isMobile ? 'text-h5' : 'text-h4'">{{ t('credits.myCredits') }}</h1>
+        <p class="page-intro__subtitle">{{ t('credits.subtitle') }}</p>
       </div>
       <v-spacer />
-      <v-btn v-if="!isMobile && !billingStore.isReadOnly" color="primary" prepend-icon="mdi-plus" @click="openCreate">Registrar crédito</v-btn>
+      <v-btn v-if="!isMobile && !billingStore.isReadOnly" color="primary" prepend-icon="mdi-plus" @click="openCreate">{{ t('credits.registerCredit') }}</v-btn>
     </div>
 
     <v-card v-if="store.credits.length === 0 && !store.loading" class="pa-8 text-center text-grey">
       <v-icon size="x-large" color="primary">mdi-bank-plus</v-icon>
-      <div class="mt-2 text-body-1">Aún no tienes créditos registrados</div>
-      <div class="text-caption mt-1">Agrega tus obligaciones actuales para conocer el plan de pagos y las cuotas que faltan.</div>
-      <v-btn v-if="!billingStore.isReadOnly" color="primary" variant="text" class="mt-3" @click="openCreate">Registrar el primero</v-btn>
+      <div class="mt-2 text-body-1">{{ t('credits.noCreditsYet') }}</div>
+      <div class="text-caption mt-1">{{ t('credits.noCreditsHint') }}</div>
+      <v-btn v-if="!billingStore.isReadOnly" color="primary" variant="text" class="mt-3" @click="openCreate">{{ t('credits.registerFirst') }}</v-btn>
     </v-card>
 
     <v-row v-else>
@@ -34,25 +34,25 @@
           </v-card-title>
 
           <v-card-text>
-            <div class="credit-balance-label">Saldo de capital</div>
+            <div class="credit-balance-label">{{ t('credits.capitalBalance') }}</div>
             <div :class="isMobile ? 'text-h5' : 'text-h4'" class="font-weight-bold">{{ money(credit.summary?.capitalBalance ?? credit.capitalBalance ?? credit.outstandingBalance, credit.currency) }}</div>
-            <div class="text-caption text-medium-emphasis mt-1">Saldo total {{ credit.summary?.interestIsEstimated ? 'estimado' : 'actual' }}: <strong>{{ money(credit.summary?.totalBalance, credit.currency) }}</strong> (capital + intereses)</div>
+            <div class="text-caption text-medium-emphasis mt-1">{{ t('credits.totalBalance', { kind: credit.summary?.interestIsEstimated ? t('credits.estimated') : t('credits.current') }) }}: <strong>{{ money(credit.summary?.totalBalance, credit.currency) }}</strong> {{ t('credits.capitalPlusInterest') }}</div>
             <v-progress-linear class="mt-3" color="primary" rounded height="8" :model-value="credit.summary?.progress || 0" />
             <div class="d-flex justify-space-between text-caption text-medium-emphasis mt-1">
-              <span>{{ percent(credit.summary?.progress) }} pagado</span>
-              <span>{{ credit.summary?.remainingInstallments || 0 }} cuotas restantes</span>
+              <span>{{ t('credits.paidPercent', { percent: percent(credit.summary?.progress) }) }}</span>
+              <span>{{ t('credits.remainingInstallments', { count: credit.summary?.remainingInstallments || 0 }) }}</span>
             </div>
 
             <div class="credit-metrics mt-4">
-              <div><span>Cuota registrada</span><strong>{{ money(credit.installmentAmount, credit.currency) }}</strong></div>
-              <div><span>Interés actual / estimado</span><strong>{{ money(credit.summary?.currentInterest, credit.currency) }}</strong></div>
-              <div><span>Interés restante estimado</span><strong>{{ money(credit.summary?.totalRemainingInterest, credit.currency) }}</strong></div>
-              <div><span>Cuotas pagadas</span><strong>{{ credit.installmentsPaid }} / {{ credit.termMonths }}</strong></div>
+              <div><span>{{ t('credits.registeredInstallment') }}</span><strong>{{ money(credit.installmentAmount, credit.currency) }}</strong></div>
+              <div><span>{{ t('credits.currentInterest') }}</span><strong>{{ money(credit.summary?.currentInterest, credit.currency) }}</strong></div>
+              <div><span>{{ t('credits.remainingInterest') }}</span><strong>{{ money(credit.summary?.totalRemainingInterest, credit.currency) }}</strong></div>
+              <div><span>{{ t('credits.installmentsPaid') }}</span><strong>{{ credit.installmentsPaid }} / {{ credit.termMonths }}</strong></div>
             </div>
 
             <div v-if="credit.summary?.calculation" class="text-caption text-medium-emphasis mt-3">
-              Tasa anual registrada: <strong>{{ Number(credit.annualInterestRate || 0).toLocaleString('es-CO', { maximumFractionDigits: 4 }) }}%</strong>
-              · Tasa mensual equivalente: <strong>{{ Number(credit.summary.calculation.monthlyRate || 0).toLocaleString('es-CO', { maximumFractionDigits: 4 }) }}%</strong>
+              {{ t('credits.registeredAnnualRate') }}: <strong>{{ number(credit.annualInterestRate || 0, { maximumFractionDigits: 4 }) }}%</strong>
+              · {{ t('credits.equivalentMonthlyRate') }}: <strong>{{ number(credit.summary.calculation.monthlyRate || 0, { maximumFractionDigits: 4 }) }}%</strong>
             </div>
 
             <v-alert v-if="credit.summary?.calculation?.warnings?.length" class="mt-3" type="warning" variant="tonal" density="compact">
@@ -60,7 +60,7 @@
             </v-alert>
 
             <v-alert v-if="credit.summary?.nextPaymentDate && credit.summary.status !== 'paid_off'" class="mt-3" :type="credit.summary.daysUntilNextPayment < 0 ? 'error' : credit.summary.daysUntilNextPayment <= 7 ? 'warning' : 'info'" variant="tonal" density="compact">
-              <strong>{{ credit.summary.daysUntilNextPayment < 0 ? `Pago vencido hace ${Math.abs(credit.summary.daysUntilNextPayment)} días` : `Próximo pago: ${formatDate(credit.summary.nextPaymentDate)}` }}</strong>
+              <strong>{{ credit.summary.daysUntilNextPayment < 0 ? t('credits.paymentOverdue', { days: Math.abs(credit.summary.daysUntilNextPayment) }) : t('credits.nextPayment', { date: formatDate(credit.summary.nextPaymentDate) }) }}</strong>
               <span v-if="credit.summary.daysUntilNextPayment >= 0"> · {{ money(credit.installmentAmount || credit.summary.nextPaymentAmount, credit.currency) }}</span>
             </v-alert>
 
@@ -69,11 +69,11 @@
             </v-alert>
 
             <v-expansion-panels variant="accordion" class="mt-3">
-              <v-expansion-panel title="Ver plan de pagos">
+              <v-expansion-panel :title="t('credits.viewPaymentPlan')">
                 <v-expansion-panel-text>
                   <div v-if="credit.paymentPlan?.length" class="plan-scroll">
                     <v-table density="compact">
-                      <thead><tr><th>Cuota</th><th>Fecha</th><th class="text-right">Pago</th><th class="text-right">Interés</th><th class="text-right">Saldo capital</th></tr></thead>
+                      <thead><tr><th>{{ t('credits.installment') }}</th><th>{{ t('transactions.date') }}</th><th class="text-right">{{ t('credits.payment') }}</th><th class="text-right">{{ t('credits.interest') }}</th><th class="text-right">{{ t('credits.capitalBalanceShort') }}</th></tr></thead>
                       <tbody>
                         <tr v-for="row in credit.paymentPlan" :key="row.period">
                           <td>{{ credit.installmentsPaid + row.period }}</td>
@@ -84,29 +84,29 @@
                         </tr>
                       </tbody>
                     </v-table>
-                    <div class="text-caption text-medium-emphasis mt-2">Mostrando las {{ credit.paymentPlan.length }} cuotas pendientes del crédito.</div>
+                    <div class="text-caption text-medium-emphasis mt-2">{{ t('credits.showingInstallments', { count: credit.paymentPlan.length }) }}</div>
                   </div>
-                  <div v-else class="text-caption text-medium-emphasis">No hay cuotas pendientes.</div>
+                  <div v-else class="text-caption text-medium-emphasis">{{ t('credits.noPendingInstallments') }}</div>
                 </v-expansion-panel-text>
               </v-expansion-panel>
-              <v-expansion-panel title="Historial de pagos">
+              <v-expansion-panel :title="t('credits.paymentHistory')">
                 <v-expansion-panel-text>
                   <v-list v-if="credit.payments?.length" density="compact" bg-color="transparent">
-                    <v-list-item v-for="payment in credit.payments.slice(0, 8)" :key="payment._id" :title="formatDate(payment.date)" :subtitle="payment.paymentType === 'extra' ? 'Abono extra' : 'Pago de cuota'">
+                    <v-list-item v-for="payment in credit.payments.slice(0, 8)" :key="payment._id" :title="formatDate(payment.date)" :subtitle="payment.paymentType === 'extra' ? t('credits.extraPayment') : t('credits.installmentPayment')">
                       <template #append>
                         <span class="text-green mr-2">{{ money(payment.amount, credit.currency) }}</span>
                         <v-btn v-if="!billingStore.isReadOnly" icon="mdi-delete-outline" size="x-small" variant="text" color="error" @click="removePayment(credit, payment)" />
                       </template>
                     </v-list-item>
                   </v-list>
-                  <div v-else class="text-caption text-medium-emphasis">Aún no hay pagos registrados.</div>
+                  <div v-else class="text-caption text-medium-emphasis">{{ t('credits.noPaymentsYet') }}</div>
                 </v-expansion-panel-text>
               </v-expansion-panel>
             </v-expansion-panels>
           </v-card-text>
 
           <v-card-actions>
-            <v-btn v-if="!billingStore.isReadOnly && credit.summary?.status !== 'paid_off'" size="small" color="primary" variant="tonal" prepend-icon="mdi-cash-check" @click="openPayment(credit)">Registrar pago</v-btn>
+            <v-btn v-if="!billingStore.isReadOnly && credit.summary?.status !== 'paid_off'" size="small" color="primary" variant="tonal" prepend-icon="mdi-cash-check" @click="openPayment(credit)">{{ t('credits.registerPayment') }}</v-btn>
             <v-spacer />
             <v-btn v-if="!billingStore.isReadOnly" size="small" variant="text" icon="mdi-pencil" @click="openEdit(credit)" />
             <v-btn v-if="!billingStore.isReadOnly" size="small" variant="text" icon="mdi-delete" color="error" @click="confirmDelete(credit)" />
@@ -116,7 +116,7 @@
     </v-row>
 
     <v-dialog v-model="dialog" :fullscreen="isMobile" max-width="620">
-      <v-card :title="editing ? 'Editar crédito' : 'Registrar crédito'" class="capture-form">
+      <v-card :title="editing ? t('credits.editCredit') : t('credits.registerCredit')" class="capture-form">
         <v-card-text>
           <div class="wizard-progress">
             <template v-for="(label, idx) in wizardSteps" :key="label">
@@ -127,57 +127,57 @@
               <div v-if="idx < wizardSteps.length - 1" class="wizard-progress__line" :class="{ 'wizard-progress__line--done': wizardStep > idx + 1 }" />
             </template>
           </div>
-          <div class="wizard-step-title">Paso {{ wizardStep }} de {{ wizardSteps.length }} · {{ wizardSteps[wizardStep - 1] }}</div>
+          <div class="wizard-step-title">{{ t('credits.stepOf', { step: wizardStep, total: wizardSteps.length, label: wizardSteps[wizardStep - 1] }) }}</div>
 
           <v-window v-model="wizardStep">
             <v-window-item :value="1">
-              <v-text-field v-model="form.name" label="Nombre del crédito" variant="outlined" density="compact" required class="mb-3" />
-              <NativeSelectField v-model="form.institutionCode" :items="institutionOptions" item-title="name" item-value="code" label="Entidad financiera" placeholder="Selecciona una entidad" @update:model-value="onInstitutionChange" class="mb-2" />
-              <v-text-field v-if="form.institutionCode === 'other'" v-model="form.institutionName" label="Nombre de la entidad" variant="outlined" density="compact" class="mb-3" />
+              <v-text-field v-model="form.name" :label="t('credits.creditName')" variant="outlined" density="compact" required class="mb-3" />
+              <NativeSelectField v-model="form.institutionCode" :items="institutionOptions" item-title="name" item-value="code" :label="t('wallets.financialInstitution')" :placeholder="t('wallets.selectInstitution')" @update:model-value="onInstitutionChange" class="mb-2" />
+              <v-text-field v-if="form.institutionCode === 'other'" v-model="form.institutionName" :label="t('wallets.institutionName')" variant="outlined" density="compact" class="mb-3" />
               <div class="d-flex align-center ga-1">
-                <label class="form-label mb-0">Tipo de crédito</label>
+                <label class="form-label mb-0">{{ t('credits.creditType') }}</label>
                 <v-icon size="15" color="grey" class="help-icon">mdi-help-circle-outline</v-icon>
-                <v-tooltip activator="parent" location="top" max-width="260">Personal: libre inversión. Vehicular e hipotecario: financian un bien específico. Rotativo: cupo que se recarga a medida que pagas (como una tarjeta).</v-tooltip>
+                <v-tooltip activator="parent" location="top" max-width="260">{{ t('credits.creditTypeHelp') }}</v-tooltip>
               </div>
-              <NativeSelectField v-model="form.type" :items="typeOptions" label="Tipo de crédito" class="mb-2" />
+              <NativeSelectField v-model="form.type" :items="typeOptions" :label="t('credits.creditType')" class="mb-2" />
               <v-row dense>
-                <v-col cols="6"><v-text-field v-model="form.currency" label="Moneda" variant="outlined" density="compact" maxlength="3" /></v-col>
-                <v-col cols="6"><v-text-field v-model.number="form.termMonths" label="Plazo (meses)" type="number" min="1" max="360" variant="outlined" density="compact" /></v-col>
+                <v-col cols="6"><v-text-field v-model="form.currency" :label="t('wallets.currency')" variant="outlined" density="compact" maxlength="3" /></v-col>
+                <v-col cols="6"><v-text-field v-model.number="form.termMonths" :label="t('credits.termMonths')" type="number" min="1" max="360" variant="outlined" density="compact" /></v-col>
               </v-row>
-              <MoneyField v-model="form.principalAmount" label="Monto original" size="hero" />
+              <MoneyField v-model="form.principalAmount" :label="t('credits.originalAmount')" size="hero" />
             </v-window-item>
 
             <v-window-item :value="2">
-              <MoneyField v-model="form.capitalBalance" label="Saldo de capital actual" size="hero" hint="Solo el capital pendiente, sin sumar intereses." />
-              <MoneyField v-model="form.interestBalance" label="Intereses pendientes actuales" hint="Intereses ya causados que aún no has pagado. El plan calcula los futuros." />
-              <MoneyField v-model="form.installmentAmount" label="Cuota mensual" />
+              <MoneyField v-model="form.capitalBalance" :label="t('credits.currentCapitalBalance')" size="hero" :hint="t('credits.currentCapitalBalanceHint')" />
+              <MoneyField v-model="form.interestBalance" :label="t('credits.currentPendingInterest')" :hint="t('credits.currentPendingInterestHint')" />
+              <MoneyField v-model="form.installmentAmount" :label="t('credits.monthlyInstallment')" />
               <v-row dense class="mt-1">
-                <v-col cols="6"><v-text-field v-model.number="form.annualInterestRate" label="Tasa" type="number" min="0" step="0.01" variant="outlined" density="compact" suffix="%" /></v-col>
-                <v-col cols="6"><v-text-field v-model.number="form.installmentsPaid" label="Cuotas pagadas" type="number" min="0" variant="outlined" density="compact" /></v-col>
+                <v-col cols="6"><v-text-field v-model.number="form.annualInterestRate" :label="t('credits.rate')" type="number" min="0" step="0.01" variant="outlined" density="compact" suffix="%" /></v-col>
+                <v-col cols="6"><v-text-field v-model.number="form.installmentsPaid" :label="t('credits.installmentsPaid')" type="number" min="0" variant="outlined" density="compact" /></v-col>
               </v-row>
               <div class="d-flex align-center ga-1">
-                <label class="form-label mb-0">Periodo de tasa</label>
+                <label class="form-label mb-0">{{ t('credits.ratePeriod') }}</label>
                 <v-icon size="15" color="grey" class="help-icon">mdi-help-circle-outline</v-icon>
-                <v-tooltip activator="parent" location="top" max-width="260">Efectiva anual (E.A.): la tasa que normalmente informa el banco para todo un año. Mensual: la tasa ya expresada por cada mes, sin convertir.</v-tooltip>
+                <v-tooltip activator="parent" location="top" max-width="260">{{ t('credits.ratePeriodHelp') }}</v-tooltip>
               </div>
-              <NativeSelectField v-model="form.ratePeriod" :items="rateOptions" label="Periodo de tasa" />
+              <NativeSelectField v-model="form.ratePeriod" :items="rateOptions" :label="t('credits.ratePeriod')" />
             </v-window-item>
 
             <v-window-item :value="3">
               <v-row dense>
-                <v-col cols="12" sm="6"><v-text-field v-model="form.startDate" label="Fecha de inicio" type="date" variant="outlined" density="compact" /></v-col>
-                <v-col cols="12" sm="6"><v-text-field v-model="form.firstPaymentDate" label="Primer pago" type="date" variant="outlined" density="compact" /></v-col>
-                <v-col cols="12" sm="6"><v-text-field v-model="form.nextPaymentDate" label="Próximo pago" type="date" variant="outlined" density="compact" /></v-col>
-                <v-col cols="12" sm="6"><v-text-field v-model.number="form.paymentDay" label="Día habitual de pago" type="number" min="1" max="28" variant="outlined" density="compact" /></v-col>
+                <v-col cols="12" sm="6"><v-text-field v-model="form.startDate" :label="t('credits.startDate')" type="date" variant="outlined" density="compact" /></v-col>
+                <v-col cols="12" sm="6"><v-text-field v-model="form.firstPaymentDate" :label="t('credits.firstPayment')" type="date" variant="outlined" density="compact" /></v-col>
+                <v-col cols="12" sm="6"><v-text-field v-model="form.nextPaymentDate" :label="t('credits.nextPaymentField')" type="date" variant="outlined" density="compact" /></v-col>
+                <v-col cols="12" sm="6"><v-text-field v-model.number="form.paymentDay" :label="t('credits.usualPaymentDay')" type="number" min="1" max="28" variant="outlined" density="compact" /></v-col>
               </v-row>
-              <v-textarea v-model="form.notes" label="Notas" rows="2" variant="outlined" density="compact" class="mt-2" />
+              <v-textarea v-model="form.notes" :label="t('credits.notes')" rows="2" variant="outlined" density="compact" class="mt-2" />
             </v-window-item>
           </v-window>
         </v-card-text>
         <v-card-actions class="form-actions">
-          <v-btn variant="text" @click="dialog = false">Cancelar</v-btn>
+          <v-btn variant="text" @click="dialog = false">{{ t('common.cancel') }}</v-btn>
           <v-spacer />
-          <v-btn v-if="wizardStep > 1" variant="text" @click="wizardStep--">Atrás</v-btn>
+          <v-btn v-if="wizardStep > 1" variant="text" @click="wizardStep--">{{ t('credits.back') }}</v-btn>
           <v-btn
             v-if="wizardStep < wizardSteps.length"
             class="form-actions__primary"
@@ -185,33 +185,33 @@
             :disabled="wizardStep === 1 && !form.name"
             @click="wizardStep++"
           >
-            Siguiente
+            {{ t('common.next') }}
           </v-btn>
-          <v-btn v-else class="form-actions__primary" :loading="saving" @click="save">Guardar</v-btn>
+          <v-btn v-else class="form-actions__primary" :loading="saving" @click="save">{{ t('common.save') }}</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
 
     <v-dialog v-model="paymentDialog" :fullscreen="isMobile" max-width="500">
-      <v-card :title="`Registrar pago · ${paymentCredit?.name || ''}`">
+      <v-card :title="t('credits.registerPaymentFor', { name: paymentCredit?.name || '' })">
         <v-card-text>
-          <v-alert v-if="paymentCredit" type="info" variant="tonal" density="compact" class="mb-4">Capital: <strong>{{ money(paymentCredit.summary?.capitalBalance, paymentCredit.currency) }}</strong> · Total actual: <strong>{{ money(paymentCredit.summary?.totalBalance, paymentCredit.currency) }}</strong></v-alert>
-          <v-text-field v-model.number="paymentForm.amount" label="Monto pagado" type="number" min="0" density="compact" prefix="$" required />
-          <v-text-field v-model.number="paymentForm.interestAmount" label="Parte correspondiente a intereses (opcional)" type="number" min="0" density="compact" prefix="$" hint="Si lo dejas vacío, se aplica primero el interés pendiente estimado y el resto a capital." persistent-hint />
-          <NativeSelectField v-model="paymentForm.paymentType" :items="paymentTypeOptions" label="Tipo de pago" />
-          <v-text-field v-model="paymentForm.date" label="Fecha del pago" type="date" density="compact" />
-          <NativeSelectField v-model="paymentForm.wallet" :items="wallets" item-title="name" item-value="_id" label="Cuenta desde la que pagaste (opcional)" placeholder="No descontar una cuenta" />
-          <v-text-field v-model="paymentForm.description" label="Descripción" density="compact" />
-          <v-textarea v-model="paymentForm.notes" label="Notas" rows="2" density="compact" />
-          <div class="text-caption text-medium-emphasis">El pago se registrará como un gasto. Si seleccionas una cuenta, también se descontará de su saldo.</div>
+          <v-alert v-if="paymentCredit" type="info" variant="tonal" density="compact" class="mb-4">{{ t('credits.capitalBalance') }}: <strong>{{ money(paymentCredit.summary?.capitalBalance, paymentCredit.currency) }}</strong> · {{ t('credits.currentTotal') }}: <strong>{{ money(paymentCredit.summary?.totalBalance, paymentCredit.currency) }}</strong></v-alert>
+          <v-text-field v-model.number="paymentForm.amount" :label="t('credits.amountPaid')" type="number" min="0" density="compact" prefix="$" required />
+          <v-text-field v-model.number="paymentForm.interestAmount" :label="t('credits.interestPortionOptional')" type="number" min="0" density="compact" prefix="$" :hint="t('credits.interestPortionHint')" persistent-hint />
+          <NativeSelectField v-model="paymentForm.paymentType" :items="paymentTypeOptions" :label="t('credits.paymentTypeLabel')" />
+          <v-text-field v-model="paymentForm.date" :label="t('credits.paymentDate')" type="date" density="compact" />
+          <NativeSelectField v-model="paymentForm.wallet" :items="wallets" item-title="name" item-value="_id" :label="t('credits.paidFromAccount')" :placeholder="t('credits.dontDiscountAccount')" />
+          <v-text-field v-model="paymentForm.description" :label="t('transactions.description')" density="compact" />
+          <v-textarea v-model="paymentForm.notes" :label="t('credits.notes')" rows="2" density="compact" />
+          <div class="text-caption text-medium-emphasis">{{ t('credits.paymentRecordedHint') }}</div>
         </v-card-text>
-        <v-card-actions><v-spacer /><v-btn variant="text" @click="paymentDialog = false">Cancelar</v-btn><v-btn color="primary" :loading="paymentSaving" @click="savePayment">Guardar pago</v-btn></v-card-actions>
+        <v-card-actions><v-spacer /><v-btn variant="text" @click="paymentDialog = false">{{ t('common.cancel') }}</v-btn><v-btn color="primary" :loading="paymentSaving" @click="savePayment">{{ t('credits.savePayment') }}</v-btn></v-card-actions>
       </v-card>
     </v-dialog>
 
     <v-dialog v-model="deleteDialog" max-width="420">
-      <v-card title="Eliminar crédito"><v-card-text>¿Eliminar este crédito? El historial de movimientos de tus cuentas no se borrará.</v-card-text>
-        <v-card-actions><v-spacer /><v-btn variant="text" @click="deleteDialog = false">Cancelar</v-btn><v-btn color="error" :loading="deleting" @click="doDelete">Eliminar</v-btn></v-card-actions>
+      <v-card :title="t('credits.deleteCredit')"><v-card-text>{{ t('credits.deleteCreditConfirm') }}</v-card-text>
+        <v-card-actions><v-spacer /><v-btn variant="text" @click="deleteDialog = false">{{ t('common.cancel') }}</v-btn><v-btn color="error" :loading="deleting" @click="doDelete">{{ t('common.delete') }}</v-btn></v-card-actions>
       </v-card>
     </v-dialog>
 
@@ -222,13 +222,17 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useDisplay } from 'vuetify'
+import { useI18n } from 'vue-i18n'
 import { useCreditsStore } from '@/stores/credits'
 import { useSnackbar } from '@/stores/snackbar'
 import { useSubscriptionStore } from '@/stores/subscriptions'
+import { useLocale } from '@/composables/useLocale'
 import { walletsAPI, financialInstitutionsAPI } from '@/api'
 import NativeSelectField from '@/components/NativeSelectField.vue'
 import MoneyField from '@/components/MoneyField.vue'
 
+const { t } = useI18n()
+const { money, number, date } = useLocale()
 const { mobile } = useDisplay()
 const isMobile = computed(() => mobile.value)
 const store = useCreditsStore()
@@ -236,7 +240,7 @@ const snackbar = useSnackbar()
 const billingStore = useSubscriptionStore()
 const wallets = ref([])
 const institutions = ref([])
-const wizardSteps = ['Datos del crédito', 'Saldo y tasas', 'Fechas y notas']
+const wizardSteps = computed(() => [t('credits.stepCreditData'), t('credits.stepBalanceAndRates'), t('credits.stepDatesAndNotes')])
 const wizardStep = ref(1)
 const dialog = ref(false)
 const paymentDialog = ref(false)
@@ -248,11 +252,22 @@ const paymentCredit = ref(null)
 const saving = ref(false)
 const paymentSaving = ref(false)
 
-const typeLabels = { personal: 'Personal', vehicle: 'Vehículo', mortgage: 'Vivienda', education: 'Educativo', business: 'Negocio', other: 'Otro' }
-const statusLabels = { active: 'Activo', paused: 'Pausado', paid_off: 'Pagado' }
-const typeOptions = Object.entries(typeLabels).map(([value, title]) => ({ value, title }))
-const rateOptions = [{ value: 'annual_effective', title: 'Efectiva anual' }, { value: 'monthly', title: 'Mensual' }]
-const paymentTypeOptions = [{ value: 'installment', title: 'Pago de cuota' }, { value: 'extra', title: 'Abono extra a capital' }]
+const typeLabels = computed(() => ({
+  personal: t('credits.typePersonal'),
+  vehicle: t('credits.typeVehicle'),
+  mortgage: t('credits.typeMortgage'),
+  education: t('credits.typeEducation'),
+  business: t('credits.typeBusiness'),
+  other: t('credits.typeOther'),
+}))
+const statusLabels = computed(() => ({
+  active: t('credits.statusActive'),
+  paused: t('credits.statusPaused'),
+  paid_off: t('credits.statusPaidOff'),
+}))
+const typeOptions = computed(() => Object.entries(typeLabels.value).map(([value, title]) => ({ value, title })))
+const rateOptions = computed(() => [{ value: 'annual_effective', title: t('credits.annualEffective') }, { value: 'monthly', title: t('wallets.monthly') }])
+const paymentTypeOptions = computed(() => [{ value: 'installment', title: t('credits.installmentPayment') }, { value: 'extra', title: t('credits.extraCapitalPayment') }])
 const institutionOptions = computed(() => institutions.value.filter((item) => item.products?.includes('credit')))
 
 const today = () => new Date().toISOString().slice(0, 10)
@@ -265,9 +280,8 @@ const emptyForm = () => ({ name: '', lender: '', institutionCode: '', institutio
 const form = ref(emptyForm())
 const paymentForm = ref({ amount: 0, interestAmount: null, paymentType: 'installment', date: today(), wallet: null, description: '', notes: '' })
 
-const money = (value, currency = 'COP') => new Intl.NumberFormat('es-CO', { style: 'currency', currency: currency || 'COP', maximumFractionDigits: 0 }).format(Number(value || 0))
-const percent = (value) => `${Number(value || 0).toLocaleString('es-CO', { maximumFractionDigits: 1 })}%`
-const formatDate = (value) => value ? new Intl.DateTimeFormat('es-CO', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(value)) : 'Sin fecha'
+const percent = (value) => `${number(value, { maximumFractionDigits: 1 })}%`
+const formatDate = (value) => value ? date(value, { day: 'numeric', month: 'short', year: 'numeric' }) : t('credits.noDate')
 
 const onInstitutionChange = (code) => {
   const institution = institutions.value.find((item) => item.code === code)
@@ -309,10 +323,10 @@ const openEdit = (credit) => {
 const save = async () => {
   saving.value = true
   try {
-    if (editing.value) { await store.update(editing.value, form.value); snackbar.success('Crédito actualizado') }
-    else { await store.create(form.value); snackbar.success('Crédito registrado') }
+    if (editing.value) { await store.update(editing.value, form.value); snackbar.success(t('credits.creditUpdated')) }
+    else { await store.create(form.value); snackbar.success(t('credits.creditRegistered')) }
     dialog.value = false
-  } catch (err) { snackbar.error(err?.response?.data?.message || 'No fue posible guardar el crédito') }
+  } catch (err) { snackbar.error(err?.response?.data?.message || t('credits.saveCreditError')) }
   saving.value = false
 }
 const openPayment = (credit) => {
@@ -325,21 +339,21 @@ const savePayment = async () => {
   paymentSaving.value = true
   try {
     await store.addPayment(paymentCredit.value._id, paymentForm.value)
-    snackbar.success('Pago registrado y saldo actualizado')
+    snackbar.success(t('credits.paymentRegistered'))
     paymentDialog.value = false
-  } catch (err) { snackbar.error(err?.response?.data?.message || 'No fue posible registrar el pago') }
+  } catch (err) { snackbar.error(err?.response?.data?.message || t('credits.registerPaymentError')) }
   paymentSaving.value = false
 }
 const removePayment = async (credit, payment) => {
-  if (!window.confirm('¿Eliminar este pago y revertir el abono al crédito?')) return
-  try { await store.deletePayment(credit._id, payment._id); snackbar.success('Pago eliminado') }
-  catch (err) { snackbar.error(err?.response?.data?.message || 'No fue posible eliminar el pago') }
+  if (!window.confirm(t('credits.removePaymentConfirm'))) return
+  try { await store.deletePayment(credit._id, payment._id); snackbar.success(t('credits.paymentDeleted')) }
+  catch (err) { snackbar.error(err?.response?.data?.message || t('credits.deletePaymentError')) }
 }
 const confirmDelete = (credit) => { toDelete.value = credit._id; deleteDialog.value = true }
 const doDelete = async () => {
   deleting.value = true
-  try { await store.remove(toDelete.value); snackbar.success('Crédito eliminado'); deleteDialog.value = false }
-  catch (err) { snackbar.error(err?.response?.data?.message || 'No fue posible eliminar el crédito') }
+  try { await store.remove(toDelete.value); snackbar.success(t('credits.creditDeleted')); deleteDialog.value = false }
+  catch (err) { snackbar.error(err?.response?.data?.message || t('credits.deleteCreditError')) }
   deleting.value = false
 }
 

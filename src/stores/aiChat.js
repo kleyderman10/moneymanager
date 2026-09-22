@@ -1,6 +1,9 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { aiAPI } from '@/api'
+import { i18n } from '@/i18n'
+
+const t = i18n.global.t
 
 export const useAiChatStore = defineStore('aiChat', () => {
   const messages = ref([])
@@ -27,8 +30,8 @@ export const useAiChatStore = defineStore('aiChat', () => {
       const res = await aiAPI.chat(text)
       messages.value = res.data.messages || [...messages.value, { role: 'assistant', content: res.data.reply }]
     } catch (e) {
-      error.value = e.response?.data?.message || 'Error de conexión con AI'
-      messages.value.push({ role: 'assistant', content: e.response?.data?.message || 'Lo siento, no pude procesar tu consulta. ¿Configuraste la API key de OpenAI en el .env del backend?' })
+      error.value = e.response?.data?.message || t('aiChatStore.connectionError')
+      messages.value.push({ role: 'assistant', content: e.response?.data?.message || t('aiChatStore.processError') })
     }
     loading.value = false
   }

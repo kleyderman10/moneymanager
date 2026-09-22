@@ -14,35 +14,35 @@
       <div class="finance-brand">
         <img src="/icon.svg" alt="" aria-hidden="true" class="finance-brand__logo" />
         <div>
-          <div class="finance-brand__name">Knexura Finanzas</div>
-          <div class="finance-brand__tagline">Tu dinero, bajo control</div>
+          <div class="finance-brand__name">{{ t('layout.brandName') }}</div>
+          <div class="finance-brand__tagline">{{ t('layout.brandTagline') }}</div>
         </div>
       </div>
     </template>
 
     <v-list nav density="comfortable">
-      <v-list-subheader>Vista general</v-list-subheader>
-      <v-list-item prepend-icon="mdi-view-dashboard-outline" title="Inicio" value="dashboard" to="/" exact />
-      <v-list-item prepend-icon="mdi-swap-vertical" title="Movimientos" value="transactions" to="/transactions" />
-      <v-list-item prepend-icon="mdi-chart-donut" title="Reportes" value="reports" to="/reports" />
+      <v-list-subheader>{{ t('nav.overview') }}</v-list-subheader>
+      <v-list-item prepend-icon="mdi-view-dashboard-outline" :title="t('nav.dashboard')" value="dashboard" to="/" exact />
+      <v-list-item prepend-icon="mdi-swap-vertical" :title="t('nav.transactions')" value="transactions" to="/transactions" />
+      <v-list-item prepend-icon="mdi-chart-donut" :title="t('nav.reports')" value="reports" to="/reports" />
 
-      <v-list-subheader class="mt-3">Planificación</v-list-subheader>
-      <v-list-item prepend-icon="mdi-wallet-outline" title="Cuentas" value="wallets" to="/wallets" />
-      <v-list-item prepend-icon="mdi-bank-minus" title="Créditos" value="credits" to="/credits" />
-      <v-list-item prepend-icon="mdi-chart-pie-outline" title="Presupuestos" value="budgets" to="/budgets" />
-      <v-list-item prepend-icon="mdi-target" title="Metas de ahorro" value="goals" to="/goals" />
-      <v-list-item prepend-icon="mdi-calculator-variant-outline" title="Simuladores y capacidad" value="simulators" to="/simulators?tab=capacity" />
-      <v-list-item prepend-icon="mdi-sync" title="Recurrentes" value="recurring" to="/recurring" />
-      <v-list-item prepend-icon="mdi-shape-outline" title="Categorías" value="categories" to="/categories" />
+      <v-list-subheader class="mt-3">{{ t('nav.planning') }}</v-list-subheader>
+      <v-list-item prepend-icon="mdi-wallet-outline" :title="t('nav.wallets')" value="wallets" to="/wallets" />
+      <v-list-item prepend-icon="mdi-bank-minus" :title="t('nav.credits')" value="credits" to="/credits" />
+      <v-list-item prepend-icon="mdi-chart-pie-outline" :title="t('nav.budgets')" value="budgets" to="/budgets" />
+      <v-list-item prepend-icon="mdi-target" :title="t('nav.goals')" value="goals" to="/goals" />
+      <v-list-item prepend-icon="mdi-calculator-variant-outline" :title="t('nav.simulators')" value="simulators" to="/simulators?tab=capacity" />
+      <v-list-item prepend-icon="mdi-sync" :title="t('nav.recurring')" value="recurring" to="/recurring" />
+      <v-list-item prepend-icon="mdi-shape-outline" :title="t('nav.categories')" value="categories" to="/categories" />
 
-      <v-list-subheader class="mt-3">Cuenta</v-list-subheader>
-      <v-list-item prepend-icon="mdi-account-outline" title="Mi perfil" value="profile" to="/profile" />
-      <v-list-item prepend-icon="mdi-credit-card-outline" title="Plan y facturación" value="subscription" to="/subscription" />
-      <v-list-item prepend-icon="mdi-information-outline" title="Acerca de" value="about" to="/about" />
+      <v-list-subheader class="mt-3">{{ t('nav.account') }}</v-list-subheader>
+      <v-list-item prepend-icon="mdi-account-outline" :title="t('nav.profile')" value="profile" to="/profile" />
+      <v-list-item prepend-icon="mdi-credit-card-outline" :title="t('nav.subscription')" value="subscription" to="/subscription" />
+      <v-list-item prepend-icon="mdi-information-outline" :title="t('nav.about')" value="about" to="/about" />
 
       <template v-if="authStore.isAdmin">
-        <v-list-subheader class="mt-3">Administración</v-list-subheader>
-        <v-list-item prepend-icon="mdi-shield-account-outline" title="Panel administrativo" value="admin" to="/admin" />
+        <v-list-subheader class="mt-3">{{ t('nav.adminSection') }}</v-list-subheader>
+        <v-list-item prepend-icon="mdi-shield-account-outline" :title="t('nav.admin')" value="admin" to="/admin" />
       </template>
     </v-list>
 
@@ -50,10 +50,10 @@
       <div class="finance-sidebar__footer d-flex align-center ga-3">
         <v-avatar size="34" class="finance-avatar">{{ initials }}</v-avatar>
         <div class="finance-sidebar__user flex-grow-1">
-          <strong>{{ authStore.user?.name || 'Mi cuenta' }}</strong>
-          <span>{{ authStore.user?.email || 'Finanzas personales' }}</span>
+          <strong>{{ authStore.user?.name || t('layout.myAccount') }}</strong>
+          <span>{{ authStore.user?.email || t('layout.personalFinance') }}</span>
         </div>
-        <v-btn icon="mdi-logout" size="x-small" variant="text" title="Cerrar sesión" @click="handleLogout" />
+        <v-btn icon="mdi-logout" size="x-small" variant="text" :title="t('layout.logout')" @click="handleLogout" />
       </div>
     </template>
   </v-navigation-drawer>
@@ -74,16 +74,16 @@
 
     <v-spacer v-if="!isMobile" />
 
-    <v-btn 
-      class="topbar-profile" 
+    <v-btn
+      class="topbar-profile"
       :class="{ 'mr-2': true, 'px-0': isMobile }"
-      :variant="isMobile ? 'text' : 'flat'" 
-      to="/profile" 
-      aria-label="Abrir perfil"
+      :variant="isMobile ? 'text' : 'flat'"
+      to="/profile"
+      :aria-label="t('layout.openProfile')"
       :icon="isMobile"
     >
       <v-avatar size="31" class="finance-avatar" :class="{ 'mr-sm-2': !isMobile }">{{ initials }}</v-avatar>
-      <span v-if="!isMobile" class="topbar-profile__name">{{ firstName || 'Perfil' }}</span>
+      <span v-if="!isMobile" class="topbar-profile__name">{{ firstName || t('layout.profile') }}</span>
       <v-icon v-if="!isMobile" size="17" class="ml-1">mdi-chevron-down</v-icon>
     </v-btn>
   </v-app-bar>
@@ -98,12 +98,12 @@
         icon="mdi-lock-outline"
         class="mb-5"
       >
-        <strong>Tu periodo gratuito o de gracia terminó</strong>
+        <strong>{{ t('layout.trialEnded') }}</strong>
         <span class="d-block text-body-2 mt-1">
-          Tus datos permanecen disponibles en modo solo lectura. Suscríbete para crear, editar o eliminar información.
+          {{ t('layout.trialEndedBody') }}
         </span>
         <template #append>
-          <v-btn variant="text" color="error" to="/subscription">Activar suscripción</v-btn>
+          <v-btn variant="text" color="error" to="/subscription">{{ t('layout.activateSubscription') }}</v-btn>
         </template>
       </v-alert>
       <v-alert
@@ -116,9 +116,9 @@
         closable
       >
         <strong>{{ trialBannerTitle }}</strong>
-        <span class="d-block text-body-2 mt-1">Después podrás continuar por {{ formattedPlanPrice }} cada tres meses.</span>
+        <span class="d-block text-body-2 mt-1">{{ t('layout.trialContinueAfter', { price: formattedPlanPrice }) }}</span>
         <template #append>
-          <v-btn variant="text" color="primary" to="/subscription">Ver mi plan</v-btn>
+          <v-btn variant="text" color="primary" to="/subscription">{{ t('layout.viewMyPlan') }}</v-btn>
         </template>
       </v-alert>
       <router-view />
@@ -134,23 +134,23 @@
   >
     <v-btn value="dashboard" to="/" exact>
       <v-icon>mdi-view-dashboard-outline</v-icon>
-      <span>Inicio</span>
+      <span>{{ t('nav.dashboard') }}</span>
     </v-btn>
     <v-btn value="transactions" to="/transactions">
       <v-icon>mdi-swap-vertical</v-icon>
-      <span>Movimientos</span>
+      <span>{{ t('nav.transactions') }}</span>
     </v-btn>
     <v-btn value="wallets" to="/wallets">
       <v-icon>mdi-wallet-outline</v-icon>
-      <span>Cuentas</span>
+      <span>{{ t('nav.wallets') }}</span>
     </v-btn>
     <v-btn value="reports" to="/reports">
       <v-icon>mdi-chart-donut</v-icon>
-      <span>Reportes</span>
+      <span>{{ t('nav.reports') }}</span>
     </v-btn>
     <v-btn value="more" @click.prevent="drawer = !drawer">
       <v-icon>mdi-menu</v-icon>
-      <span>Menú</span>
+      <span>{{ t('nav.menu') }}</span>
     </v-btn>
   </v-bottom-navigation>
 </template>
@@ -158,12 +158,16 @@
 <script setup>
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useSubscriptionStore } from '@/stores/subscriptions'
+import { useLocale } from '@/composables/useLocale'
 import { useDisplay } from 'vuetify'
 import AIChatPanel from '@/components/AIChatPanel.vue'
 import AIConsentDialog from '@/components/AIConsentDialog.vue'
 
+const { t } = useI18n()
+const { money, dateLong } = useLocale()
 const { mobile } = useDisplay()
 const isMobile = computed(() => mobile.value)
 
@@ -212,36 +216,36 @@ const initials = computed(() => {
 
 const greeting = computed(() => {
   const hour = new Date().getHours()
-  if (hour < 12) return 'Buenos días'
-  if (hour < 18) return 'Buenas tardes'
-  return 'Buenas noches'
+  if (hour < 12) return t('layout.goodMorning')
+  if (hour < 18) return t('layout.goodAfternoon')
+  return t('layout.goodEvening')
 })
 
-const currentDate = computed(() => new Intl.DateTimeFormat('es-CO', {
+const currentDate = computed(() => dateLong(new Date(), {
   weekday: 'long',
   day: 'numeric',
   month: 'long',
-}).format(new Date()))
+}))
 
 const currentRouteTitle = computed(() => {
   const map = {
-    Dashboard: 'Inicio',
-    Transactions: 'Movimientos',
-    Categories: 'Categorías',
-    Budgets: 'Presupuestos',
-    Goals: 'Metas',
-    Wallets: 'Cuentas',
-    Credits: 'Créditos',
-    Recurring: 'Recurrentes',
-    Reports: 'Reportes',
-    Simulators: 'Simuladores',
-    Profile: 'Mi perfil',
-    Subscription: 'Plan y facturación',
-    About: 'Acerca de',
-    Admin: 'Panel administrativo'
+    Dashboard: t('nav.dashboard'),
+    Transactions: t('nav.transactions'),
+    Categories: t('nav.categories'),
+    Budgets: t('nav.budgets'),
+    Goals: t('nav.goals'),
+    Wallets: t('nav.wallets'),
+    Credits: t('nav.credits'),
+    Recurring: t('nav.recurring'),
+    Reports: t('nav.reports'),
+    Simulators: t('nav.simulators'),
+    Profile: t('nav.profile'),
+    Subscription: t('nav.subscription'),
+    About: t('nav.about'),
+    Admin: t('nav.admin'),
   }
-  if (route.name === 'Simulators' && route.query.tab === 'capacity') return 'Capacidad crediticia'
-  return map[route.name] || 'Knexura Finanzas'
+  if (route.name === 'Simulators' && route.query.tab === 'capacity') return t('layout.creditCapacity')
+  return map[route.name] || t('layout.brandName')
 })
 
 const showTrialBanner = computed(() => (
@@ -252,13 +256,12 @@ const showReadOnlyBanner = computed(() => (
 ))
 const trialBannerTitle = computed(() => {
   const days = billingStore.status?.daysRemaining || 0
-  return days === 1 ? 'Te queda 1 día de prueba' : `Te quedan ${days} días de prueba`
+  return days === 1 ? t('layout.trialDaysLeftOne') : t('layout.trialDaysLeft', { days })
 })
-const formattedPlanPrice = computed(() => new Intl.NumberFormat('es-CO', {
-  style: 'currency',
-  currency: billingStore.status?.plan?.currency || 'COP',
-  maximumFractionDigits: 0,
-}).format(billingStore.status?.plan?.amount || 15000))
+const formattedPlanPrice = computed(() => money(
+  billingStore.status?.plan?.amount || 15000,
+  billingStore.status?.plan?.currency || undefined,
+))
 
 watch(() => route.path, (path) => {
   const segment = path.split('/')[1] || 'dashboard'

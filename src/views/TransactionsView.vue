@@ -2,14 +2,14 @@
   <div>
     <div class="page-intro d-flex align-start align-sm-center flex-column flex-sm-row ga-3">
       <div>
-        <div class="page-intro__eyebrow">Control diario</div>
-        <h1 :class="isMobile ? 'text-h5' : 'text-h4'">Movimientos</h1>
-        <p class="page-intro__subtitle">Consulta, filtra e importa todos tus ingresos y gastos.</p>
+        <div class="page-intro__eyebrow">{{ t('transactions.dailyControl') }}</div>
+        <h1 :class="isMobile ? 'text-h5' : 'text-h4'">{{ t('nav.transactions') }}</h1>
+        <p class="page-intro__subtitle">{{ t('transactions.subtitle') }}</p>
       </div>
       <v-spacer />
       <div v-if="!isMobile" class="d-flex ga-2">
-        <v-btn variant="outlined" prepend-icon="mdi-download" @click="doExport">Exportar</v-btn>
-        <v-btn v-if="!billingStore.isReadOnly" color="primary" prepend-icon="mdi-plus" @click="openModeDialog">Nuevo movimiento</v-btn>
+        <v-btn variant="outlined" prepend-icon="mdi-download" @click="doExport">{{ t('transactions.export') }}</v-btn>
+        <v-btn v-if="!billingStore.isReadOnly" color="primary" prepend-icon="mdi-plus" @click="openModeDialog">{{ t('transactions.newTransaction') }}</v-btn>
       </div>
     </div>
 
@@ -17,24 +17,24 @@
       <v-col cols="12" sm="4">
         <v-card class="tx-summary-card">
           <v-card-text>
-            <div class="tx-summary-card__label">Total mostrado</div>
-            <div class="tx-summary-card__value">{{ totalShown < 0 ? '−' : '' }}${{ fmt(Math.abs(totalShown)) }}</div>
+            <div class="tx-summary-card__label">{{ t('transactions.totalShown') }}</div>
+            <div class="tx-summary-card__value">{{ totalShown < 0 ? '−' : '' }}{{ money(Math.abs(totalShown)) }}</div>
           </v-card-text>
         </v-card>
       </v-col>
       <v-col cols="6" sm="4">
         <v-card class="tx-summary-card tx-summary-card--light">
           <v-card-text>
-            <div class="tx-summary-card__label">Movimientos mostrados</div>
-            <div class="tx-summary-card__value tx-summary-card__value--dark">{{ pagedRegisters.length }} <span class="tx-summary-card__of">de {{ store.registers.length }}</span></div>
+            <div class="tx-summary-card__label">{{ t('transactions.transactionsShown') }}</div>
+            <div class="tx-summary-card__value tx-summary-card__value--dark">{{ pagedRegisters.length }} <span class="tx-summary-card__of">{{ t('transactions.of', { total: store.registers.length }) }}</span></div>
           </v-card-text>
         </v-card>
       </v-col>
       <v-col cols="6" sm="4">
         <v-card class="tx-summary-card tx-summary-card--light">
           <v-card-text>
-            <div class="tx-summary-card__label">Promedio por movimiento</div>
-            <div class="tx-summary-card__value tx-summary-card__value--dark">${{ fmt(averagePerMovement) }}</div>
+            <div class="tx-summary-card__label">{{ t('transactions.averagePerTransaction') }}</div>
+            <div class="tx-summary-card__value tx-summary-card__value--dark">{{ money(averagePerMovement) }}</div>
           </v-card-text>
         </v-card>
       </v-col>
@@ -44,19 +44,19 @@
       <v-expansion-panel>
         <v-expansion-panel-title>
           <div class="d-flex align-center w-100">
-            <v-icon class="mr-2">mdi-filter</v-icon> Filtros
+            <v-icon class="mr-2">mdi-filter</v-icon> {{ t('transactions.filters') }}
             <v-spacer />
             <div v-if="selected.length" class="tx-selection-bar" @click.stop>
-              <span class="text-caption text-medium-emphasis mr-2">{{ selected.length }} seleccionado{{ selected.length === 1 ? '' : 's' }}</span>
-              <v-btn size="small" variant="text" color="primary" @click="exportSelected">Exportar selección</v-btn>
-              <v-btn size="small" variant="text" color="error" @click="confirmBulkDelete">Eliminar</v-btn>
+              <span class="text-caption text-medium-emphasis mr-2">{{ t('transactions.selectedCount', { count: selected.length }, selected.length) }}</span>
+              <v-btn size="small" variant="text" color="primary" @click="exportSelected">{{ t('transactions.exportSelection') }}</v-btn>
+              <v-btn size="small" variant="text" color="error" @click="confirmBulkDelete">{{ t('common.delete') }}</v-btn>
             </div>
           </div>
         </v-expansion-panel-title>
         <v-expansion-panel-text>
           <v-row dense>
             <v-col cols="6" sm="3">
-              <v-select v-model="filters.type" :items="typeOptions" label="Tipo" clearable density="compact" hide-details @update:model-value="load" />
+              <v-select v-model="filters.type" :items="typeOptions" :label="t('transactions.type')" clearable density="compact" hide-details @update:model-value="load" />
             </v-col>
             <v-col cols="6" sm="3">
               <v-select
@@ -66,7 +66,7 @@
                 :no-data-text="categoryNoDataText"
                 item-title="name"
                 item-value="_id"
-                label="Categoría"
+                :label="t('transactions.category')"
                 clearable
                 density="compact"
                 hide-details
@@ -74,10 +74,10 @@
               />
             </v-col>
             <v-col cols="6" sm="3">
-              <v-text-field v-model="filters.startDate" type="date" label="Desde" density="compact" hide-details @update:model-value="load" />
+              <v-text-field v-model="filters.startDate" type="date" :label="t('transactions.from')" density="compact" hide-details @update:model-value="load" />
             </v-col>
             <v-col cols="6" sm="3">
-              <v-text-field v-model="filters.endDate" type="date" label="Hasta" density="compact" hide-details @update:model-value="load" />
+              <v-text-field v-model="filters.endDate" type="date" :label="t('transactions.to')" density="compact" hide-details @update:model-value="load" />
             </v-col>
           </v-row>
         </v-expansion-panel-text>
@@ -100,10 +100,10 @@
       >
         <template #item.date="{ value }">{{ formatDate(value) }}</template>
         <template #item.type="{ value }">
-          <v-chip :color="value === 'income' ? 'income' : 'expense'" size="small" label>{{ value === 'income' ? 'Ingreso' : 'Gasto' }}</v-chip>
+          <v-chip :color="value === 'income' ? 'income' : 'expense'" size="small" label>{{ value === 'income' ? t('transactions.income') : t('transactions.expense') }}</v-chip>
         </template>
         <template #item.amount="{ value, item }">
-          <span :class="item.type === 'income' ? 'text-green' : 'text-red'">{{ item.type === 'income' ? '+' : '-' }}${{ fmt(value) }}</span>
+          <span :class="item.type === 'income' ? 'text-green' : 'text-red'">{{ item.type === 'income' ? '+' : '-' }}{{ money(value) }}</span>
         </template>
         <template #item.category="{ value }">
           <v-chip size="small" :color="getCategoryColor(value).bg" :style="{ color: getCategoryColor(value).text }">{{ value?.icon }} {{ value?.name }}</v-chip>
@@ -115,7 +115,7 @@
         </template>
       </v-data-table>
       <div class="tx-pagination">
-        <span class="text-caption text-medium-emphasis">Mostrando {{ pagedRegisters.length }} de {{ store.registers.length }}</span>
+        <span class="text-caption text-medium-emphasis">{{ t('transactions.showing', { shown: pagedRegisters.length, total: store.registers.length }) }}</span>
         <div class="d-flex align-center ga-1">
           <v-btn icon="mdi-chevron-left" size="small" variant="text" :disabled="page <= 1" @click="page--" />
           <span class="text-caption">{{ page }} / {{ pageCount }}</span>
@@ -128,7 +128,7 @@
     <div v-else>
       <v-card v-if="store.registers.length === 0 && !store.loading" class="pa-8 text-center text-grey">
         <v-icon size="x-large" color="grey">mdi-cash-remove</v-icon>
-        <div class="mt-2">No hay transacciones</div>
+        <div class="mt-2">{{ t('transactions.noTransactions') }}</div>
       </v-card>
       <template v-else>
         <v-list bg-color="transparent" lines="two">
@@ -150,7 +150,7 @@
                 <span class="text-white text-caption">{{ reg.category?.icon || '?' }}</span>
               </v-avatar>
             </template>
-            <v-list-item-title>{{ reg.description || reg.category?.name || 'Sin descripción' }}</v-list-item-title>
+            <v-list-item-title>{{ reg.description || reg.category?.name || t('transactions.noDescription') }}</v-list-item-title>
             <v-list-item-subtitle>
               {{ formatDate(reg.date) }} · {{ reg.category?.name }}
               <span v-if="reg.wallet" class="text-caption"> · {{ reg.wallet.name }}</span>
@@ -158,15 +158,15 @@
             <template #append>
               <div class="text-right">
                 <div :class="reg.type === 'income' ? 'text-green' : 'text-red'" class="text-body-1 font-weight-bold">
-                  {{ reg.type === 'income' ? '+' : '-' }}${{ fmt(reg.amount) }}
+                  {{ reg.type === 'income' ? '+' : '-' }}{{ money(reg.amount) }}
                 </div>
-                <div class="text-caption text-grey">{{ reg.type === 'income' ? 'Ingreso' : 'Gasto' }}</div>
+                <div class="text-caption text-grey">{{ reg.type === 'income' ? t('transactions.income') : t('transactions.expense') }}</div>
               </div>
             </template>
           </v-list-item>
         </v-list>
         <div class="tx-pagination">
-          <span class="text-caption text-medium-emphasis">Mostrando {{ pagedRegisters.length }} de {{ store.registers.length }}</span>
+          <span class="text-caption text-medium-emphasis">{{ t('transactions.showing', { shown: pagedRegisters.length, total: store.registers.length }) }}</span>
           <div class="d-flex align-center ga-1">
             <v-btn icon="mdi-chevron-left" size="small" variant="text" :disabled="page <= 1" @click="page--" />
             <span class="text-caption">{{ page }} / {{ pageCount }}</span>
@@ -177,53 +177,53 @@
     </div>
 
     <v-dialog v-model="modeDialog" max-width="460" @after-leave="onModeDialogAfterLeave">
-      <v-card title="Nueva transacción">
+      <v-card :title="t('transactions.newTransactionTitle')">
         <v-card-text class="text-center">
-          <p class="text-body-2 text-grey mb-4">¿Cómo deseas ingresar el gasto?</p>
+          <p class="text-body-2 text-grey mb-4">{{ t('transactions.howToEnter') }}</p>
           <div class="d-flex ga-3 justify-center flex-wrap">
             <v-card variant="outlined" class="pa-4 text-center" style="cursor: pointer; flex: 1 1 120px; min-width: 120px" hover @click="startScan">
               <v-icon size="40" color="primary" class="mb-2">mdi-camera-document</v-icon>
-              <div class="text-body-2 font-weight-bold">Escanear documento</div>
-              <div class="text-caption text-grey">Foto de factura o recibo</div>
+              <div class="text-body-2 font-weight-bold">{{ t('transactions.scanDocument') }}</div>
+              <div class="text-caption text-grey">{{ t('transactions.scanDocumentHint') }}</div>
             </v-card>
             <v-card variant="outlined" class="pa-4 text-center" style="cursor: pointer; flex: 1 1 120px; min-width: 120px" hover @click="startStatement">
               <v-icon size="40" color="primary" class="mb-2">mdi-file-document-outline</v-icon>
-              <v-badge v-if="newBadge" content="NUEVO" color="success" offset-x="-32" offset-y="6" />
-              <div class="text-body-2 font-weight-bold">Subir extracto PDF</div>
-              <div class="text-caption text-grey">Importa transacciones del banco</div>
+              <v-badge v-if="newBadge" :content="t('transactions.newBadge')" color="success" offset-x="-32" offset-y="6" />
+              <div class="text-body-2 font-weight-bold">{{ t('transactions.uploadStatement') }}</div>
+              <div class="text-caption text-grey">{{ t('transactions.uploadStatementHint') }}</div>
             </v-card>
             <v-card variant="outlined" class="pa-4 text-center" style="cursor: pointer; flex: 1 1 120px; min-width: 120px" hover @click="openManualCreate">
               <v-icon size="40" color="primary" class="mb-2">mdi-pencil-box</v-icon>
-              <div class="text-body-2 font-weight-bold">Digitar</div>
-              <div class="text-caption text-grey">Ingresar datos manualmente</div>
+              <div class="text-body-2 font-weight-bold">{{ t('transactions.typeIn') }}</div>
+              <div class="text-caption text-grey">{{ t('transactions.typeInHint') }}</div>
             </v-card>
           </div>
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn variant="text" @click="modeDialog = false">Cancelar</v-btn>
+          <v-btn variant="text" @click="modeDialog = false">{{ t('common.cancel') }}</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
 
     <v-dialog v-model="statementWalletDialog" max-width="420">
-      <v-card title="Subir extracto PDF">
+      <v-card :title="t('transactions.uploadStatement')">
         <v-card-text>
-          <p class="text-body-2 text-grey mb-3">Selecciona la cuenta del extracto. La IA detectara transacciones, omitira duplicados y podras revisar antes de importar.</p>
+          <p class="text-body-2 text-grey mb-3">{{ t('transactions.statementWalletHint') }}</p>
           <NativeSelectField
             v-model="statementWallet"
             :items="walletOptions"
             item-title="name"
             item-value="_id"
-            label="Cuenta"
-            placeholder="Selecciona una cuenta"
+            :label="t('transactions.account')"
+            :placeholder="t('wallets.selectAccount')"
           />
           <div v-if="bankWalletsHint" class="text-caption text-grey mt-1">{{ bankWalletsHint }}</div>
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn variant="text" @click="statementWalletDialog = false">Cancelar</v-btn>
-          <v-btn color="primary" :disabled="!statementWallet" prepend-icon="mdi-file-upload" @click="pickStatementPdf">Seleccionar PDF</v-btn>
+          <v-btn variant="text" @click="statementWalletDialog = false">{{ t('common.cancel') }}</v-btn>
+          <v-btn color="primary" :disabled="!statementWallet" prepend-icon="mdi-file-upload" @click="pickStatementPdf">{{ t('transactions.selectPdf') }}</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -254,7 +254,7 @@
     </v-dialog>
 
     <v-dialog v-model="dialog" :fullscreen="isMobile" max-width="500">
-      <v-card :title="editing ? 'Editar transacción' : 'Nueva transacción'" class="capture-form">
+      <v-card :title="editing ? t('transactions.editTransaction') : t('transactions.newTransactionTitle')" class="capture-form">
         <v-card-text>
           <div class="tool-tiles">
             <AISuggestCategory
@@ -266,11 +266,11 @@
             <VoiceInputButton @parsed="onVoiceParsed" />
             <ReceiptScanner @scanned="onReceiptScanned" />
           </div>
-          <p class="tool-tiles__hint">Llena el formulario en segundos con estas herramientas.</p>
+          <p class="tool-tiles__hint">{{ t('transactions.toolsHint') }}</p>
 
-          <div class="form-divider"><span>o ingresa los datos manualmente</span></div>
+          <div class="form-divider"><span>{{ t('transactions.orManualEntry') }}</span></div>
 
-          <label class="form-label">Tipo</label>
+          <label class="form-label">{{ t('transactions.type') }}</label>
           <div class="segmented-toggle mb-3">
             <button
               type="button"
@@ -278,7 +278,7 @@
               :class="{ 'segmented-toggle__option--active': form.type === 'expense' }"
               @click="onTypeChange('expense')"
             >
-              Gasto
+              {{ t('transactions.expense') }}
             </button>
             <button
               type="button"
@@ -286,23 +286,23 @@
               :class="{ 'segmented-toggle__option--active': form.type === 'income' }"
               @click="onTypeChange('income')"
             >
-              Ingreso
+              {{ t('transactions.income') }}
             </button>
           </div>
 
-          <MoneyField v-model="form.amount" label="Monto" size="hero" required />
+          <MoneyField v-model="form.amount" :label="t('wallets.amount')" size="hero" required />
 
-          <label class="form-label mt-2">Fecha</label>
+          <label class="form-label mt-2">{{ t('transactions.date') }}</label>
           <div class="chip-row mb-2">
-            <button type="button" class="chip-option" :class="{ 'chip-option--active': !showDatePicker && isToday(form.date) }" @click="setDateToday">Hoy</button>
-            <button type="button" class="chip-option" :class="{ 'chip-option--active': !showDatePicker && isYesterday(form.date) }" @click="setDateYesterday">Ayer</button>
+            <button type="button" class="chip-option" :class="{ 'chip-option--active': !showDatePicker && isToday(form.date) }" @click="setDateToday">{{ t('common.today') }}</button>
+            <button type="button" class="chip-option" :class="{ 'chip-option--active': !showDatePicker && isYesterday(form.date) }" @click="setDateYesterday">{{ t('transactions.yesterday') }}</button>
             <button type="button" class="chip-option" :class="{ 'chip-option--active': showDatePicker }" @click="showDatePicker = true">
-              <v-icon size="14">mdi-calendar</v-icon> Elegir
+              <v-icon size="14">mdi-calendar</v-icon> {{ t('transactions.choose') }}
             </button>
           </div>
           <v-text-field v-if="showDatePicker" v-model="form.date" type="date" variant="outlined" density="compact" required class="mb-2" />
 
-          <label class="form-label">Categoría</label>
+          <label class="form-label">{{ t('transactions.category') }}</label>
           <div class="chip-row mb-2">
             <button
               v-for="cat in frequentCategories"
@@ -314,7 +314,7 @@
             >
               <v-icon v-if="form.category === cat._id" size="14">mdi-check</v-icon> {{ cat.name }}
             </button>
-            <button type="button" class="chip-option" @click="showAllCategories = !showAllCategories">+ Ver todas</button>
+            <button type="button" class="chip-option" @click="showAllCategories = !showAllCategories">+ {{ t('transactions.viewAll') }}</button>
           </div>
           <NativeSelectField
             v-if="showAllCategories"
@@ -325,72 +325,72 @@
             :no-data-text="categoryNoDataText"
             item-title="name"
             item-value="_id"
-            label="Categoría"
-            placeholder="Selecciona una categoría"
-            loading-text="Cargando categorías..."
+            :label="t('transactions.category')"
+            :placeholder="t('transactions.selectCategory')"
+            :loading-text="t('transactions.loadingCategories')"
             :error="!!categoriesError || (attemptedSave && !form.category)"
             required
             class="mb-2"
           />
 
-          <v-text-field v-model="form.description" label="Descripción" variant="outlined" density="compact" class="mb-2" />
+          <v-text-field v-model="form.description" :label="t('transactions.description')" variant="outlined" density="compact" class="mb-2" />
 
           <NativeSelectField
             v-model="form.wallet"
             :items="walletOptions"
             item-title="name"
             item-value="_id"
-            label="Cuenta"
-            placeholder="Sin cuenta"
+            :label="t('transactions.account')"
+            :placeholder="t('transactions.noAccount')"
             :loading="referenceDataLoading"
           />
 
           <v-btn v-if="!showTagsField" variant="text" size="small" color="primary" class="px-0 mt-1" prepend-icon="mdi-plus" @click="showTagsField = true">
-            Etiqueta
+            {{ t('transactions.tag') }}
           </v-btn>
-          <v-combobox v-else v-model="form.tags" :items="store.tags.map(t => t.name)" label="Etiquetas" variant="outlined" density="compact" multiple chips />
+          <v-combobox v-else v-model="form.tags" :items="store.tags.map(t => t.name)" :label="t('transactions.tags')" variant="outlined" density="compact" multiple chips />
         </v-card-text>
         <v-card-actions class="form-actions">
-          <v-btn variant="text" @click="dialog = false">Cancelar</v-btn>
+          <v-btn variant="text" @click="dialog = false">{{ t('common.cancel') }}</v-btn>
           <v-spacer />
-          <v-btn class="form-actions__primary" @click="save" :loading="saving">Guardar</v-btn>
+          <v-btn class="form-actions__primary" @click="save" :loading="saving">{{ t('common.save') }}</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
 
     <v-dialog v-model="reviewDialog" :fullscreen="isMobile" max-width="600">
-      <v-card title="Revisar recibo escaneado">
+      <v-card :title="t('transactions.reviewScannedReceipt')">
         <v-card-text>
           <v-row dense class="mb-2">
             <v-col cols="12" sm="6">
-              <v-text-field v-model="reviewMerchant" label="Comercio" density="compact" />
+              <v-text-field v-model="reviewMerchant" :label="t('transactions.merchant')" density="compact" />
             </v-col>
             <v-col cols="12" sm="6">
-              <v-text-field v-model="reviewDate" label="Fecha" type="date" density="compact" />
+              <v-text-field v-model="reviewDate" :label="t('transactions.date')" type="date" density="compact" />
             </v-col>
           </v-row>
-          <NativeSelectField v-model="reviewWallet" :items="walletOptions" item-title="name" item-value="_id" label="Cuenta" placeholder="Selecciona una cuenta" class="mb-2" />
-          <div class="text-subtitle-2 mb-2">Items detectados</div>
+          <NativeSelectField v-model="reviewWallet" :items="walletOptions" item-title="name" item-value="_id" :label="t('transactions.account')" :placeholder="t('wallets.selectAccount')" class="mb-2" />
+          <div class="text-subtitle-2 mb-2">{{ t('transactions.detectedItems') }}</div>
           <v-list bg-color="transparent" density="compact">
             <v-list-item v-for="(item, i) in reviewItems" :key="i" class="mb-2 pa-2" rounded elevation="1">
               <div class="d-flex flex-column w-100 ga-1">
                 <div class="d-flex align-center ga-2">
-                  <v-text-field v-model="item.description" label="Descripción" density="compact" hide-details class="flex-grow-1" />
+                  <v-text-field v-model="item.description" :label="t('transactions.description')" density="compact" hide-details class="flex-grow-1" />
                   <v-btn icon="mdi-delete" size="x-small" variant="text" color="error" @click="removeReviewItem(i)" />
                 </div>
                 <div class="d-flex ga-2">
-                  <v-text-field v-model.number="item.amount" label="Monto" type="number" density="compact" hide-details style="max-width: 140px" prefix="$" />
-                  <NativeSelectField v-model="item.category" :items="expenseCategories" item-title="name" item-value="_id" label="Categoría" placeholder="Selecciona una categoría" class="flex-grow-1" />
+                  <v-text-field v-model.number="item.amount" :label="t('wallets.amount')" type="number" density="compact" hide-details style="max-width: 140px" prefix="$" />
+                  <NativeSelectField v-model="item.category" :items="expenseCategories" item-title="name" item-value="_id" :label="t('transactions.category')" :placeholder="t('transactions.selectCategory')" class="flex-grow-1" />
                 </div>
               </div>
             </v-list-item>
           </v-list>
-          <v-btn size="small" variant="text" color="primary" prepend-icon="mdi-plus" @click="addReviewItem" class="mt-1">Agregar ítem</v-btn>
+          <v-btn size="small" variant="text" color="primary" prepend-icon="mdi-plus" @click="addReviewItem" class="mt-1">{{ t('transactions.addItem') }}</v-btn>
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn variant="text" @click="reviewDialog = false">Cancelar</v-btn>
-          <v-btn color="primary" @click="saveReviewedItems" :loading="reviewSaving">Confirmar ({{ reviewItems.length }})</v-btn>
+          <v-btn variant="text" @click="reviewDialog = false">{{ t('common.cancel') }}</v-btn>
+          <v-btn color="primary" @click="saveReviewedItems" :loading="reviewSaving">{{ t('transactions.confirmCount', { count: reviewItems.length }) }}</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -398,30 +398,30 @@
     <v-dialog v-model="statementReviewDialog" :fullscreen="isMobile" max-width="900" scrollable>
       <v-card>
         <v-card-title class="d-flex align-center">
-          <span>Revisar extracto</span>
+          <span>{{ t('transactions.reviewStatement') }}</span>
           <v-spacer />
-          <v-chip size="small" color="info">{{ statementContext.summary.detected }} filas</v-chip>
-          <v-chip size="small" color="grey" class="ml-2">{{ statementContext.summary.duplicates }} duplicadas</v-chip>
-          <v-chip size="small" color="success" class="ml-2">{{ selectedStatementRows.length }} a importar</v-chip>
+          <v-chip size="small" color="info">{{ t('transactions.rowsCount', { count: statementContext.summary.detected }, statementContext.summary.detected) }}</v-chip>
+          <v-chip size="small" color="grey" class="ml-2">{{ t('transactions.duplicatesCount', { count: statementContext.summary.duplicates }, statementContext.summary.duplicates) }}</v-chip>
+          <v-chip size="small" color="success" class="ml-2">{{ t('transactions.toImportCount', { count: selectedStatementRows.length }, selectedStatementRows.length) }}</v-chip>
         </v-card-title>
         <v-card-text>
           <v-alert v-if="statementContext.summary.duplicates > 0" type="info" variant="tonal" density="compact" class="mb-3">
-            Las filas marcadas como <strong>Duplicado</strong> ya existen en tus transacciones y se deseleccionan por defecto. Puedes cambiar la selección manualmente.
+            {{ t('transactions.duplicateRowsNotice') }}
           </v-alert>
           <div v-if="statementContext.period && statementContext.period.start" class="text-caption text-grey mb-2">
-            Periodo: {{ statementContext.period.start }} al {{ statementContext.period.end }}
+            {{ t('transactions.period', { start: statementContext.period.start, end: statementContext.period.end }) }}
           </div>
           <v-list v-if="!isMobile" bg-color="transparent" density="compact" lines="one">
             <v-list-item v-for="(row, i) in statementRows" :key="i" class="mb-1 pa-2" rounded elevation="1" :class="{ 'text-grey': !row.selected }">
               <div class="d-flex align-center ga-2 w-100">
                 <v-checkbox v-model="row.selected" density="compact" hide-details class="flex-0-0" />
                 <v-text-field v-model="row.date" type="date" density="compact" hide-details style="max-width: 150px" />
-                <v-text-field v-model="row.description" label="Descripción" density="compact" hide-details class="flex-grow-1" />
-                <NativeSelectField v-model="row.type" :items="typeOptions" item-title="title" item-value="value" label="Tipo" style="max-width: 110px" />
+                <v-text-field v-model="row.description" :label="t('transactions.description')" density="compact" hide-details class="flex-grow-1" />
+                <NativeSelectField v-model="row.type" :items="typeOptions" item-title="title" item-value="value" :label="t('transactions.type')" style="max-width: 110px" />
                 <v-text-field v-model.number="row.amount" type="number" prefix="$" density="compact" hide-details style="max-width: 110px" />
-                <NativeSelectField v-model="row.category" :items="categoriesForType(row.type)" item-title="name" item-value="_id" label="Categoría" placeholder="Selecciona una categoría" class="flex-grow-1" />
-                <v-chip v-if="row.duplicate" size="small" color="grey" label>Duplicado</v-chip>
-                <v-chip v-else size="small" color="success" label>Nuevo</v-chip>
+                <NativeSelectField v-model="row.category" :items="categoriesForType(row.type)" item-title="name" item-value="_id" :label="t('transactions.category')" :placeholder="t('transactions.selectCategory')" class="flex-grow-1" />
+                <v-chip v-if="row.duplicate" size="small" color="grey" label>{{ t('transactions.duplicate') }}</v-chip>
+                <v-chip v-else size="small" color="success" label>{{ t('transactions.newRow') }}</v-chip>
               </div>
             </v-list-item>
           </v-list>
@@ -430,28 +430,28 @@
               <div class="d-flex flex-column ga-2 w-100">
                 <div class="d-flex align-center ga-2">
                   <v-checkbox v-model="row.selected" density="compact" hide-details class="flex-0-0" />
-                  <v-text-field v-model="row.description" label="Descripción" density="compact" hide-details class="flex-grow-1" />
-                  <v-chip v-if="row.duplicate" size="small" color="grey" label>Duplicado</v-chip>
-                  <v-chip v-else size="small" color="success" label>Nuevo</v-chip>
+                  <v-text-field v-model="row.description" :label="t('transactions.description')" density="compact" hide-details class="flex-grow-1" />
+                  <v-chip v-if="row.duplicate" size="small" color="grey" label>{{ t('transactions.duplicate') }}</v-chip>
+                  <v-chip v-else size="small" color="success" label>{{ t('transactions.newRow') }}</v-chip>
                 </div>
                 <div class="d-flex ga-2 flex-wrap">
-                  <v-text-field v-model="row.date" type="date" label="Fecha" density="compact" hide-details style="max-width: 150px" />
-                  <NativeSelectField v-model="row.type" :items="typeOptions" item-title="title" item-value="value" label="Tipo" style="max-width: 130px" />
-                  <v-text-field v-model.number="row.amount" type="number" prefix="$" label="Monto" density="compact" hide-details style="max-width: 130px" />
-                  <NativeSelectField v-model="row.category" :items="categoriesForType(row.type)" item-title="name" item-value="_id" label="Categoría" placeholder="Selecciona una categoría" class="flex-grow-1" />
+                  <v-text-field v-model="row.date" type="date" :label="t('transactions.date')" density="compact" hide-details style="max-width: 150px" />
+                  <NativeSelectField v-model="row.type" :items="typeOptions" item-title="title" item-value="value" :label="t('transactions.type')" style="max-width: 130px" />
+                  <v-text-field v-model.number="row.amount" type="number" prefix="$" :label="t('wallets.amount')" density="compact" hide-details style="max-width: 130px" />
+                  <NativeSelectField v-model="row.category" :items="categoriesForType(row.type)" item-title="name" item-value="_id" :label="t('transactions.category')" :placeholder="t('transactions.selectCategory')" class="flex-grow-1" />
                 </div>
               </div>
             </v-list-item>
           </v-list>
           <div class="text-caption text-grey mt-3">
-            Total a importar: <strong>${{ fmt(statementImportTotal) }}</strong>
+            {{ t('transactions.totalToImport') }}: <strong>{{ money(statementImportTotal) }}</strong>
           </div>
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn variant="text" @click="cancelStatementReview">Cancelar</v-btn>
+          <v-btn variant="text" @click="cancelStatementReview">{{ t('common.cancel') }}</v-btn>
           <v-btn color="primary" :disabled="selectedStatementRows.length === 0" :loading="statementImporting" @click="confirmImport">
-            Confirmar ({{ selectedStatementRows.length }})
+            {{ t('transactions.confirmCount', { count: selectedStatementRows.length }) }}
           </v-btn>
         </v-card-actions>
       </v-card>
@@ -459,24 +459,24 @@
 
     <v-dialog v-model="deleteDialog" max-width="400">
       <v-card>
-        <v-card-title>Confirmar</v-card-title>
-        <v-card-text>¿Eliminar esta transacción?</v-card-text>
+        <v-card-title>{{ t('wallets.confirm') }}</v-card-title>
+        <v-card-text>{{ t('transactions.deleteTransactionConfirm') }}</v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn variant="text" @click="deleteDialog = false">Cancelar</v-btn>
-          <v-btn color="error" @click="doDelete" :loading="deleting">Eliminar</v-btn>
+          <v-btn variant="text" @click="deleteDialog = false">{{ t('common.cancel') }}</v-btn>
+          <v-btn color="error" @click="doDelete" :loading="deleting">{{ t('common.delete') }}</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
 
     <v-dialog v-model="bulkDeleteDialog" max-width="400">
       <v-card>
-        <v-card-title>Confirmar</v-card-title>
-        <v-card-text>¿Eliminar {{ selected.length }} movimiento{{ selected.length === 1 ? '' : 's' }} seleccionado{{ selected.length === 1 ? '' : 's' }}?</v-card-text>
+        <v-card-title>{{ t('wallets.confirm') }}</v-card-title>
+        <v-card-text>{{ t('transactions.deleteBulkConfirm', { count: selected.length }, selected.length) }}</v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn variant="text" @click="bulkDeleteDialog = false">Cancelar</v-btn>
-          <v-btn color="error" @click="doBulkDelete" :loading="deleting">Eliminar</v-btn>
+          <v-btn variant="text" @click="bulkDeleteDialog = false">{{ t('common.cancel') }}</v-btn>
+          <v-btn color="error" @click="doBulkDelete" :loading="deleting">{{ t('common.delete') }}</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -496,10 +496,12 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useDisplay } from 'vuetify'
+import { useI18n } from 'vue-i18n'
 import { useRegistersStore } from '@/stores/registers'
 import { useSnackbar } from '@/stores/snackbar'
 import { useSubscriptionStore } from '@/stores/subscriptions'
 import { useAuthStore } from '@/stores/auth'
+import { useLocale } from '@/composables/useLocale'
 import { categoriesAPI, walletsAPI, aiAPI, statementsAPI, recurringAPI } from '@/api'
 import AISuggestCategory from '@/components/AISuggestCategory.vue'
 import VoiceInputButton from '@/components/VoiceInputButton.vue'
@@ -509,6 +511,8 @@ import MoneyField from '@/components/MoneyField.vue'
 import { readAndCompressImage } from '@/utils/imageUtils'
 import { getCategoryColor } from '@/constants/categoryColors'
 
+const { t } = useI18n()
+const { money, date } = useLocale()
 const route = useRoute()
 const { mobile } = useDisplay()
 const isMobile = computed(() => mobile.value)
@@ -524,7 +528,7 @@ const authStore = useAuthStore()
 const requireAIConsent = () => {
   if (authStore.hasAcceptedAIConsent) return true
   modeDialog.value = false
-  snackbar.error('Acepta el uso de funciones de IA en "Mi perfil" para escanear documentos o subir extractos')
+  snackbar.error(t('transactions.aiConsentRequired'))
   return false
 }
 
@@ -557,8 +561,8 @@ const reviewItems = ref([])
 const modeDialog = ref(false)
 const pendingManualCreate = ref(false)
 const scanningOverlay = ref(false)
-const scanningMessage = ref('Escaneando recibo...')
-const scanningSubtitle = ref('Procesando imagen con IA')
+const scanningMessage = ref(t('transactions.scanningReceipt'))
+const scanningSubtitle = ref(t('transactions.processingImage'))
 const scanFileInput = ref(null)
 const newBadge = ref(true)
 
@@ -576,7 +580,7 @@ const statementContext = ref({
 })
 
 const form = ref({ type: 'expense', amount: 0, date: new Date().toISOString().slice(0, 10), category: null, description: '', wallet: null, tags: [] })
-const typeOptions = [{ title: 'Ingreso', value: 'income' }, { title: 'Gasto', value: 'expense' }]
+const typeOptions = computed(() => [{ title: t('transactions.income'), value: 'income' }, { title: t('transactions.expense'), value: 'expense' }])
 
 const showAllCategories = ref(false)
 const showDatePicker = ref(false)
@@ -611,15 +615,15 @@ const frequentCategories = computed(() => {
 const categoryOptions = computed(() => categories.value.filter(c => !filters.value.type || c.type === filters.value.type))
 const categoryNoDataText = computed(() => {
   if (categoriesError.value) return categoriesError.value
-  if (referenceDataLoading.value) return 'Cargando categorías...'
-  return 'No hay categorías disponibles para el tipo seleccionado'
+  if (referenceDataLoading.value) return t('transactions.loadingCategories')
+  return t('transactions.noCategoriesForType')
 })
 const walletOptions = computed(() => wallets.value)
 const expenseCategories = computed(() => categories.value.filter(c => c.type === 'expense'))
 const bankWallets = computed(() => wallets.value.filter(w => w.type === 'bank'))
 const bankWalletsHint = computed(() => {
-  if (bankWallets.value.length === 0) return 'No tienes cuentas de tipo banco. Puedes elegir otra cuenta.'
-  return 'Para mejor deteccion de duplicados elige la cuenta bancaria del extracto.'
+  if (bankWallets.value.length === 0) return t('transactions.noBankWalletsHint')
+  return t('transactions.pickBankWalletHint')
 })
 const categoriesForType = (type) => categories.value.filter(c => !type || c.type === type)
 const selectedStatementRows = computed(() => statementRows.value.filter(r => r.selected && r.category))
@@ -632,15 +636,15 @@ const statementImportTotal = computed(() =>
     .reduce((s, r) => s + (Number(r.amount) || 0), 0)
 )
 
-const headers = [
-  { title: 'Fecha', key: 'date' },
-  { title: 'Tipo', key: 'type' },
-  { title: 'Categoría', key: 'category' },
-  { title: 'Descripción', key: 'description' },
-  { title: 'Cuenta', key: 'wallet' },
-  { title: 'Monto', key: 'amount' },
+const headers = computed(() => [
+  { title: t('transactions.date'), key: 'date' },
+  { title: t('transactions.type'), key: 'type' },
+  { title: t('transactions.category'), key: 'category' },
+  { title: t('transactions.description'), key: 'description' },
+  { title: t('transactions.account'), key: 'wallet' },
+  { title: t('wallets.amount'), key: 'amount' },
   { title: '', key: 'actions', sortable: false, width: 80 },
-]
+])
 
 const PROCESS_THROTTLE_KEY = 'mm_last_recurring_process'
 const tryProcessRecurring = () => {
@@ -650,8 +654,7 @@ const tryProcessRecurring = () => {
   recurringAPI.processRecurring().catch(() => {})
 }
 
-const fmt = (n) => Number(n || 0).toLocaleString('es-CO')
-const formatDate = (d) => d ? new Date(d).toLocaleDateString('es-CO') : ''
+const formatDate = (d) => d ? date(d) : ''
 
 const pageCount = computed(() => Math.max(1, Math.ceil(store.registers.length / PAGE_SIZE)))
 const pagedRegisters = computed(() => store.registers.slice((page.value - 1) * PAGE_SIZE, page.value * PAGE_SIZE))
@@ -672,10 +675,10 @@ const toggleSelected = (id, value) => {
 const exportSelected = () => {
   const rows = store.registers.filter((r) => selected.value.includes(r._id))
   const escape = (value) => `"${String(value ?? '').replace(/"/g, '""')}"`
-  const header = ['Fecha', 'Tipo', 'Categoría', 'Descripción', 'Cuenta', 'Monto']
+  const header = [t('transactions.date'), t('transactions.type'), t('transactions.category'), t('transactions.description'), t('transactions.account'), t('wallets.amount')]
   const lines = rows.map((r) => [
     formatDate(r.date),
-    r.type === 'income' ? 'Ingreso' : 'Gasto',
+    r.type === 'income' ? t('transactions.income') : t('transactions.expense'),
     r.category?.name || '',
     r.description || '',
     r.wallet?.name || '',
@@ -697,10 +700,10 @@ const doBulkDelete = async () => {
   deleting.value = true
   try {
     for (const id of selected.value) await store.remove(id)
-    snackbar.success(`${selected.value.length} movimientos eliminados`)
+    snackbar.success(t('transactions.bulkDeleted', { count: selected.value.length }, selected.value.length))
     selected.value = []
   } catch {
-    snackbar.error('Error al eliminar la selección')
+    snackbar.error(t('transactions.bulkDeleteError'))
   }
   deleting.value = false
   bulkDeleteDialog.value = false
@@ -766,8 +769,8 @@ const handleScanFile = async (event) => {
   const file = event.target.files[0]
   if (!file) return
   scanningOverlay.value = true
-  scanningMessage.value = 'Escaneando recibo...'
-  scanningSubtitle.value = 'Procesando imagen con IA'
+  scanningMessage.value = t('transactions.scanningReceipt')
+  scanningSubtitle.value = t('transactions.processingImage')
   try {
     const base64 = await readAndCompressImage(file)
     const res = await aiAPI.scanReceipt(base64)
@@ -776,7 +779,7 @@ const handleScanFile = async (event) => {
       dialog.value = true
     }
   } catch (err) {
-    const msg = err?.response?.data?.message || err?.message || 'Error al escanear el recibo'
+    const msg = err?.response?.data?.message || err?.message || t('transactions.scanReceiptError')
     snackbar.error(msg)
   }
   scanningOverlay.value = false
@@ -805,7 +808,7 @@ const startStatement = () => {
 
 const pickStatementPdf = () => {
   if (!statementWallet.value) {
-    snackbar.error('Selecciona la cuenta del extracto')
+    snackbar.error(t('transactions.selectStatementAccount'))
     return
   }
   statementWalletDialog.value = false
@@ -817,18 +820,18 @@ const handleStatementFile = async (event) => {
   const file = event.target.files[0]
   if (!file) return
   if (file.type && file.type !== 'application/pdf') {
-    snackbar.error('El archivo debe ser un PDF')
+    snackbar.error(t('transactions.fileMustBePdf'))
     event.target.value = ''
     return
   }
   if (file.size > MAX_PDF_MB * 1024 * 1024) {
-    snackbar.error(`El PDF supera el limite de ${MAX_PDF_MB}MB`)
+    snackbar.error(t('transactions.pdfTooLarge', { max: MAX_PDF_MB }))
     event.target.value = ''
     return
   }
   scanningOverlay.value = true
-  scanningMessage.value = 'Analizando extracto...'
-  scanningSubtitle.value = 'Leyendo el PDF con IA'
+  scanningMessage.value = t('transactions.analyzingStatement')
+  scanningSubtitle.value = t('transactions.readingPdf')
   try {
     const pdfBase64 = await readFileAsBase64(file)
     const res = await statementsAPI.analyze({ wallet: statementWallet.value, pdf: pdfBase64, filename: file.name })
@@ -851,14 +854,14 @@ const handleStatementFile = async (event) => {
     }))
     statementReviewDialog.value = true
     if (statementContext.value.summary.duplicates > 0) {
-      snackbar.info(`${statementContext.value.summary.duplicates} duplicados omitidos`)
+      snackbar.info(t('transactions.duplicatesSkipped', { count: statementContext.value.summary.duplicates }, statementContext.value.summary.duplicates))
     }
   } catch (err) {
     const status = err?.response?.status
-    const msg = err?.response?.data?.message || err?.message || 'Error al analizar el extracto'
-    if (status === 413) snackbar.error(`El PDF excede el limite de ${MAX_PDF_MB}MB`)
-    else if (status === 422) snackbar.error('No se detectaron transacciones en el PDF. Revisa que sea un extracto valido.')
-    else if (status === 429) snackbar.error('Has alcanzado tu cuota diaria de IA. Intenta manana.')
+    const msg = err?.response?.data?.message || err?.message || t('transactions.analyzeStatementError')
+    if (status === 413) snackbar.error(t('transactions.pdfExceedsLimit', { max: MAX_PDF_MB }))
+    else if (status === 422) snackbar.error(t('transactions.noTransactionsDetected'))
+    else if (status === 429) snackbar.error(t('transactions.dailyQuotaReached'))
     else snackbar.error(msg)
   }
   scanningOverlay.value = false
@@ -873,12 +876,12 @@ const cancelStatementReview = () => {
 const confirmImport = async () => {
   const items = selectedStatementRows.value
   if (items.length === 0) {
-    snackbar.error('Selecciona al menos una transaccion valida')
+    snackbar.error(t('transactions.selectAtLeastOneValid'))
     return
   }
   const missingCategory = items.find(r => !r.category)
   if (missingCategory) {
-    snackbar.error('Todas las transacciones a importar deben tener categoria')
+    snackbar.error(t('transactions.allNeedCategory'))
     return
   }
   statementImporting.value = true
@@ -896,10 +899,10 @@ const confirmImport = async () => {
     const created = res.data?.created || items.length
     statementReviewDialog.value = false
     statementRows.value = []
-    snackbar.success(`${created} transacciones importadas del extracto`)
+    snackbar.success(t('transactions.statementImported', { count: created }, created))
     load()
   } catch (err) {
-    const msg = err?.response?.data?.message || err?.message || 'Error al importar el extracto'
+    const msg = err?.response?.data?.message || err?.message || t('transactions.importStatementError')
     snackbar.error(msg)
   }
   statementImporting.value = false
@@ -924,7 +927,7 @@ const save = async () => {
   attemptedSave.value = true
   if (!form.value.category) {
     showAllCategories.value = true
-    snackbar.error('Selecciona una categoría')
+    snackbar.error(t('transactions.selectCategoryError'))
     return
   }
 
@@ -932,16 +935,16 @@ const save = async () => {
   try {
     if (editing.value) {
       await store.update(editing.value, form.value)
-      snackbar.success('Transacción actualizada')
+      snackbar.success(t('transactions.transactionUpdated'))
     } else {
       await store.create(form.value)
       setLastWallet(form.value.wallet)
-      snackbar.success('Transacción creada')
+      snackbar.success(t('transactions.transactionCreated'))
     }
     dialog.value = false
     load()
   } catch (err) {
-    snackbar.error(err?.response?.data?.message || 'Error al guardar')
+    snackbar.error(err?.response?.data?.message || t('transactions.saveError'))
   }
   saving.value = false
 }
@@ -951,7 +954,7 @@ const confirmDelete = (item) => { toDelete.value = item._id; deleteDialog.value 
 const onCategorySuggested = (data) => {
   const cat = categories.value.find((c) => c.name.toLowerCase() === data.category?.toLowerCase())
   if (cat) form.value.category = cat._id
-  snackbar.info(`AI sugiere: ${data.category} (${Math.round(data.confidence * 100)}% confianza)`)
+  snackbar.info(t('transactions.aiSuggests', { category: data.category, confidence: Math.round(data.confidence * 100) }))
 }
 
 const onVoiceParsed = (data) => {
@@ -964,13 +967,13 @@ const onVoiceParsed = (data) => {
     const cat = categories.value.find((c) => c.name.toLowerCase().includes(hint.toLowerCase()))
     if (cat) form.value.category = cat._id
   }
-  snackbar.success('Voz procesada')
+  snackbar.success(t('transactions.voiceProcessed'))
 }
 
 const onReceiptScanned = (data) => {
   const detailedItems = data.items?.filter(i => typeof i === 'object' && i.amount)
   if (detailedItems?.length > 0) {
-    reviewMerchant.value = data.merchant || 'Recibo'
+    reviewMerchant.value = data.merchant || t('transactions.receipt')
     reviewDate.value = data.date || new Date().toISOString().slice(0, 10)
     reviewWallet.value = form.value.wallet
     reviewItems.value = detailedItems.map(item => ({
@@ -989,7 +992,7 @@ const onReceiptScanned = (data) => {
       const cat = categories.value.find((c) => c.name.toLowerCase().includes(hint.toLowerCase()))
       if (cat) form.value.category = cat._id
     }
-    snackbar.success('Recibo escaneado')
+    snackbar.success(t('transactions.receiptScanned'))
   }
 }
 
@@ -1019,10 +1022,10 @@ const saveReviewedItems = async () => {
       count++
     }
     reviewDialog.value = false
-    snackbar.success(`${count} transacciones creadas del recibo`)
+    snackbar.success(t('transactions.receiptItemsCreated', { count }, count))
     load()
   } catch (err) {
-    snackbar.error(err?.response?.data?.message || 'Error al guardar items del recibo')
+    snackbar.error(err?.response?.data?.message || t('transactions.receiptItemsError'))
   }
   reviewSaving.value = false
 }
@@ -1034,8 +1037,8 @@ const doDelete = async () => {
   deleting.value = true
   try {
     await store.remove(toDelete.value)
-    snackbar.success('Transacción eliminada')
-  } catch { snackbar.error('Error al eliminar') }
+    snackbar.success(t('transactions.transactionDeleted'))
+  } catch { snackbar.error(t('transactions.deleteError')) }
   deleting.value = false
   deleteDialog.value = false
 }
@@ -1055,7 +1058,7 @@ const loadReferenceData = async () => {
     categories.value = categoriesResult.value.data
   } else {
     categories.value = []
-    categoriesError.value = 'No fue posible cargar las categorías'
+    categoriesError.value = t('transactions.loadCategoriesError')
     snackbar.error(categoriesError.value)
   }
 
@@ -1063,7 +1066,7 @@ const loadReferenceData = async () => {
     wallets.value = walletsResult.value.data
   } else {
     wallets.value = []
-    snackbar.error('No fue posible cargar las cuentas')
+    snackbar.error(t('transactions.loadAccountsError'))
   }
 
   referenceDataLoading.value = false

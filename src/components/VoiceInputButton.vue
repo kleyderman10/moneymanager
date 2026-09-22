@@ -2,16 +2,19 @@
   <button v-if="isSupported" type="button" class="tool-tile" :class="{ 'tool-tile--active': listening }" :disabled="processing" @click="toggle">
     <v-progress-circular v-if="processing" indeterminate size="20" width="2" color="primary" />
     <v-icon v-else size="22" :color="listening ? 'error' : 'primary'">{{ listening ? 'mdi-microphone-off' : 'mdi-microphone' }}</v-icon>
-    <span class="tool-tile__label">{{ listening ? 'Escuchando...' : 'Voz' }}</span>
+    <span class="tool-tile__label">{{ listening ? t('voiceInput.listening') : t('voiceInput.voice') }}</span>
   </button>
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, onMounted, onBeforeUnmount, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Capacitor } from '@capacitor/core'
 import { aiAPI } from '@/api'
 import { useSnackbar } from '@/stores/snackbar'
 
+const { t, locale } = useI18n()
+const speechLang = computed(() => locale.value === 'en' ? 'en-US' : 'es-ES')
 const emit = defineEmits(['parsed'])
 const snackbar = useSnackbar()
 
@@ -34,7 +37,7 @@ const parseAndEmit = async (text) => {
     const res = await aiAPI.parseVoice(text)
     emit('parsed', res.data)
   } catch {
-    snackbar.error('No se pudo interpretar lo que dijiste. Intenta de nuevo.')
+    snackbar.error(t('voiceInput.couldNotInterpret'))
   } finally {
     processing.value = false
   }
@@ -59,7 +62,7 @@ const startNative = async () => {
       permission = await SpeechRecognition.requestPermissions()
     }
     if (permission.speechRecognition !== 'granted') {
-      snackbar.error('Activa el permiso de micrófono/dictado en Ajustes para usar esta función.')
+      snackbar.error(t('voiceInput.enableMicPermission'))
       return
     }
 
@@ -71,12 +74,12 @@ const startNative = async () => {
     listening.value = true
     // Resolves right away when partialResults is true; it doesn't wait for the user to
     // finish speaking, so it's only used here to surface a startup error (e.g. mic busy).
-    await SpeechRecognition.start({ language: 'es-ES', partialResults: true, popup: false })
+    await SpeechRecognition.start({ language: speechLang.value, partialResults: true, popup: false })
   } catch (e) {
     listening.value = false
     await partialListener?.remove()
     partialListener = null
-    snackbar.error(e?.message || 'No se pudo iniciar el dictado por voz')
+    snackbar.error(e?.message || t('voiceInput.couldNotStart'))
   }
 }
 
@@ -96,7 +99,7 @@ const stopNative = async () => {
 const startWeb = () => {
   const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition
   recognition = new SpeechRecognitionCtor()
-  recognition.lang = 'es-ES'
+  recognition.lang = speechLang.value
   recognition.interimResults = false
   recognition.continuous = false
 
@@ -105,7 +108,7 @@ const startWeb = () => {
   recognition.onresult = (event) => parseAndEmit(event.results[0][0].transcript)
   recognition.onerror = () => {
     listening.value = false
-    snackbar.error('No se pudo reconocer el audio. Intenta de nuevo.')
+    snackbar.error(t('voiceInput.couldNotRecognize'))
   }
   recognition.start()
 }

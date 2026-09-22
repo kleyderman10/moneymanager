@@ -7,13 +7,16 @@
     prepend-icon="mdi-robot"
     @click="generate"
   >
-    Generar ícono
+    {{ t('aiIconButton.generateIcon') }}
   </v-btn>
 </template>
 
 <script setup>
 import { ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { aiAPI } from '@/api'
+
+const { t } = useI18n()
 
 const emit = defineEmits(['generated'])
 const props = defineProps({ name: String, type: String })

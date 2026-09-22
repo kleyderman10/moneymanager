@@ -3,11 +3,11 @@
     <v-card-title class="d-flex align-center">
       <span class="section-icon mr-3"><v-icon size="20">mdi-auto-awesome</v-icon></span>
       <div>
-        <div class="text-body-1">Ideas para mejorar</div>
-        <div class="text-caption text-medium-emphasis font-weight-regular">Recomendaciones creadas a partir de tus hábitos</div>
+        <div class="text-body-1">{{ t('aiInsights.title') }}</div>
+        <div class="text-caption text-medium-emphasis font-weight-regular">{{ t('aiInsights.subtitle') }}</div>
       </div>
       <v-spacer />
-      <v-btn v-if="!billingStore.isReadOnly" size="small" variant="text" icon="mdi-refresh" title="Actualizar recomendaciones" :loading="loading" @click="store.refreshInsights" />
+      <v-btn v-if="!billingStore.isReadOnly" size="small" variant="text" icon="mdi-refresh" :title="t('aiInsights.refresh')" :loading="loading" @click="store.refreshInsights" />
     </v-card-title>
     <v-list density="compact" bg-color="transparent">
       <v-list-item
@@ -31,18 +31,20 @@
 
 <script setup>
 import { onMounted, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useAiInsights } from '@/stores/aiInsights'
 import { useSubscriptionStore } from '@/stores/subscriptions'
 
+const { t } = useI18n()
 const store = useAiInsights()
 const billingStore = useSubscriptionStore()
 const props = defineProps({ loading: { type: Boolean, default: false } })
 const insights = computed(() => store.insights)
 
 const severityColor = (s) => s === 'high' ? 'error' : s === 'medium' ? 'warning' : 'info'
-const severityIcon = (t) => {
+const severityIcon = (type) => {
   const m = { spending_pattern: 'mdi-chart-line', budget_alert: 'mdi-alert', saving_tip: 'mdi-piggy-bank', anomaly: 'mdi-alert-circle', general: 'mdi-information' }
-  return m[t] || 'mdi-information'
+  return m[type] || 'mdi-information'
 }
 
 onMounted(() => store.fetchInsights())

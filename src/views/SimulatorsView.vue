@@ -1,37 +1,37 @@
 <template>
   <div class="simulators-page">
     <div class="page-intro">
-      <div class="page-intro__eyebrow">Decisiones financieras</div>
-      <h1 :class="isMobile ? 'text-h5' : 'text-h4'">Simuladores</h1>
-      <p class="page-intro__subtitle">Compara el costo de un crédito o proyecta cuánto pueden crecer tus ahorros.</p>
+      <div class="page-intro__eyebrow">{{ t('simulators.financialDecisions') }}</div>
+      <h1 :class="isMobile ? 'text-h5' : 'text-h4'">{{ t('nav.simulators') }}</h1>
+      <p class="page-intro__subtitle">{{ t('simulators.subtitle') }}</p>
     </div>
 
     <v-tabs v-model="tab" color="primary" class="mb-4">
-      <v-tab value="loan" prepend-icon="mdi-cash-multiple">Crédito</v-tab>
+      <v-tab value="loan" prepend-icon="mdi-cash-multiple">{{ t('nav.credits') }}</v-tab>
       <v-tab value="cdt" prepend-icon="mdi-bank-outline">CDT</v-tab>
-      <v-tab value="savings" prepend-icon="mdi-piggy-bank-outline">Ahorro</v-tab>
-      <v-tab value="capacity" prepend-icon="mdi-finance">Capacidad crediticia</v-tab>
+      <v-tab value="savings" prepend-icon="mdi-piggy-bank-outline">{{ t('simulators.savings') }}</v-tab>
+      <v-tab value="capacity" prepend-icon="mdi-finance">{{ t('layout.creditCapacity') }}</v-tab>
     </v-tabs>
 
     <v-window v-model="tab">
       <v-window-item value="capacity">
         <v-row>
           <v-col cols="12" lg="4">
-            <v-card title="Tu capacidad de endeudamiento" subtitle="Basada en tus últimos movimientos registrados">
+            <v-card :title="t('simulators.yourDebtCapacity')" :subtitle="t('simulators.basedOnRecentTransactions')">
               <v-card-text>
                 <v-form @submit.prevent="loadCreditCapacity">
                   <v-text-field
                     v-model.number="capacityForm.existingMonthlyDebt"
-                    label="Cuotas mensuales actuales"
+                    :label="t('simulators.currentMonthlyInstallments')"
                     type="number"
                     min="0"
                     :prefix="currencySymbol"
                     prepend-inner-icon="mdi-credit-card-clock-outline"
-                    hint="Incluye préstamos, libranzas y pagos mínimos que ya debes cubrir cada mes."
+                    :hint="t('simulators.currentMonthlyInstallmentsHint')"
                     persistent-hint
                   />
                   <v-btn type="submit" color="primary" size="large" block class="mt-4" :loading="capacityLoading">
-                    Evaluar mi capacidad
+                    {{ t('simulators.evaluateMyCapacity') }}
                   </v-btn>
                 </v-form>
               </v-card-text>
@@ -57,14 +57,14 @@
                   prepend-icon="mdi-cash-multiple"
                   @click="openLoanEvaluation"
                 >
-                  Evaluar un crédito
+                  {{ t('simulators.evaluateACredit') }}
                 </v-btn>
               </v-alert>
 
-              <v-card class="mb-4" title="Resumen de tu flujo mensual">
+              <v-card class="mb-4" :title="t('simulators.monthlyFlowSummary')">
                 <v-card-text>
                   <div v-if="capacityResult.capacity.monthsAnalyzed" class="text-caption text-medium-emphasis mb-3">
-                    Promedio de {{ capacityResult.capacity.monthsAnalyzed }} {{ capacityResult.capacity.monthsAnalyzed === 1 ? 'mes' : 'meses' }} · {{ capacityResult.capacity.transactionCount }} movimientos analizados
+                    {{ t('simulators.averageOfMonths', { months: capacityResult.capacity.monthsAnalyzed, monthWord: capacityResult.capacity.monthsAnalyzed === 1 ? t('simulators.month') : t('simulators.months'), count: capacityResult.capacity.transactionCount }) }}
                   </div>
                   <v-alert
                     v-if="capacityResult.capacity.includesCurrentPartialMonth"
@@ -73,7 +73,7 @@
                     variant="tonal"
                     class="mb-3"
                   >
-                    La estimación usa el mes actual porque aún no hay movimientos en meses completos.
+                    {{ t('simulators.usesCurrentMonthNotice') }}
                   </v-alert>
                   <v-alert
                     v-else-if="capacityResult.capacity.monthsWithData < capacityResult.capacity.monthsAnalyzed"
@@ -82,7 +82,7 @@
                     variant="tonal"
                     class="mb-3"
                   >
-                    Solo hay movimientos en {{ capacityResult.capacity.monthsWithData }} de los {{ capacityResult.capacity.monthsAnalyzed }} meses analizados; interpreta el resultado con cautela.
+                    {{ t('simulators.partialDataNotice', { withData: capacityResult.capacity.monthsWithData, analyzed: capacityResult.capacity.monthsAnalyzed }) }}
                   </v-alert>
                   <div v-if="capacityResult.capacity.currentDebtToIncome !== null">
                     <div class="readiness-gauge">
@@ -93,37 +93,37 @@
                         value-class="readiness-gauge__value"
                       />
                       <div class="readiness-gauge__text">
-                        <div class="readiness-gauge__label">Indicador del flujo</div>
+                        <div class="readiness-gauge__label">{{ t('simulators.flowIndicator') }}</div>
                         <div class="readiness-gauge__title">{{ capacityResult.capacity.title }}</div>
                       </div>
                     </div>
                     <div class="capacity-grid">
-                      <div><span>Ingreso promedio</span><strong>{{ money(capacityResult.capacity.averageIncome) }}</strong></div>
-                      <div><span>Gasto promedio</span><strong>{{ money(capacityResult.capacity.averageExpenses) }}</strong></div>
-                      <div><span>Excedente mensual</span><strong :class="capacityResult.capacity.averageSurplus >= 0 ? 'text-success' : 'text-error'">{{ money(capacityResult.capacity.averageSurplus) }}</strong></div>
-                      <div><span>Cuotas actuales / ingreso</span><strong>{{ percent(capacityResult.capacity.currentDebtToIncome) }}</strong></div>
-                      <div><span>Límite por ingreso (30%)</span><strong>{{ money(capacityResult.capacity.maximumByDebtRatio) }}</strong></div>
-                      <div><span>Límite por excedente (70%)</span><strong>{{ money(capacityResult.capacity.maximumByCashFlow) }}</strong></div>
-                      <div><span>Nueva cuota máxima sugerida</span><strong>{{ money(capacityResult.capacity.recommendedMaxPayment) }}</strong></div>
+                      <div><span>{{ t('simulators.averageIncome') }}</span><strong>{{ money(capacityResult.capacity.averageIncome) }}</strong></div>
+                      <div><span>{{ t('simulators.averageExpense') }}</span><strong>{{ money(capacityResult.capacity.averageExpenses) }}</strong></div>
+                      <div><span>{{ t('simulators.monthlySurplus') }}</span><strong :class="capacityResult.capacity.averageSurplus >= 0 ? 'text-success' : 'text-error'">{{ money(capacityResult.capacity.averageSurplus) }}</strong></div>
+                      <div><span>{{ t('simulators.currentInstallmentsToIncome') }}</span><strong>{{ percent(capacityResult.capacity.currentDebtToIncome) }}</strong></div>
+                      <div><span>{{ t('simulators.incomeLimit') }}</span><strong>{{ money(capacityResult.capacity.maximumByDebtRatio) }}</strong></div>
+                      <div><span>{{ t('simulators.surplusLimit') }}</span><strong>{{ money(capacityResult.capacity.maximumByCashFlow) }}</strong></div>
+                      <div><span>{{ t('simulators.newRecommendedMaxPayment') }}</span><strong>{{ money(capacityResult.capacity.recommendedMaxPayment) }}</strong></div>
                     </div>
                   </div>
                   <div v-else class="text-body-2 text-medium-emphasis">
-                    Registra movimientos de ingresos y gastos para obtener una evaluación personalizada.
+                    {{ t('simulators.registerTransactionsHint') }}
                   </div>
-                  <div class="text-caption text-medium-emphasis mt-3">La cuota máxima sugerida usa el menor valor entre el 30% de tu ingreso, descontando cuotas actuales, y el 70% de tu excedente mensual.</div>
+                  <div class="text-caption text-medium-emphasis mt-3">{{ t('simulators.maxPaymentExplainer') }}</div>
                   <div class="text-caption text-medium-emphasis mt-2">{{ capacityResult.capacity.disclaimer }}</div>
                 </v-card-text>
               </v-card>
             </template>
 
-            <v-card class="mb-4" title="Viabilidad para tarjeta de crédito" subtitle="Esta evaluación es independiente de la capacidad y tiene su propio botón">
+            <v-card class="mb-4" :title="t('simulators.cardViability')" :subtitle="t('simulators.cardViabilitySubtitle')">
               <v-card-text>
                 <v-form @submit.prevent="loadCardViability">
                   <v-row dense>
                     <v-col cols="12" md="6">
                       <v-text-field
                         v-model.number="cardForm.existingMonthlyDebt"
-                        label="Cuotas mensuales actuales"
+                        :label="t('simulators.currentMonthlyInstallments')"
                         type="number"
                         min="0"
                         :prefix="currencySymbol"
@@ -133,18 +133,18 @@
                     <v-col cols="12" md="6">
                       <v-text-field
                         v-model.number="cardForm.requestedCardLimit"
-                        label="Cupo de tarjeta a evaluar"
+                        :label="t('simulators.cardLimitToEvaluate')"
                         type="number"
                         min="0"
                         :prefix="currencySymbol"
                         prepend-inner-icon="mdi-credit-card-outline"
-                        hint="Déjalo en 0 para ver un cupo orientativo."
+                        :hint="t('simulators.cardLimitHint')"
                         persistent-hint
                       />
                     </v-col>
                   </v-row>
                   <v-btn type="submit" color="primary" variant="outlined" :loading="cardLoading">
-                    Evaluar tarjeta
+                    {{ t('simulators.evaluateCard') }}
                   </v-btn>
                 </v-form>
 
@@ -161,19 +161,19 @@
                     <div>{{ cardResult.creditCard.message }}</div>
                   </v-alert>
                   <div v-if="cardResult.creditCard.suggestedCardLimit !== null" class="capacity-grid">
-                    <div><span>Cupo orientativo máximo</span><strong>{{ money(cardResult.creditCard.suggestedCardLimit) }}</strong></div>
-                    <div><span>Uso mensual recomendado</span><strong>{{ money(cardResult.creditCard.recommendedMonthlyCardSpend) }}</strong></div>
-                    <div v-if="cardResult.creditCard.requestedCardLimit"><span>Pago mínimo estimado del cupo evaluado</span><strong>{{ money(cardResult.creditCard.estimatedMinimumPayment) }}</strong></div>
+                    <div><span>{{ t('simulators.suggestedMaxLimit') }}</span><strong>{{ money(cardResult.creditCard.suggestedCardLimit) }}</strong></div>
+                    <div><span>{{ t('simulators.recommendedMonthlySpend') }}</span><strong>{{ money(cardResult.creditCard.recommendedMonthlyCardSpend) }}</strong></div>
+                    <div v-if="cardResult.creditCard.requestedCardLimit"><span>{{ t('simulators.estimatedMinPaymentOfLimit') }}</span><strong>{{ money(cardResult.creditCard.estimatedMinimumPayment) }}</strong></div>
                   </div>
                   <p class="text-caption text-medium-emphasis mt-3 mb-0">{{ cardResult.creditCard.disclaimer }}</p>
                 </template>
                 <div v-else class="text-body-2 text-medium-emphasis mt-4">
-                  Ingresa el cupo que estás considerando y presiona “Evaluar tarjeta”. No depende del botón de capacidad.
+                  {{ t('simulators.enterLimitHint') }}
                 </div>
               </v-card-text>
             </v-card>
 
-            <v-card v-if="!capacityResult" class="simulation-empty"><v-card-text><v-icon size="48">mdi-finance</v-icon><h3>Conoce tu margen antes de endeudarte</h3><p>Analizaremos tus ingresos, gastos y cuotas actuales para orientar una solicitud de crédito o tarjeta.</p></v-card-text></v-card>
+            <v-card v-if="!capacityResult" class="simulation-empty"><v-card-text><v-icon size="48">mdi-finance</v-icon><h3>{{ t('simulators.knowYourMargin') }}</h3><p>{{ t('simulators.knowYourMarginHint') }}</p></v-card-text></v-card>
           </v-col>
         </v-row>
       </v-window-item>
@@ -181,12 +181,12 @@
       <v-window-item value="loan">
         <v-row>
           <v-col cols="12" lg="4">
-            <v-card title="Datos del crédito" subtitle="Sistema de cuota fija mensual">
+            <v-card :title="t('simulators.loanData')" :subtitle="t('simulators.fixedMonthlyInstallmentSystem')">
               <v-card-text>
                 <v-form @submit.prevent="simulateLoan">
                   <v-text-field
                     v-model.number="loanForm.amount"
-                    label="Monto solicitado"
+                    :label="t('simulators.requestedAmount')"
                     type="number"
                     min="1"
                     :prefix="currencySymbol"
@@ -195,7 +195,7 @@
                   />
                   <v-text-field
                     v-model.number="loanForm.interestRate"
-                    label="Tasa de interés"
+                    :label="t('simulators.interestRate')"
                     type="number"
                     min="0"
                     max="200"
@@ -207,51 +207,51 @@
                   <v-select
                     v-model="loanForm.ratePeriod"
                     :items="rateTypes"
-                    label="Tipo de tasa"
+                    :label="t('simulators.rateType')"
                     prepend-inner-icon="mdi-calendar-sync-outline"
                   />
                   <v-text-field
                     v-model.number="loanForm.termMonths"
-                    label="Plazo"
+                    :label="t('simulators.term')"
                     type="number"
                     min="1"
                     max="360"
-                    suffix="meses"
+                    :suffix="t('simulators.months')"
                     prepend-inner-icon="mdi-calendar-range"
                     required
                   />
                   <v-text-field
                     v-model.number="loanForm.requestedMonthlyPayment"
-                    label="Cuota mensual a evaluar (opcional)"
+                    :label="t('simulators.monthlyPaymentToEvaluate')"
                     type="number"
                     min="1"
                     :prefix="currencySymbol"
                     prepend-inner-icon="mdi-cash-check"
-                    hint="Si la dejas vacía, se valida la cuota calculada por monto, tasa y plazo."
+                    :hint="t('simulators.monthlyPaymentToEvaluateHint')"
                     persistent-hint
                   />
                   <v-text-field
                     v-model.number="loanForm.existingMonthlyDebt"
-                    label="Otras cuotas mensuales"
+                    :label="t('simulators.otherMonthlyInstallments')"
                     type="number"
                     min="0"
                     :prefix="currencySymbol"
                     prepend-inner-icon="mdi-credit-card-clock-outline"
-                    hint="Incluye créditos vigentes; se usa para medir tu endeudamiento."
+                    :hint="t('simulators.otherMonthlyInstallmentsHint')"
                     persistent-hint
                   />
                   <v-text-field
                     v-model.number="loanForm.monthlyExpenseReduction"
-                    label="Reducción mensual de gastos (opcional)"
+                    :label="t('simulators.monthlyExpenseReduction')"
                     type="number"
                     min="0"
                     :prefix="currencySymbol"
                     prepend-inner-icon="mdi-trending-down"
-                    hint="Simula cuánto podrías recortar cada mes para saber cuándo encaja la cuota."
+                    :hint="t('simulators.monthlyExpenseReductionHint')"
                     persistent-hint
                   />
                   <v-btn type="submit" color="primary" size="large" block class="mt-4" :loading="loading">
-                    Validar crédito y cuota
+                    {{ t('simulators.validateLoan') }}
                   </v-btn>
                 </v-form>
               </v-card-text>
@@ -261,18 +261,18 @@
           <v-col cols="12" lg="8">
             <template v-if="loanResult">
               <div class="loan-result-summary">
-                {{ money(loanResult.amount) }} · {{ loanForm.interestRate }}{{ loanForm.ratePeriod === 'annual_effective' ? '% E.A.' : '% mensual' }} · {{ loanResult.termMonths }} meses
+                {{ money(loanResult.amount) }} · {{ loanForm.interestRate }}{{ loanForm.ratePeriod === 'annual_effective' ? t('simulators.annualEffectiveSuffix') : t('simulators.monthlySuffix') }} · {{ t('simulators.monthsCount', { count: loanResult.termMonths }) }}
               </div>
 
               <div class="loan-hero">
-                <div class="loan-hero__label">Cuota mensual estimada</div>
+                <div class="loan-hero__label">{{ t('simulators.estimatedMonthlyPayment') }}</div>
                 <div class="loan-hero__value">{{ money(loanResult.monthlyPayment) }}</div>
               </div>
 
               <div class="loan-composition">
                 <div class="loan-composition__legend">
-                  <span><i class="loan-composition__dot loan-composition__dot--principal" /> Capital</span>
-                  <span><i class="loan-composition__dot loan-composition__dot--interest" /> Interés</span>
+                  <span><i class="loan-composition__dot loan-composition__dot--principal" /> {{ t('simulators.principal') }}</span>
+                  <span><i class="loan-composition__dot loan-composition__dot--interest" /> {{ t('credits.interest') }}</span>
                 </div>
                 <div class="loan-composition__bar">
                   <div class="loan-composition__segment loan-composition__segment--principal" :style="{ width: principalPercent + '%' }" />
@@ -286,23 +286,21 @@
 
               <v-row dense class="mb-3">
                 <v-col cols="6" md="4">
-                  <div class="loan-stat"><span>Costo total del crédito</span><strong>{{ money(loanResult.totalPaid) }}</strong></div>
+                  <div class="loan-stat"><span>{{ t('simulators.totalLoanCost') }}</span><strong>{{ money(loanResult.totalPaid) }}</strong></div>
                 </v-col>
                 <v-col cols="6" md="4">
-                  <div class="loan-stat"><span>Total de intereses</span><strong class="text-error">{{ money(loanResult.totalInterest) }}</strong></div>
+                  <div class="loan-stat"><span>{{ t('simulators.totalInterest') }}</span><strong class="text-error">{{ money(loanResult.totalInterest) }}</strong></div>
                 </v-col>
                 <v-col cols="12" md="4">
-                  <div class="loan-stat"><span>Tasa mensual</span><strong>{{ percent(loanResult.monthlyRate) }}</strong></div>
+                  <div class="loan-stat"><span>{{ t('simulators.monthlyRate') }}</span><strong>{{ percent(loanResult.monthlyRate) }}</strong></div>
                 </v-col>
               </v-row>
 
               <v-alert v-if="paymentExceedsCapacity" type="warning" color="error" variant="tonal" class="mb-4" icon="mdi-alert-octagon-outline">
                 <div>
-                  Esta cuota (<strong>{{ money(evaluatedPayment) }}</strong>) supera tu límite sugerido de
-                  <strong>{{ money(suggestedMaxPayment) }}</strong> en {{ money(capacityExcessAmount) }} según tu flujo mensual en Capacidad crediticia.
-                  Con tu excedente actual, este crédito comprometería más de lo recomendado.
+                  {{ t('simulators.paymentExceedsCapacity', { payment: money(evaluatedPayment), limit: money(suggestedMaxPayment), excess: money(capacityExcessAmount) }) }}
                 </div>
-                <v-btn variant="text" size="small" color="error" class="mt-2 px-0" @click="tab = 'capacity'">Ver capacidad crediticia →</v-btn>
+                <v-btn variant="text" size="small" color="error" class="mt-2 px-0" @click="tab = 'capacity'">{{ t('simulators.viewCreditCapacity') }} →</v-btn>
               </v-alert>
 
               <v-alert
@@ -316,10 +314,10 @@
                 <div>{{ loanResult.capacity.message }}</div>
               </v-alert>
 
-              <v-card class="mb-4" title="Capacidad según tus movimientos">
+              <v-card class="mb-4" :title="t('simulators.capacityAccordingToTransactions')">
                 <v-card-text>
                   <div v-if="loanResult.capacity.monthsAnalyzed" class="text-caption text-medium-emphasis mb-3">
-                    Promedio de {{ loanResult.capacity.monthsAnalyzed }} {{ loanResult.capacity.monthsAnalyzed === 1 ? 'mes' : 'meses' }} · {{ loanResult.capacity.transactionCount }} movimientos analizados
+                    {{ t('simulators.averageOfMonths', { months: loanResult.capacity.monthsAnalyzed, monthWord: loanResult.capacity.monthsAnalyzed === 1 ? t('simulators.month') : t('simulators.months'), count: loanResult.capacity.transactionCount }) }}
                   </div>
                   <v-alert
                     v-if="loanResult.capacity.includesCurrentPartialMonth"
@@ -328,7 +326,7 @@
                     variant="tonal"
                     class="mb-3"
                   >
-                    La estimación usa el mes actual porque aún no hay movimientos en meses completos.
+                    {{ t('simulators.usesCurrentMonthNotice') }}
                   </v-alert>
                   <v-alert
                     v-else-if="loanResult.capacity.monthsWithData < loanResult.capacity.monthsAnalyzed"
@@ -337,30 +335,30 @@
                     variant="tonal"
                     class="mb-3"
                   >
-                    Solo hay movimientos en {{ loanResult.capacity.monthsWithData }} de los {{ loanResult.capacity.monthsAnalyzed }} meses analizados; interpreta el resultado con cautela.
+                    {{ t('simulators.partialDataNotice', { withData: loanResult.capacity.monthsWithData, analyzed: loanResult.capacity.monthsAnalyzed }) }}
                   </v-alert>
                   <div v-if="loanResult.capacity.debtToIncome !== null" class="capacity-grid">
-                    <div><span>Monto del crédito</span><strong>{{ money(loanResult.amount) }}</strong></div>
-                    <div><span>Plazo</span><strong>{{ loanResult.termMonths }} meses</strong></div>
-                    <div><span>Ingreso promedio</span><strong>{{ money(loanResult.capacity.averageIncome) }}</strong></div>
-                    <div><span>Gasto promedio</span><strong>{{ money(loanResult.capacity.averageExpenses) }}</strong></div>
-                    <div><span>Excedente después de la cuota</span><strong :class="loanResult.capacity.cashFlowAfterPayment >= 0 ? 'text-success' : 'text-error'">{{ money(loanResult.capacity.cashFlowAfterPayment) }}</strong></div>
-                    <div><span>Cuotas / ingreso</span><strong>{{ percent(loanResult.capacity.debtToIncome) }}</strong></div>
-                    <div><span>Cuota evaluada</span><strong>{{ money(loanResult.capacity.evaluatedMonthlyPayment) }}</strong></div>
-                    <div><span>Cuota máxima sugerida</span><strong>{{ money(loanResult.capacity.recommendedMaxPayment) }}</strong></div>
-                    <div><span>Crédito máximo estimado</span><strong>{{ money(loanResult.capacity.estimatedMaxLoan) }}</strong></div>
+                    <div><span>{{ t('simulators.loanAmount') }}</span><strong>{{ money(loanResult.amount) }}</strong></div>
+                    <div><span>{{ t('simulators.term') }}</span><strong>{{ t('simulators.monthsCount', { count: loanResult.termMonths }) }}</strong></div>
+                    <div><span>{{ t('simulators.averageIncome') }}</span><strong>{{ money(loanResult.capacity.averageIncome) }}</strong></div>
+                    <div><span>{{ t('simulators.averageExpense') }}</span><strong>{{ money(loanResult.capacity.averageExpenses) }}</strong></div>
+                    <div><span>{{ t('simulators.surplusAfterPayment') }}</span><strong :class="loanResult.capacity.cashFlowAfterPayment >= 0 ? 'text-success' : 'text-error'">{{ money(loanResult.capacity.cashFlowAfterPayment) }}</strong></div>
+                    <div><span>{{ t('simulators.installmentsToIncome') }}</span><strong>{{ percent(loanResult.capacity.debtToIncome) }}</strong></div>
+                    <div><span>{{ t('simulators.evaluatedInstallment') }}</span><strong>{{ money(loanResult.capacity.evaluatedMonthlyPayment) }}</strong></div>
+                    <div><span>{{ t('simulators.suggestedMaxInstallment') }}</span><strong>{{ money(loanResult.capacity.recommendedMaxPayment) }}</strong></div>
+                    <div><span>{{ t('simulators.estimatedMaxLoan') }}</span><strong>{{ money(loanResult.capacity.estimatedMaxLoan) }}</strong></div>
                   </div>
                   <div v-else class="text-body-2 text-medium-emphasis">
-                    Registra movimientos de ingresos y gastos para obtener una evaluación personalizada.
+                    {{ t('simulators.registerTransactionsHint') }}
                   </div>
                   <div class="text-caption text-medium-emphasis mt-3">{{ loanResult.capacity.disclaimer }}</div>
                 </v-card-text>
               </v-card>
 
-              <v-card v-if="loanResult.capacity.manageability" class="mb-4" title="¿Cuándo sería manejable esta cuota?" subtitle="Proyección educativa si reduces gastos de forma constante">
+              <v-card v-if="loanResult.capacity.manageability" class="mb-4" :title="t('simulators.whenManageable')" :subtitle="t('simulators.whenManageableSubtitle')">
                 <v-card-text>
                   <div class="text-body-2 mb-3">
-                    La evaluación compara la cuota con dos límites: no superar el 30% de tus ingresos después de cuotas actuales y conservar al menos el 30% de tu excedente como margen.
+                    {{ t('simulators.manageabilityExplainer') }}
                   </div>
                   <v-alert
                     v-if="loanResult.capacity.manageability.paymentFitsNow"
@@ -369,7 +367,7 @@
                     density="comfortable"
                     class="mb-4"
                   >
-                    Esta cuota encaja hoy en tu flujo promedio. Aun así, conserva un fondo para imprevistos.
+                    {{ t('simulators.paymentFitsNow') }}
                   </v-alert>
                   <v-alert
                     v-else-if="!loanResult.capacity.manageability.debtRatioAllowsPayment"
@@ -378,7 +376,7 @@
                     density="comfortable"
                     class="mb-4"
                   >
-                    Reducir gastos no sería suficiente: la cuota supera el 30% de tus ingresos después de las cuotas actuales. Considera pedir menos o ampliar el plazo.
+                    {{ t('simulators.reducingNotEnough') }}
                   </v-alert>
                   <v-alert
                     v-else-if="loanResult.capacity.manageability.monthsToManage !== null"
@@ -387,7 +385,7 @@
                     density="comfortable"
                     class="mb-4"
                   >
-                    Con una reducción de {{ money(loanResult.capacity.manageability.monthlyExpenseReduction) }} al mes, la cuota podría encajar en {{ formatMonthKey(loanResult.capacity.manageability.targetMonth) }} (en aproximadamente {{ loanResult.capacity.manageability.monthsToManage }} {{ loanResult.capacity.manageability.monthsToManage === 1 ? 'mes' : 'meses' }}).
+                    {{ t('simulators.wouldFitIn', { reduction: money(loanResult.capacity.manageability.monthlyExpenseReduction), month: formatMonthKey(loanResult.capacity.manageability.targetMonth), months: loanResult.capacity.manageability.monthsToManage, monthWord: loanResult.capacity.manageability.monthsToManage === 1 ? t('simulators.month') : t('simulators.months') }) }}
                   </v-alert>
                   <v-alert
                     v-else
@@ -396,19 +394,19 @@
                     density="comfortable"
                     class="mb-4"
                   >
-                    Para que esta cuota entre en el rango prudente necesitarías reducir aproximadamente {{ money(loanResult.capacity.manageability.requiredMonthlyExpenseReduction) }} de gastos al mes. Ingresa ese valor en el formulario para proyectar el mes estimado.
+                    {{ t('simulators.needToReduce', { amount: money(loanResult.capacity.manageability.requiredMonthlyExpenseReduction) }) }}
                   </v-alert>
                   <div class="capacity-grid">
-                    <div><span>Cuota calculada</span><strong>{{ money(loanResult.capacity.monthlyPayment) }}</strong></div>
-                    <div><span>Cuota evaluada</span><strong>{{ money(loanResult.capacity.evaluatedMonthlyPayment) }}</strong></div>
-                    <div><span>Pago / ingreso</span><strong>{{ percent(loanResult.capacity.paymentToIncome) }}</strong></div>
-                    <div><span>Reducción mensual simulada</span><strong>{{ money(loanResult.capacity.manageability.monthlyExpenseReduction) }}</strong></div>
+                    <div><span>{{ t('simulators.calculatedInstallment') }}</span><strong>{{ money(loanResult.capacity.monthlyPayment) }}</strong></div>
+                    <div><span>{{ t('simulators.evaluatedInstallment') }}</span><strong>{{ money(loanResult.capacity.evaluatedMonthlyPayment) }}</strong></div>
+                    <div><span>{{ t('simulators.paymentToIncome') }}</span><strong>{{ percent(loanResult.capacity.paymentToIncome) }}</strong></div>
+                    <div><span>{{ t('simulators.simulatedMonthlyReduction') }}</span><strong>{{ money(loanResult.capacity.manageability.monthlyExpenseReduction) }}</strong></div>
                   </div>
-                  <v-table density="compact" class="mt-4" aria-label="Proyección de gastos y cuota">
-                    <thead><tr><th>Mes</th><th>Gasto proyectado</th><th>Cuota máxima prudente</th><th>¿Encaja?</th></tr></thead>
+                  <v-table density="compact" class="mt-4" :aria-label="t('simulators.expenseProjectionTable')">
+                    <thead><tr><th>{{ t('budgets.month') }}</th><th>{{ t('simulators.projectedExpense') }}</th><th>{{ t('simulators.prudentMaxInstallment') }}</th><th>{{ t('simulators.fits') }}</th></tr></thead>
                     <tbody>
                       <tr v-for="month in loanResult.capacity.manageability.projection.slice(0, 6)" :key="month.month">
-                        <td>{{ month.month === 0 ? 'Ahora' : formatMonthKey(month.label) }}</td>
+                        <td>{{ month.month === 0 ? t('common.today') : formatMonthKey(month.label) }}</td>
                         <td>{{ money(month.projectedExpenses) }}</td>
                         <td>{{ money(month.recommendedMaxPayment) }}</td>
                         <td><v-icon :color="month.paymentFits ? 'success' : 'error'" size="18">{{ month.paymentFits ? 'mdi-check-circle' : 'mdi-close-circle' }}</v-icon></td>
@@ -418,13 +416,13 @@
                 </v-card-text>
               </v-card>
 
-              <v-card class="mb-4" title="Cómo disminuye la deuda">
+              <v-card class="mb-4" :title="t('simulators.howDebtDecreases')">
                 <v-card-text><div class="simulation-chart"><Line :data="loanChartData" :options="chartOptions" /></div></v-card-text>
               </v-card>
 
               <v-expansion-panels>
                 <v-expansion-panel>
-                  <v-expansion-panel-title>Ver tabla de amortización ({{ loanResult.termMonths }} cuotas)</v-expansion-panel-title>
+                  <v-expansion-panel-title>{{ t('simulators.viewAmortizationTable', { count: loanResult.termMonths }) }}</v-expansion-panel-title>
                   <v-expansion-panel-text>
                     <v-data-table
                       :headers="amortizationHeaders"
@@ -441,7 +439,7 @@
                 </v-expansion-panel>
               </v-expansion-panels>
             </template>
-            <v-card v-else class="simulation-empty"><v-card-text><v-icon size="48">mdi-calculator-variant-outline</v-icon><h3>Configura el escenario</h3><p>Calcula la cuota, el costo total y si encaja en tu flujo mensual.</p></v-card-text></v-card>
+            <v-card v-else class="simulation-empty"><v-card-text><v-icon size="48">mdi-calculator-variant-outline</v-icon><h3>{{ t('simulators.configureScenario') }}</h3><p>{{ t('simulators.configureScenarioHint') }}</p></v-card-text></v-card>
           </v-col>
         </v-row>
       </v-window-item>
@@ -449,20 +447,20 @@
       <v-window-item value="cdt">
         <v-row>
           <v-col cols="12" lg="4">
-            <v-card title="Datos del CDT" subtitle="Rendimiento con tasa efectiva anual">
+            <v-card :title="t('simulators.cdtData')" :subtitle="t('simulators.cdtSubtitle')">
               <v-card-text>
                 <v-form @submit.prevent="simulateCdt">
-                  <v-text-field v-model.number="cdtForm.initialAmount" label="Monto a invertir" type="number" min="1" :prefix="currencySymbol" prepend-inner-icon="mdi-cash-lock" required />
-                  <v-text-field v-model.number="cdtForm.annualRate" label="Tasa efectiva anual" type="number" min="0" max="100" step="0.01" suffix="% E.A." prepend-inner-icon="mdi-percent-outline" required />
-                  <v-text-field v-model.number="cdtForm.termMonths" label="Plazo" type="number" min="1" max="120" suffix="meses" prepend-inner-icon="mdi-calendar-range" required />
-                  <v-btn type="submit" color="primary" size="large" block :loading="loading">Proyectar CDT</v-btn>
+                  <v-text-field v-model.number="cdtForm.initialAmount" :label="t('simulators.amountToInvest')" type="number" min="1" :prefix="currencySymbol" prepend-inner-icon="mdi-cash-lock" required />
+                  <v-text-field v-model.number="cdtForm.annualRate" :label="t('simulators.annualEffectiveRate')" type="number" min="0" max="100" step="0.01" suffix="% E.A." prepend-inner-icon="mdi-percent-outline" required />
+                  <v-text-field v-model.number="cdtForm.termMonths" :label="t('simulators.term')" type="number" min="1" max="120" :suffix="t('simulators.months')" prepend-inner-icon="mdi-calendar-range" required />
+                  <v-btn type="submit" color="primary" size="large" block :loading="loading">{{ t('simulators.projectCdt') }}</v-btn>
                 </v-form>
               </v-card-text>
             </v-card>
           </v-col>
           <v-col cols="12" lg="8">
             <InvestmentProjectionResults v-if="cdtResult" :result="cdtResult" :currency="currency" />
-            <v-card v-else class="simulation-empty"><v-card-text><v-icon size="48">mdi-bank-outline</v-icon><h3>Proyecta tu CDT</h3><p>Conoce el valor final y los intereses brutos al vencimiento.</p></v-card-text></v-card>
+            <v-card v-else class="simulation-empty"><v-card-text><v-icon size="48">mdi-bank-outline</v-icon><h3>{{ t('simulators.projectYourCdt') }}</h3><p>{{ t('simulators.projectYourCdtHint') }}</p></v-card-text></v-card>
           </v-col>
         </v-row>
       </v-window-item>
@@ -470,21 +468,21 @@
       <v-window-item value="savings">
         <v-row>
           <v-col cols="12" lg="4">
-            <v-card title="Plan de ahorro" subtitle="Aportes mensuales al final de cada mes">
+            <v-card :title="t('simulators.savingsPlan')" :subtitle="t('simulators.savingsPlanSubtitle')">
               <v-card-text>
                 <v-form @submit.prevent="simulateSavings">
-                  <v-text-field v-model.number="savingsForm.initialAmount" label="Ahorro inicial" type="number" min="0" :prefix="currencySymbol" prepend-inner-icon="mdi-safe" required />
-                  <v-text-field v-model.number="savingsForm.monthlyContribution" label="Aporte mensual" type="number" min="0" :prefix="currencySymbol" prepend-inner-icon="mdi-calendar-plus" required />
-                  <v-text-field v-model.number="savingsForm.annualRate" label="Tasa efectiva anual" type="number" min="0" max="100" step="0.01" suffix="% E.A." prepend-inner-icon="mdi-percent-outline" required />
-                  <v-text-field v-model.number="savingsForm.termMonths" label="Plazo" type="number" min="1" max="600" suffix="meses" prepend-inner-icon="mdi-calendar-range" required />
-                  <v-btn type="submit" color="primary" size="large" block :loading="loading">Proyectar ahorro</v-btn>
+                  <v-text-field v-model.number="savingsForm.initialAmount" :label="t('simulators.initialSavings')" type="number" min="0" :prefix="currencySymbol" prepend-inner-icon="mdi-safe" required />
+                  <v-text-field v-model.number="savingsForm.monthlyContribution" :label="t('simulators.monthlyContribution')" type="number" min="0" :prefix="currencySymbol" prepend-inner-icon="mdi-calendar-plus" required />
+                  <v-text-field v-model.number="savingsForm.annualRate" :label="t('simulators.annualEffectiveRate')" type="number" min="0" max="100" step="0.01" suffix="% E.A." prepend-inner-icon="mdi-percent-outline" required />
+                  <v-text-field v-model.number="savingsForm.termMonths" :label="t('simulators.term')" type="number" min="1" max="600" :suffix="t('simulators.months')" prepend-inner-icon="mdi-calendar-range" required />
+                  <v-btn type="submit" color="primary" size="large" block :loading="loading">{{ t('simulators.projectSavings') }}</v-btn>
                 </v-form>
               </v-card-text>
             </v-card>
           </v-col>
           <v-col cols="12" lg="8">
             <InvestmentProjectionResults v-if="savingsResult" :result="savingsResult" :currency="currency" />
-            <v-card v-else class="simulation-empty"><v-card-text><v-icon size="48">mdi-piggy-bank-outline</v-icon><h3>Diseña tu plan de ahorro</h3><p>Separa tus aportes de los intereses que podrías ganar.</p></v-card-text></v-card>
+            <v-card v-else class="simulation-empty"><v-card-text><v-icon size="48">mdi-piggy-bank-outline</v-icon><h3>{{ t('simulators.designYourSavingsPlan') }}</h3><p>{{ t('simulators.designYourSavingsPlanHint') }}</p></v-card-text></v-card>
           </v-col>
         </v-row>
       </v-window-item>
@@ -507,14 +505,18 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js'
+import { useI18n } from 'vue-i18n'
 import { simulationsAPI } from '@/api'
 import { useAuthStore } from '@/stores/auth'
 import { useSnackbar } from '@/stores/snackbar'
+import { useLocale } from '@/composables/useLocale'
 import InvestmentProjectionResults from '@/components/InvestmentProjectionResults.vue'
 import CircularGauge from '@/components/CircularGauge.vue'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Filler, Tooltip, Legend)
 
+const { t } = useI18n()
+const { locale: appLocale } = useLocale()
 const authStore = useAuthStore()
 const snackbar = useSnackbar()
 const route = useRoute()
@@ -535,38 +537,38 @@ const capacityForm = ref({ existingMonthlyDebt: 0 })
 const cardForm = ref({ existingMonthlyDebt: 0, requestedCardLimit: 0 })
 const cdtForm = ref({ initialAmount: 5_000_000, annualRate: 10, termMonths: 12 })
 const savingsForm = ref({ initialAmount: 1_000_000, monthlyContribution: 300_000, annualRate: 8, termMonths: 24 })
-const rateTypes = [
-  { title: 'Efectiva anual (E.A.)', value: 'annual_effective' },
-  { title: 'Mensual vencida', value: 'monthly' },
-]
-const amortizationHeaders = [
-  { title: 'Cuota', key: 'period' },
-  { title: 'Pago', key: 'payment', align: 'end' },
-  { title: 'Capital', key: 'principal', align: 'end' },
-  { title: 'Interés', key: 'interest', align: 'end' },
-  { title: 'Saldo', key: 'balance', align: 'end' },
-]
+const rateTypes = computed(() => [
+  { title: t('simulators.annualEffectiveOption'), value: 'annual_effective' },
+  { title: t('simulators.monthlyOption'), value: 'monthly' },
+])
+const amortizationHeaders = computed(() => [
+  { title: t('credits.installment'), key: 'period' },
+  { title: t('credits.payment'), key: 'payment', align: 'end' },
+  { title: t('simulators.principal'), key: 'principal', align: 'end' },
+  { title: t('credits.interest'), key: 'interest', align: 'end' },
+  { title: t('wallets.balance'), key: 'balance', align: 'end' },
+])
 
 const currency = computed(() => authStore.user?.currency || 'COP')
 const currencySymbol = computed(() => currency.value === 'COP' ? '$' : currency.value)
-const money = (value) => new Intl.NumberFormat('es-CO', {
+const money = (value) => new Intl.NumberFormat(appLocale.value, {
   style: 'currency',
   currency: currency.value,
   maximumFractionDigits: 0,
 }).format(Number(value || 0))
-const compactMoney = (value) => new Intl.NumberFormat('es-CO', {
+const compactMoney = (value) => new Intl.NumberFormat(appLocale.value, {
   notation: 'compact',
   maximumFractionDigits: 1,
 }).format(Number(value || 0))
-const percent = (value) => `${Number(value || 0).toLocaleString('es-CO', { maximumFractionDigits: 2 })}%`
+const percent = (value) => `${Number(value || 0).toLocaleString(appLocale.value, { maximumFractionDigits: 2 })}%`
 const formatMonthKey = (value) => {
-  if (!value || value === 'Ahora') return value || ''
+  if (!value) return ''
   const date = new Date(`${value}-01T00:00:00.000Z`)
   if (Number.isNaN(date.getTime())) return value
-  return new Intl.DateTimeFormat('es-CO', { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(date)
+  return new Intl.DateTimeFormat(appLocale.value, { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(date)
 }
 
-const percentDisplay = (value) => `${Number(value || 0).toLocaleString('es-CO', { maximumFractionDigits: 1 })}%`
+const percentDisplay = (value) => `${Number(value || 0).toLocaleString(appLocale.value, { maximumFractionDigits: 1 })}%`
 
 const principalPercent = computed(() => {
   if (!loanResult.value) return 0
@@ -605,16 +607,16 @@ const baseChartOptions = (yLabel) => ({
   interaction: { intersect: false, mode: 'index' },
   plugins: { legend: { position: 'bottom' } },
   scales: {
-    x: { title: { display: true, text: 'Mes' }, grid: { display: false } },
+    x: { title: { display: true, text: t('budgets.month') }, grid: { display: false } },
     y: { beginAtZero: true, title: { display: true, text: yLabel }, ticks: { callback: compactMoney } },
   },
 })
-const chartOptions = computed(() => baseChartOptions(`Saldo (${currency.value})`))
+const chartOptions = computed(() => baseChartOptions(`${t('wallets.balance')} (${currency.value})`))
 
 const loanChartData = computed(() => ({
   labels: loanResult.value.schedule.map((row) => row.period),
   datasets: [{
-    label: 'Saldo pendiente',
+    label: t('simulators.outstandingBalance'),
     data: loanResult.value.schedule.map((row) => row.balance),
     borderColor: '#0b6b5d',
     backgroundColor: 'rgba(11, 107, 93, 0.12)',
@@ -630,7 +632,7 @@ const runSimulation = async (request, target) => {
     const response = await request()
     target.value = response.data
   } catch (error) {
-    snackbar.error(error.response?.data?.message || 'No se pudo realizar la simulación')
+    snackbar.error(error.response?.data?.message || t('simulators.simulationError'))
   } finally {
     loading.value = false
   }
@@ -657,7 +659,7 @@ const loadCreditCapacity = async () => {
     const response = await simulationsAPI.capacity(input)
     capacityResult.value = response.data
   } catch (error) {
-    snackbar.error(error.response?.data?.message || 'No se pudo evaluar tu capacidad de endeudamiento')
+    snackbar.error(error.response?.data?.message || t('simulators.capacityEvalError'))
   } finally {
     capacityLoading.value = false
   }
@@ -672,7 +674,7 @@ const loadCardViability = async () => {
     const response = await simulationsAPI.cardViability(input)
     cardResult.value = response.data
   } catch (error) {
-    snackbar.error(error.response?.data?.message || 'No se pudo evaluar la viabilidad de la tarjeta')
+    snackbar.error(error.response?.data?.message || t('simulators.cardEvalError'))
   } finally {
     cardLoading.value = false
   }

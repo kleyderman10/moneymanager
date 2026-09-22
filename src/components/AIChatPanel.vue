@@ -8,7 +8,7 @@
       @click="chatStore.toggle"
     >
       <v-icon>mdi-robot</v-icon>
-      <v-tooltip activator="parent" location="left">Asistente MoneyAI</v-tooltip>
+      <v-tooltip activator="parent" location="left">{{ t('aiChat.assistantName') }}</v-tooltip>
     </v-btn>
 
     <v-navigation-drawer
@@ -21,7 +21,7 @@
       <template #prepend>
         <v-toolbar color="secondary" theme="dark" density="comfortable">
           <v-toolbar-title class="text-body-1">
-            <v-icon class="mr-1" color="primary">mdi-auto-awesome</v-icon> Asistente financiero
+            <v-icon class="mr-1" color="primary">mdi-auto-awesome</v-icon> {{ t('aiChat.financialAssistant') }}
           </v-toolbar-title>
           <v-spacer />
           <v-btn icon size="small" variant="text" @click="chatStore.clearHistory">
@@ -37,8 +37,8 @@
         <div class="chat-messages flex-grow-1 pa-2" ref="msgContainer">
           <div v-if="chatStore.messages.length === 0" class="text-center text-grey pa-6">
             <v-icon size="48" color="primary">mdi-chat-processing-outline</v-icon>
-            <div class="mt-2 font-weight-bold">Hablemos de tus finanzas</div>
-            <div class="text-caption mt-1">Prueba: “¿Cómo voy con mi presupuesto?”</div>
+            <div class="mt-2 font-weight-bold">{{ t('aiChat.letsTalk') }}</div>
+            <div class="text-caption mt-1">{{ t('aiChat.tryExample') }}</div>
           </div>
 
           <div
@@ -56,7 +56,7 @@
             >
               <div class="text-body-2" style="white-space: pre-wrap">{{ msg.content }}</div>
               <div :class="msg.role === 'user' ? 'text-right' : 'text-left'" class="text-caption mt-1 text-grey">
-                {{ msg.role === 'user' ? 'Tú' : 'Asistente' }}
+                {{ msg.role === 'user' ? t('aiChat.you') : t('aiChat.assistant') }}
               </div>
             </v-card>
           </div>
@@ -72,7 +72,7 @@
           <div class="d-flex">
             <v-text-field
               v-model="input"
-              placeholder="Escribe tu consulta..."
+              :placeholder="t('aiChat.inputPlaceholder')"
               density="compact"
               hide-details
               variant="outlined"
@@ -96,9 +96,11 @@
 
 <script setup>
 import { ref, computed, watch, nextTick } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useDisplay } from 'vuetify'
 import { useAiChatStore } from '@/stores/aiChat'
 
+const { t } = useI18n()
 const { mobile } = useDisplay()
 const isMobile = computed(() => mobile.value)
 

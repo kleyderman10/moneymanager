@@ -7,13 +7,16 @@
     prepend-icon="mdi-calculator"
     @click="predict"
   >
-    Recomendar monto
+    {{ t('aiRecommendBudget.recommendAmount') }}
   </v-btn>
 </template>
 
 <script setup>
 import { ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { aiAPI } from '@/api'
+
+const { t } = useI18n()
 
 const emit = defineEmits(['predicted'])
 const props = defineProps({ categoryId: { type: String, default: null } })

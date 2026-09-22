@@ -2,9 +2,9 @@
   <div class="dashboard-page">
     <header class="dashboard-welcome d-flex align-start align-sm-center flex-column flex-sm-row ga-3">
       <div>
-        <div class="page-intro__eyebrow">Resumen financiero</div>
-        <h1 :class="isMobile ? 'text-h5' : 'text-h4'">Tu dinero, de un vistazo</h1>
-        <p class="page-intro__subtitle">Revisa lo más importante de {{ periodLabel }} y toma decisiones con claridad.</p>
+        <div class="page-intro__eyebrow">{{ t('dashboard.financialSummary') }}</div>
+        <h1 :class="isMobile ? 'text-h5' : 'text-h4'">{{ t('dashboard.title') }}</h1>
+        <p class="page-intro__subtitle">{{ t('dashboard.subtitle', { period: periodLabel }) }}</p>
       </div>
       <v-spacer />
       <v-btn
@@ -14,7 +14,7 @@
         prepend-icon="mdi-plus"
         @click="goToNewTransaction"
       >
-        Registrar movimiento
+        {{ t('dashboard.logTransaction') }}
       </v-btn>
     </header>
 
@@ -22,17 +22,17 @@
       <v-col cols="12">
         <v-card class="dashboard-hero">
           <v-card-text class="pa-6 pa-md-7">
-            <div class="dashboard-hero__label">Patrimonio · cuentas conectadas</div>
-            <div class="dashboard-hero__amount">${{ fmt(netWorth) }}</div>
+            <div class="dashboard-hero__label">{{ t('dashboard.netWorth') }}</div>
+            <div class="dashboard-hero__amount">{{ money(netWorth) }}</div>
 
             <div class="dashboard-hero__meta">
               <div>
-                <span><v-icon size="14" color="success">mdi-arrow-top-right</v-icon> Ingresos (prom.)</span>
-                <strong>${{ fmt(cashFlow?.averageIncome) }}</strong>
+                <span><v-icon size="14" color="success">mdi-arrow-top-right</v-icon> {{ t('dashboard.avgIncome') }}</span>
+                <strong>{{ money(cashFlow?.averageIncome) }}</strong>
               </div>
               <div>
-                <span><v-icon size="14" color="error">mdi-arrow-bottom-right</v-icon> Gastos (prom.)</span>
-                <strong>${{ fmt(cashFlow?.averageExpenses) }}</strong>
+                <span><v-icon size="14" color="error">mdi-arrow-bottom-right</v-icon> {{ t('dashboard.avgExpenses') }}</span>
+                <strong>{{ money(cashFlow?.averageExpenses) }}</strong>
               </div>
             </div>
 
@@ -46,7 +46,7 @@
               rounded
             />
             <div v-if="cashFlow" class="dashboard-hero__surplus">
-              Excedente mensual: ${{ fmt(cashFlow.averageSurplus) }} — {{ surplusMargin }}
+              {{ t('dashboard.monthlySurplus', { amount: money(cashFlow.averageSurplus), margin: surplusMargin }) }}
             </div>
           </v-card-text>
         </v-card>
@@ -71,9 +71,9 @@
           <v-card-text>
             <div class="metric-card__icon"><v-icon>mdi-arrow-down-left</v-icon></div>
             <div>
-              <div class="metric-card__label">Ingresos</div>
-              <div class="metric-card__value">${{ fmt(summary.totalIncome) }}</div>
-              <div class="metric-card__hint">{{ summary.incomeCount }} movs</div>
+              <div class="metric-card__label">{{ t('dashboard.income') }}</div>
+              <div class="metric-card__value">{{ money(summary.totalIncome) }}</div>
+              <div class="metric-card__hint">{{ t('dashboard.movCount', { count: summary.incomeCount }) }}</div>
             </div>
           </v-card-text>
         </v-card>
@@ -83,9 +83,9 @@
           <v-card-text>
             <div class="metric-card__icon"><v-icon>mdi-arrow-up-right</v-icon></div>
             <div>
-              <div class="metric-card__label">Gastos</div>
-              <div class="metric-card__value">${{ fmt(summary.totalExpenses) }}</div>
-              <div class="metric-card__hint">{{ summary.expenseCount }} movs</div>
+              <div class="metric-card__label">{{ t('dashboard.expenses') }}</div>
+              <div class="metric-card__value">{{ money(summary.totalExpenses) }}</div>
+              <div class="metric-card__hint">{{ t('dashboard.movCount', { count: summary.expenseCount }) }}</div>
             </div>
           </v-card-text>
         </v-card>
@@ -95,9 +95,9 @@
           <v-card-text>
             <div class="metric-card__icon"><v-icon>mdi-swap-vertical</v-icon></div>
             <div>
-              <div class="metric-card__label">Actividad del mes</div>
-              <div class="metric-card__value">{{ summary.transactionCount }} transacciones</div>
-              <div class="metric-card__hint">Todos tus ingresos y gastos registrados</div>
+              <div class="metric-card__label">{{ t('dashboard.monthActivity') }}</div>
+              <div class="metric-card__value">{{ t('dashboard.transactionCount', { count: summary.transactionCount }) }}</div>
+              <div class="metric-card__hint">{{ t('dashboard.allRecorded') }}</div>
             </div>
           </v-card-text>
         </v-card>
@@ -115,27 +115,27 @@
           <v-card-title class="d-flex align-center">
             <span class="section-icon mr-3"><v-icon size="20">mdi-lightning-bolt-outline</v-icon></span>
             <div>
-              <div class="text-body-1">Acciones rápidas</div>
-              <div class="text-caption text-medium-emphasis font-weight-regular">Lo que más usas, siempre a mano</div>
+              <div class="text-body-1">{{ t('dashboard.quickActions') }}</div>
+              <div class="text-caption text-medium-emphasis font-weight-regular">{{ t('dashboard.quickActionsSubtitle') }}</div>
             </div>
           </v-card-title>
           <v-card-text class="pa-3 pa-md-4">
             <div class="quick-actions">
               <button v-if="!billingStore.isReadOnly" type="button" class="quick-action" @click="goToNewTransaction">
                 <span class="quick-action__icon"><v-icon>mdi-plus</v-icon></span>
-                <span class="text-left"><strong>Nuevo movimiento</strong><span>Ingreso o gasto</span></span>
+                <span class="text-left"><strong>{{ t('dashboard.newTransaction') }}</strong><span>{{ t('dashboard.newTransactionHint') }}</span></span>
               </button>
               <button v-if="!billingStore.isReadOnly" type="button" class="quick-action" @click="router.push('/budgets')">
                 <span class="quick-action__icon"><v-icon>mdi-chart-pie-outline</v-icon></span>
-                <span class="text-left"><strong>Crear presupuesto</strong><span>Define tus límites</span></span>
+                <span class="text-left"><strong>{{ t('dashboard.createBudget') }}</strong><span>{{ t('dashboard.createBudgetHint') }}</span></span>
               </button>
               <button type="button" class="quick-action" @click="router.push('/reports')">
                 <span class="quick-action__icon"><v-icon>mdi-chart-line</v-icon></span>
-                <span class="text-left"><strong>Ver reportes</strong><span>Analiza tus hábitos</span></span>
+                <span class="text-left"><strong>{{ t('dashboard.viewReports') }}</strong><span>{{ t('dashboard.viewReportsHint') }}</span></span>
               </button>
               <button type="button" class="quick-action" @click="router.push('/simulators')">
                 <span class="quick-action__icon"><v-icon>mdi-calculator-variant-outline</v-icon></span>
-                <span class="text-left"><strong>Simular</strong><span>Crédito o inversión</span></span>
+                <span class="text-left"><strong>{{ t('dashboard.simulate') }}</strong><span>{{ t('dashboard.simulateHint') }}</span></span>
               </button>
             </div>
           </v-card-text>
@@ -154,15 +154,15 @@
           <v-card-title class="d-flex align-center">
             <span class="section-icon mr-3"><v-icon size="20">mdi-calendar-clock-outline</v-icon></span>
             <div>
-              <div class="text-body-1">Próximos pagos</div>
-              <div class="text-caption text-medium-emphasis font-weight-regular">Movimientos, créditos y tarjetas de los próximos 7 días</div>
+              <div class="text-body-1">{{ t('dashboard.upcomingPayments') }}</div>
+              <div class="text-caption text-medium-emphasis font-weight-regular">{{ t('dashboard.upcomingPaymentsSubtitle') }}</div>
             </div>
           </v-card-title>
           <v-card-text v-if="upcomingPayments.length === 0" class="finance-empty text-center">
             <div>
               <v-icon size="38" color="grey-lighten-1">mdi-calendar-check-outline</v-icon>
-              <div class="mt-2 text-body-2">No tienes pagos próximos</div>
-              <div class="text-caption">Tu agenda financiera está al día</div>
+              <div class="mt-2 text-body-2">{{ t('dashboard.noUpcomingPayments') }}</div>
+              <div class="text-caption">{{ t('dashboard.upToDateAgenda') }}</div>
             </div>
           </v-card-text>
           <v-list v-else bg-color="transparent" density="comfortable">
@@ -179,7 +179,7 @@
               </template>
               <template #append>
                 <strong :class="item.isIncome ? 'text-success' : 'text-error'">
-                  {{ item.isIncome ? '+' : '−' }}${{ fmt(item.amount) }}
+                  {{ item.isIncome ? '+' : '−' }}{{ money(item.amount) }}
                 </strong>
               </template>
             </v-list-item>
@@ -191,15 +191,15 @@
           <v-card-title class="d-flex align-center">
             <span class="section-icon mr-3"><v-icon size="20">mdi-chart-donut</v-icon></span>
             <div>
-              <div class="text-body-1">Gastos por categoría</div>
-              <div class="text-caption text-medium-emphasis font-weight-regular">Tus principales destinos de dinero</div>
+              <div class="text-body-1">{{ t('dashboard.expensesByCategory') }}</div>
+              <div class="text-caption text-medium-emphasis font-weight-regular">{{ t('dashboard.expensesByCategorySubtitle') }}</div>
             </div>
           </v-card-title>
           <v-card-text v-if="expenseCategories.length === 0" class="finance-empty text-center">
             <div>
               <v-icon size="38" color="grey-lighten-1">mdi-chart-donut</v-icon>
-              <div class="mt-2 text-body-2">Aún no hay datos suficientes</div>
-              <div class="text-caption">Registra gastos para ver la distribución</div>
+              <div class="mt-2 text-body-2">{{ t('dashboard.notEnoughData') }}</div>
+              <div class="text-caption">{{ t('dashboard.notEnoughDataHint') }}</div>
             </div>
           </v-card-text>
           <v-card-text v-else>
@@ -214,7 +214,7 @@
       color="primary"
       icon="mdi-plus"
       class="finance-fab"
-      aria-label="Registrar nuevo movimiento"
+      :aria-label="t('dashboard.logTransaction')"
       @click="goToNewTransaction"
     />
   </div>
@@ -223,14 +223,18 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useDisplay } from 'vuetify'
 import { summaryAPI, recurringAPI, creditsAPI, walletsAPI, simulationsAPI } from '@/api'
 import { useAiInsights } from '@/stores/aiInsights'
 import { useSubscriptionStore } from '@/stores/subscriptions'
+import { useLocale } from '@/composables/useLocale'
 import AIInsightsCard from '@/components/AIInsightsCard.vue'
 import AIHealthScore from '@/components/AIHealthScore.vue'
 import CategoryDonutChart from '@/components/CategoryDonutChart.vue'
 
+const { t } = useI18n()
+const { money, dateLong } = useLocale()
 const router = useRouter()
 const { mobile } = useDisplay()
 const isMobile = computed(() => mobile.value)
@@ -248,7 +252,7 @@ const creditCards = ref([])
 const wallets = ref([])
 const cashFlow = ref(null)
 
-const periodLabel = computed(() => new Intl.DateTimeFormat('es-CO', { month: 'long' }).format(new Date()))
+const periodLabel = computed(() => dateLong(new Date(), { month: 'long' }))
 const savingsRate = computed(() => {
   if (!summary.value?.totalIncome) return 0
   return Math.round((summary.value.balance / summary.value.totalIncome) * 100)
@@ -278,10 +282,10 @@ const spentRatioColor = computed(() => {
 const surplusMargin = computed(() => {
   if (!cashFlow.value?.averageIncome) return ''
   const ratio = cashFlow.value.averageSurplus / cashFlow.value.averageIncome
-  if (ratio < 0) return 'sin margen, revisa tus gastos'
-  if (ratio < 0.1) return 'margen ajustado'
-  if (ratio < 0.3) return 'margen cómodo'
-  return 'margen amplio'
+  if (ratio < 0) return t('dashboard.marginNone')
+  if (ratio < 0.1) return t('dashboard.marginTight')
+  if (ratio < 0.3) return t('dashboard.marginComfortable')
+  return t('dashboard.marginWide')
 })
 
 const topInsight = computed(() => insightsStore.insights[0] || null)
@@ -293,7 +297,7 @@ const UPCOMING_WINDOW_DAYS = 7
 const upcomingPayments = computed(() => {
   const items = upcoming.value.map((item) => ({
     id: `recurring-${item._id}`,
-    title: item.description || item.category?.name || 'Movimiento recurrente',
+    title: item.description || item.category?.name || t('dashboard.recurringTransaction'),
     date: item.nextOccurrence,
     amount: item.amount,
     isIncome: item.type === 'income',
@@ -306,12 +310,12 @@ const upcomingPayments = computed(() => {
     if (credit.status !== 'paid_off' && credit.summary?.nextPaymentDate && days !== undefined && days <= UPCOMING_WINDOW_DAYS) {
       items.push({
         id: `credit-${credit._id}`,
-        title: credit.name || 'Crédito',
+        title: credit.name || t('nav.credits'),
         date: credit.summary.nextPaymentDate,
         amount: credit.installmentAmount || credit.summary.nextPaymentAmount,
         isIncome: false,
         icon: 'mdi-bank-outline',
-        tag: 'Crédito',
+        tag: t('nav.credits'),
       })
     }
   }
@@ -321,12 +325,12 @@ const upcomingPayments = computed(() => {
     if (wallet.creditSummary?.nextPaymentDate && days !== undefined && days <= UPCOMING_WINDOW_DAYS) {
       items.push({
         id: `card-${wallet._id}`,
-        title: wallet.name || 'Tarjeta de crédito',
+        title: wallet.name || t('dashboard.creditCard'),
         date: wallet.creditSummary.nextPaymentDate,
         amount: wallet.creditSummary.minimumPayment,
         isIncome: false,
         icon: 'mdi-credit-card-outline',
-        tag: 'Tarjeta',
+        tag: t('dashboard.card'),
       })
     }
   }
@@ -342,8 +346,7 @@ const tryProcessRecurring = () => {
   recurringAPI.processRecurring().catch(() => {})
 }
 
-const fmt = (number) => Number(number || 0).toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
-const formatDate = (date) => date ? new Intl.DateTimeFormat('es-CO', { weekday: 'short', day: 'numeric', month: 'short' }).format(new Date(date)) : ''
+const formatDate = (date) => date ? dateLong(date, { weekday: 'short', day: 'numeric', month: 'short' }) : ''
 
 const load = async () => {
   const now = new Date()

@@ -8,12 +8,12 @@
               <v-icon size="25">mdi-chart-timeline-variant-shimmer</v-icon>
             </div>
             <div>
-              <div class="finance-brand__name">Knexura Finanzas</div>
-              <div class="finance-brand__tagline">Tu dinero, bajo control</div>
+              <div class="finance-brand__name">{{ t('layout.brandName') }}</div>
+              <div class="finance-brand__tagline">{{ t('layout.brandTagline') }}</div>
             </div>
           </div>
-          <h1>Recupera tu acceso de forma segura.</h1>
-          <p>Confirmaremos tu identidad con un código de un solo uso antes de permitir una contraseña nueva.</p>
+          <h1>{{ t('auth.recoverHeroTitle') }}</h1>
+          <p>{{ t('auth.recoverHeroSubtitle') }}</p>
         </div>
       </v-col>
 
@@ -22,14 +22,14 @@
           <div class="auth-card__mobile-brand">
             <div class="finance-brand__mark" aria-hidden="true"><v-icon size="23">mdi-chart-timeline-variant-shimmer</v-icon></div>
             <div>
-              <div class="finance-brand__name">Knexura Finanzas</div>
-              <div class="finance-brand__tagline">Tu dinero, bajo control</div>
+              <div class="finance-brand__name">{{ t('layout.brandName') }}</div>
+              <div class="finance-brand__tagline">{{ t('layout.brandTagline') }}</div>
             </div>
           </div>
 
-          <h2>{{ codeRequested ? 'Crea una contraseña nueva' : 'Recupera tu cuenta' }}</h2>
+          <h2>{{ codeRequested ? t('auth.createNewPassword') : t('auth.recoverAccount') }}</h2>
           <p class="auth-card__intro">
-            {{ codeRequested ? `Escribe el código enviado a ${email}.` : 'Te enviaremos un código si el correo corresponde a una cuenta.' }}
+            {{ codeRequested ? t('auth.enterCodeSentTo', { email }) : t('auth.recoverCodeNotice') }}
           </p>
 
           <v-alert v-if="message" :type="success ? 'success' : 'error'" variant="tonal" closable class="mb-5" @click:close="message = ''">
@@ -37,7 +37,7 @@
           </v-alert>
 
           <v-form v-if="!codeRequested" @submit.prevent="requestCode()">
-            <label class="text-caption font-weight-bold d-block mb-2">Correo electrónico</label>
+            <label class="text-caption font-weight-bold d-block mb-2">{{ t('auth.email') }}</label>
             <v-text-field
               v-model="email"
               type="email"
@@ -48,11 +48,11 @@
               required
               :rules="[rules.required, rules.email]"
             />
-            <v-btn type="submit" color="primary" size="large" block :loading="loading">Enviar código</v-btn>
+            <v-btn type="submit" color="primary" size="large" block :loading="loading">{{ t('auth.sendCode') }}</v-btn>
           </v-form>
 
           <v-form v-else @submit.prevent="resetPassword">
-            <label class="text-caption font-weight-bold d-block mb-2">Código de seguridad</label>
+            <label class="text-caption font-weight-bold d-block mb-2">{{ t('auth.securityCode') }}</label>
             <v-text-field
               v-model="code"
               placeholder="000000"
@@ -66,14 +66,14 @@
               class="mb-2"
             />
 
-            <label class="text-caption font-weight-bold d-block mb-2">Contraseña nueva</label>
+            <label class="text-caption font-weight-bold d-block mb-2">{{ t('auth.newPassword') }}</label>
             <v-text-field
               v-model="newPassword"
               :type="showPassword ? 'text' : 'password'"
               :append-inner-icon="showPassword ? 'mdi-eye-off-outline' : 'mdi-eye-outline'"
               prepend-inner-icon="mdi-lock-outline"
               autocomplete="new-password"
-              placeholder="Mínimo 10 caracteres"
+              :placeholder="t('auth.minChars')"
               variant="outlined"
               required
               :rules="[rules.password]"
@@ -81,7 +81,7 @@
               @click:append-inner="showPassword = !showPassword"
             />
 
-            <label class="text-caption font-weight-bold d-block mb-2">Confirma la contraseña</label>
+            <label class="text-caption font-weight-bold d-block mb-2">{{ t('auth.confirmPassword') }}</label>
             <v-text-field
               v-model="confirmPassword"
               :type="showPassword ? 'text' : 'password'"
@@ -92,13 +92,13 @@
               :rules="[rules.confirmPassword]"
             />
 
-            <v-btn type="submit" color="primary" size="large" block :loading="loading">Restablecer contraseña</v-btn>
+            <v-btn type="submit" color="primary" size="large" block :loading="loading">{{ t('auth.resetPassword') }}</v-btn>
             <v-btn variant="text" color="primary" block class="mt-3" :loading="resendLoading" @click="requestCode(true)">
-              Reenviar código
+              {{ t('profile.resendCode') }}
             </v-btn>
           </v-form>
 
-          <v-btn variant="text" block class="mt-5" prepend-icon="mdi-arrow-left" to="/login">Volver al inicio de sesión</v-btn>
+          <v-btn variant="text" block class="mt-5" prepend-icon="mdi-arrow-left" to="/login">{{ t('auth.backToSignIn') }}</v-btn>
         </v-card>
       </v-col>
     </v-row>
@@ -108,8 +108,10 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 
+const { t } = useI18n()
 const router = useRouter()
 const authStore = useAuthStore()
 const email = ref('')
@@ -124,11 +126,11 @@ const message = ref('')
 const success = ref(false)
 
 const rules = {
-  required: (value) => !!value || 'Campo obligatorio',
-  email: (value) => /.+@.+\..+/.test(value) || 'Correo inválido',
-  code: (value) => /^\d{6}$/.test(value) || 'Ingresa los 6 dígitos',
-  password: (value) => (value.length >= 10 && new TextEncoder().encode(value).length <= 72) || 'Usa entre 10 y 72 caracteres',
-  confirmPassword: (value) => value === newPassword.value || 'Las contraseñas no coinciden',
+  required: (value) => !!value || t('auth.requiredField'),
+  email: (value) => /.+@.+\..+/.test(value) || t('auth.invalidEmail'),
+  code: (value) => /^\d{6}$/.test(value) || t('profile.codeRuleError'),
+  password: (value) => (value.length >= 10 && new TextEncoder().encode(value).length <= 72) || t('profile.passwordRuleError'),
+  confirmPassword: (value) => value === newPassword.value || t('auth.passwordsDontMatch'),
 }
 
 const requestCode = async (resend = false) => {
@@ -145,7 +147,7 @@ const requestCode = async (resend = false) => {
 const resetPassword = async () => {
   if (newPassword.value !== confirmPassword.value) {
     success.value = false
-    message.value = 'Las contraseñas no coinciden'
+    message.value = t('auth.passwordsDontMatch')
     return
   }
   loading.value = true

@@ -5,6 +5,9 @@ import { authAPI, webauthnAPI } from '@/api'
 import { startRegistration, startAuthentication } from '@simplewebauthn/browser'
 import { useSubscriptionStore } from '@/stores/subscriptions'
 import { BIOMETRIC_SERVER } from '@/constants/biometric'
+import { setLanguage, i18n } from '@/i18n'
+
+const t = i18n.global.t
 
 // Native apps use the device's own biometric hardware (Keystore/Keychain) to
 // guard the refresh token, since WebAuthn platform authenticators aren't
@@ -68,11 +71,14 @@ export const useAuthStore = defineStore('auth', () => {
       name: data.name,
       email: data.email,
       currency: data.currency,
+      country: data.country,
+      language: data.language,
       role: data.role,
       emailVerified: data.emailVerified,
       twoFactorEnabled: data.twoFactorEnabled,
       aiConsentAcceptedAt: data.aiConsentAcceptedAt,
     }
+    if (data.language) setLanguage(data.language)
     // Awaited so the Keystore/Keychain always holds the just-issued (still valid) refresh
     // token before the caller can navigate away or the app gets backgrounded — the refresh
     // token is single-use, so if this write is left in-flight and never completes, the next
@@ -80,7 +86,7 @@ export const useAuthStore = defineStore('auth', () => {
     await syncBiometricCredential(data.email, data.refreshToken)
   }
 
-  const messageFrom = (e, fallback = 'Ocurrió un error') => e.response?.data?.message || fallback
+  const messageFrom = (e, fallback = t('common.error')) => e.response?.data?.message || fallback
 
   const register = async (data) => {
     loading.value = true
@@ -89,7 +95,7 @@ export const useAuthStore = defineStore('auth', () => {
       const res = await authAPI.register(data)
       return { success: true, ...res.data }
     } catch (e) {
-      error.value = messageFrom(e, 'Error al registrarse')
+      error.value = messageFrom(e, t('authStore.registerError'))
       return { success: false, message: error.value, code: e.response?.data?.code }
     } finally {
       loading.value = false
@@ -104,7 +110,7 @@ export const useAuthStore = defineStore('auth', () => {
       await setSession(res.data)
       return { success: true }
     } catch (e) {
-      error.value = messageFrom(e, 'No se pudo verificar el correo')
+      error.value = messageFrom(e, t('authStore.verifyEmailError'))
       return { success: false, message: error.value }
     } finally {
       loading.value = false
@@ -116,7 +122,7 @@ export const useAuthStore = defineStore('auth', () => {
       const res = await authAPI.resendVerification({ email })
       return { success: true, message: res.data.message }
     } catch (e) {
-      return { success: false, message: messageFrom(e, 'No se pudo enviar el código') }
+      return { success: false, message: messageFrom(e, t('authStore.sendCodeError')) }
     }
   }
 
@@ -129,7 +135,7 @@ export const useAuthStore = defineStore('auth', () => {
       await setSession(res.data)
       return { success: true }
     } catch (e) {
-      error.value = messageFrom(e, 'Error al iniciar sesión')
+      error.value = messageFrom(e, t('authStore.signInError'))
       return {
         success: false,
         message: error.value,
@@ -149,7 +155,7 @@ export const useAuthStore = defineStore('auth', () => {
       await setSession(res.data)
       return { success: true }
     } catch (e) {
-      error.value = messageFrom(e, 'No se pudo validar el código')
+      error.value = messageFrom(e, t('authStore.validateCodeError'))
       return { success: false, message: error.value }
     } finally {
       loading.value = false
@@ -161,7 +167,7 @@ export const useAuthStore = defineStore('auth', () => {
       const res = await authAPI.forgotPassword({ email })
       return { success: true, message: res.data.message }
     } catch (e) {
-      return { success: false, message: messageFrom(e, 'No se pudo enviar el código') }
+      return { success: false, message: messageFrom(e, t('authStore.sendCodeError')) }
     }
   }
 
@@ -170,7 +176,7 @@ export const useAuthStore = defineStore('auth', () => {
       const res = await authAPI.resetPassword(data)
       return { success: true, message: res.data.message }
     } catch (e) {
-      return { success: false, message: messageFrom(e, 'No se pudo restablecer la contraseña') }
+      return { success: false, message: messageFrom(e, t('authStore.resetPasswordError')) }
     }
   }
 
@@ -178,6 +184,7 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const res = await authAPI.getMe()
       user.value = res.data
+      if (res.data.language) setLanguage(res.data.language)
     } catch {
       await logout(false)
     }
@@ -189,7 +196,7 @@ export const useAuthStore = defineStore('auth', () => {
       user.value = res.data
       return { success: true }
     } catch (e) {
-      return { success: false, message: messageFrom(e, 'Error al actualizar el perfil') }
+      return { success: false, message: messageFrom(e, t('profile.profileUpdateError')) }
     }
   }
 
@@ -202,7 +209,7 @@ export const useAuthStore = defineStore('auth', () => {
       user.value = res.data
       return { success: true }
     } catch (e) {
-      return { success: false, message: messageFrom(e, 'No se pudo guardar tu respuesta') }
+      return { success: false, message: messageFrom(e, t('authStore.saveResponseError')) }
     }
   }
 
@@ -220,7 +227,7 @@ export const useAuthStore = defineStore('auth', () => {
       dismissAIConsent()
       return { success: true }
     } catch (e) {
-      return { success: false, message: messageFrom(e, 'No se pudo revocar el consentimiento') }
+      return { success: false, message: messageFrom(e, t('authStore.revokeConsentError')) }
     }
   }
 
@@ -228,7 +235,7 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       await authAPI.deleteAccount({ password })
     } catch (e) {
-      return { success: false, message: messageFrom(e, 'No se pudo eliminar la cuenta') }
+      return { success: false, message: messageFrom(e, t('authStore.deleteAccountError')) }
     }
 
     // The account no longer exists server-side, so every local trace of it has to go
@@ -257,7 +264,7 @@ export const useAuthStore = defineStore('auth', () => {
       const res = await authAPI.changePassword(data)
       return { success: true, message: res.data.message }
     } catch (e) {
-      return { success: false, message: messageFrom(e, 'No se pudo actualizar la contraseña') }
+      return { success: false, message: messageFrom(e, t('authStore.updatePasswordError')) }
     }
   }
 
@@ -288,7 +295,7 @@ export const useAuthStore = defineStore('auth', () => {
       const res = await authAPI.requestTwoFactorSetup()
       return { success: true, message: res.data.message }
     } catch (e) {
-      return { success: false, message: messageFrom(e, 'No se pudo enviar el código') }
+      return { success: false, message: messageFrom(e, t('authStore.sendCodeError')) }
     }
   }
 
@@ -298,7 +305,7 @@ export const useAuthStore = defineStore('auth', () => {
       await setSession(res.data)
       return { success: true }
     } catch (e) {
-      return { success: false, message: messageFrom(e, 'No se pudo activar la verificación') }
+      return { success: false, message: messageFrom(e, t('authStore.enableVerificationError')) }
     }
   }
 
@@ -307,7 +314,7 @@ export const useAuthStore = defineStore('auth', () => {
       const res = await authAPI.requestTwoFactorDisable({ currentPassword })
       return { success: true, message: res.data.message }
     } catch (e) {
-      return { success: false, message: messageFrom(e, 'No se pudo enviar el código') }
+      return { success: false, message: messageFrom(e, t('authStore.sendCodeError')) }
     }
   }
 
@@ -317,7 +324,7 @@ export const useAuthStore = defineStore('auth', () => {
       await setSession(res.data)
       return { success: true }
     } catch (e) {
-      return { success: false, message: messageFrom(e, 'No se pudo desactivar la verificación') }
+      return { success: false, message: messageFrom(e, t('authStore.disableVerificationError')) }
     }
   }
 
@@ -358,7 +365,7 @@ export const useAuthStore = defineStore('auth', () => {
       try {
         const refreshToken = localStorage.getItem('refreshToken')
         if (!refreshToken || !user.value?.email) {
-          return { success: false, message: 'Inicia sesión nuevamente antes de activar la biometría' }
+          return { success: false, message: t('authStore.reloginForBiometric') }
         }
         const { NativeBiometric } = await import('@capgo/capacitor-native-biometric')
         await NativeBiometric.setCredentials({
@@ -372,7 +379,7 @@ export const useAuthStore = defineStore('auth', () => {
         hasBiometric.value = true
         return { success: true }
       } catch (e) {
-        return { success: false, message: e.message || 'No se pudo activar Face ID / Huella' }
+        return { success: false, message: e.message || t('authStore.enableBiometricError') }
       }
     }
     try {
@@ -384,7 +391,7 @@ export const useAuthStore = defineStore('auth', () => {
       hasBiometric.value = true
       return { success: true }
     } catch (e) {
-      return { success: false, message: e.message || 'No se pudo activar Face ID / Huella' }
+      return { success: false, message: e.message || t('authStore.enableBiometricError') }
     }
   }
 
@@ -403,7 +410,7 @@ export const useAuthStore = defineStore('auth', () => {
     }
     localStorage.removeItem('biometricEmail')
     hasBiometric.value = false
-    error.value = 'Tu sesión biométrica expiró. Inicia sesión con tu contraseña para reactivarla.'
+    error.value = t('authStore.biometricSessionExpired')
     return { success: false, prefillEmail }
   }
 
@@ -416,14 +423,14 @@ export const useAuthStore = defineStore('auth', () => {
         // plain (unprotected) storage, so it doesn't trigger a second, redundant
         // authentication — see the note on syncBiometricCredential above.
         await NativeBiometric.verifyIdentity({
-          reason: 'Inicia sesión con Face ID / Huella',
-          title: 'Inicia sesión',
+          reason: t('authStore.biometricPromptReason'),
+          title: t('auth.signIn'),
         })
       } catch (e) {
         // The user dismissed the prompt or the OS canceled it (e.g. app backgrounded
         // mid-authentication) — not a failure worth alarming them about.
         if (e.code === '15' || e.code === '16') return { success: false, cancelled: true }
-        error.value = e.message || 'Error al iniciar con Face ID / Huella'
+        error.value = e.message || t('auth.biometricLoginError')
         return { success: false }
       }
 
@@ -453,7 +460,7 @@ export const useAuthStore = defineStore('auth', () => {
         if (e.response?.data?.code === 'INVALID_REFRESH_TOKEN') {
           return resetBiometricCredential(credentials.username)
         }
-        error.value = e.response?.data?.message || e.message || 'Error al iniciar con Face ID / Huella'
+        error.value = e.response?.data?.message || e.message || t('auth.biometricLoginError')
         return { success: false }
       }
     }
@@ -467,7 +474,7 @@ export const useAuthStore = defineStore('auth', () => {
       hasBiometric.value = true
       return { success: true }
     } catch (e) {
-      error.value = e.response?.data?.message || e.message || 'Error al iniciar con Face ID / Huella'
+      error.value = e.response?.data?.message || e.message || t('auth.biometricLoginError')
       return { success: false }
     }
   }
@@ -481,7 +488,7 @@ export const useAuthStore = defineStore('auth', () => {
         hasBiometric.value = false
         return { success: true }
       } catch (e) {
-        return { success: false, message: e.message || 'Error al desactivar' }
+        return { success: false, message: e.message || t('authStore.disableError') }
       }
     }
     try {
@@ -490,7 +497,7 @@ export const useAuthStore = defineStore('auth', () => {
       hasBiometric.value = false
       return { success: true }
     } catch (e) {
-      return { success: false, message: messageFrom(e, 'Error al desactivar') }
+      return { success: false, message: messageFrom(e, t('authStore.disableError')) }
     }
   }
 

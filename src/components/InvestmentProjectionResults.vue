@@ -2,17 +2,17 @@
   <div>
     <div class="investment-summary-grid mb-4">
       <v-card class="investment-summary-card">
-        <v-card-text><span>Saldo final</span><strong>{{ money(result.finalBalance) }}</strong></v-card-text>
+        <v-card-text><span>{{ t('investment.finalBalance') }}</span><strong>{{ money(result.finalBalance) }}</strong></v-card-text>
       </v-card>
       <v-card class="investment-summary-card">
-        <v-card-text><span>Dinero aportado</span><strong>{{ money(result.totalContributions) }}</strong></v-card-text>
+        <v-card-text><span>{{ t('investment.contributedMoney') }}</span><strong>{{ money(result.totalContributions) }}</strong></v-card-text>
       </v-card>
       <v-card class="investment-summary-card investment-summary-card--gain">
-        <v-card-text><span>Intereses brutos</span><strong>{{ money(result.totalInterest) }}</strong></v-card-text>
+        <v-card-text><span>{{ t('investment.grossInterest') }}</span><strong>{{ money(result.totalInterest) }}</strong></v-card-text>
       </v-card>
     </div>
 
-    <v-card title="Crecimiento proyectado">
+    <v-card :title="t('investment.projectedGrowth')">
       <v-card-text>
         <div class="investment-chart"><Line :data="chartData" :options="chartOptions" /></div>
         <div class="text-caption text-medium-emphasis mt-3">{{ result.disclaimer }}</div>
@@ -23,6 +23,7 @@
 
 <script setup>
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Line } from 'vue-chartjs'
 import {
   Chart as ChartJS,
@@ -34,6 +35,7 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js'
+import { useLocale } from '@/composables/useLocale'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Filler, Tooltip, Legend)
 
@@ -42,13 +44,16 @@ const props = defineProps({
   currency: { type: String, required: true },
 })
 
-const money = (value) => new Intl.NumberFormat('es-CO', {
+const { t } = useI18n()
+const { locale } = useLocale()
+
+const money = (value) => new Intl.NumberFormat(locale.value, {
   style: 'currency',
   currency: props.currency,
   maximumFractionDigits: 0,
 }).format(Number(value || 0))
 
-const compactMoney = (value) => new Intl.NumberFormat('es-CO', {
+const compactMoney = (value) => new Intl.NumberFormat(locale.value, {
   notation: 'compact',
   maximumFractionDigits: 1,
 }).format(Number(value || 0))
@@ -57,7 +62,7 @@ const chartData = computed(() => ({
   labels: props.result.projection.map((row) => row.period),
   datasets: [
     {
-      label: 'Dinero aportado',
+      label: t('investment.contributedMoney'),
       data: props.result.projection.map((row) => row.contributions),
       borderColor: '#3276b1',
       backgroundColor: 'rgba(50, 118, 177, 0.08)',
@@ -65,7 +70,7 @@ const chartData = computed(() => ({
       tension: 0.2,
     },
     {
-      label: 'Saldo con intereses',
+      label: t('investment.balanceWithInterest'),
       data: props.result.projection.map((row) => row.balance),
       borderColor: '#159a72',
       backgroundColor: 'rgba(21, 154, 114, 0.12)',
@@ -82,10 +87,10 @@ const chartOptions = computed(() => ({
   interaction: { intersect: false, mode: 'index' },
   plugins: { legend: { position: 'bottom' } },
   scales: {
-    x: { title: { display: true, text: 'Mes' }, grid: { display: false } },
+    x: { title: { display: true, text: t('budgets.month') }, grid: { display: false } },
     y: {
       beginAtZero: true,
-      title: { display: true, text: `Saldo (${props.currency})` },
+      title: { display: true, text: `${t('wallets.balance')} (${props.currency})` },
       ticks: { callback: compactMoney },
     },
   },

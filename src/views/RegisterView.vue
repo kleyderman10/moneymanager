@@ -8,16 +8,16 @@
               <v-icon size="25">mdi-chart-timeline-variant-shimmer</v-icon>
             </div>
             <div>
-              <div class="finance-brand__name">Knexura Finanzas</div>
-              <div class="finance-brand__tagline">Tu dinero, bajo control</div>
+              <div class="finance-brand__name">{{ t('layout.brandName') }}</div>
+              <div class="finance-brand__tagline">{{ t('layout.brandTagline') }}</div>
             </div>
           </div>
-          <h1>Haz que cada peso tenga un propósito.</h1>
-          <p>Crea una vista completa de tus finanzas y empieza a avanzar hacia lo que realmente importa.</p>
+          <h1>{{ t('auth.registerHeroTitle') }}</h1>
+          <p>{{ t('auth.registerHeroSubtitle') }}</p>
           <div class="auth-proof">
-            <div class="auth-proof__item"><v-icon color="success" size="19">mdi-check-circle</v-icon> Presupuestos</div>
-            <div class="auth-proof__item"><v-icon color="success" size="19">mdi-check-circle</v-icon> Metas de ahorro</div>
-            <div class="auth-proof__item"><v-icon color="success" size="19">mdi-email-check-outline</v-icon> Cuenta verificada</div>
+            <div class="auth-proof__item"><v-icon color="success" size="19">mdi-check-circle</v-icon> {{ t('nav.budgets') }}</div>
+            <div class="auth-proof__item"><v-icon color="success" size="19">mdi-check-circle</v-icon> {{ t('nav.goals') }}</div>
+            <div class="auth-proof__item"><v-icon color="success" size="19">mdi-email-check-outline</v-icon> {{ t('auth.verifiedAccount') }}</div>
           </div>
         </div>
       </v-col>
@@ -29,19 +29,19 @@
               <v-icon size="23">mdi-chart-timeline-variant-shimmer</v-icon>
             </div>
             <div>
-              <div class="finance-brand__name">Knexura Finanzas</div>
-              <div class="finance-brand__tagline">Tu dinero, bajo control</div>
+              <div class="finance-brand__name">{{ t('layout.brandName') }}</div>
+              <div class="finance-brand__tagline">{{ t('layout.brandTagline') }}</div>
             </div>
           </div>
 
           <template v-if="!awaitingCode">
-            <h2>Crea tu cuenta</h2>
-            <p class="auth-card__intro">Empieza con 45 días gratis. Verificaremos tu correo antes de ingresar.</p>
+            <h2>{{ t('auth.createAccount') }}</h2>
+            <p class="auth-card__intro">{{ t('auth.createAccountIntro') }}</p>
           </template>
           <template v-else>
-            <h2>Revisa tu correo</h2>
+            <h2>{{ t('auth.checkYourEmail') }}</h2>
             <p class="auth-card__intro">
-              Enviamos un código de 6 dígitos a <strong>{{ email }}</strong>. Expira en 10 minutos.
+              {{ t('auth.codeSentTo') }} <strong>{{ email }}</strong>. {{ t('auth.codeExpires') }}
             </p>
           </template>
 
@@ -53,10 +53,10 @@
           </v-alert>
 
           <v-form v-if="!awaitingCode" @submit.prevent="handleRegister">
-            <label class="text-caption font-weight-bold d-block mb-2">Nombre</label>
+            <label class="text-caption font-weight-bold d-block mb-2">{{ t('profile.name') }}</label>
             <v-text-field
               v-model="name"
-              placeholder="Tu nombre"
+              :placeholder="t('auth.namePlaceholder')"
               prepend-inner-icon="mdi-account-outline"
               autocomplete="name"
               variant="outlined"
@@ -65,7 +65,7 @@
               class="mb-2"
             />
 
-            <label class="text-caption font-weight-bold d-block mb-2">Correo electrónico</label>
+            <label class="text-caption font-weight-bold d-block mb-2">{{ t('auth.email') }}</label>
             <v-text-field
               v-model="email"
               placeholder="nombre@correo.com"
@@ -78,10 +78,10 @@
               class="mb-2"
             />
 
-            <label class="text-caption font-weight-bold d-block mb-2">Contraseña</label>
+            <label class="text-caption font-weight-bold d-block mb-2">{{ t('auth.password') }}</label>
             <v-text-field
               v-model="password"
-              placeholder="Mínimo 10 caracteres"
+              :placeholder="t('auth.minChars')"
               prepend-inner-icon="mdi-lock-outline"
               :append-inner-icon="showPassword ? 'mdi-eye-off-outline' : 'mdi-eye-outline'"
               :type="showPassword ? 'text' : 'password'"
@@ -93,10 +93,10 @@
               @click:append-inner="showPassword = !showPassword"
             />
 
-            <label class="text-caption font-weight-bold d-block mb-2">Confirma la contraseña</label>
+            <label class="text-caption font-weight-bold d-block mb-2">{{ t('auth.confirmPassword') }}</label>
             <v-text-field
               v-model="confirmPassword"
-              placeholder="Repite tu contraseña"
+              :placeholder="t('auth.repeatPassword')"
               prepend-inner-icon="mdi-lock-check-outline"
               :type="showPassword ? 'text' : 'password'"
               autocomplete="new-password"
@@ -106,12 +106,12 @@
             />
 
             <v-btn type="submit" color="primary" block size="large" class="auth-primary-btn mt-2" :loading="authStore.loading">
-              Crear y verificar mi cuenta
+              {{ t('auth.createAndVerify') }}
             </v-btn>
           </v-form>
 
           <v-form v-else @submit.prevent="handleVerification">
-            <label class="text-caption font-weight-bold d-block mb-2">Código de verificación</label>
+            <label class="text-caption font-weight-bold d-block mb-2">{{ t('auth.verificationCode') }}</label>
             <v-text-field
               v-model="code"
               placeholder="000000"
@@ -124,17 +124,17 @@
               :rules="[rules.code]"
             />
             <v-btn type="submit" color="primary" block size="large" :loading="authStore.loading">
-              Verificar correo y entrar
+              {{ t('auth.verifyEmailAndEnter') }}
             </v-btn>
             <v-btn variant="text" color="primary" block class="mt-3" :loading="resendLoading" @click="resendCode">
-              Reenviar código
+              {{ t('profile.resendCode') }}
             </v-btn>
-            <v-btn variant="text" block size="small" @click="awaitingCode = false">Cambiar correo</v-btn>
+            <v-btn variant="text" block size="small" @click="awaitingCode = false">{{ t('auth.changeEmail') }}</v-btn>
           </v-form>
 
           <p v-if="!awaitingCode" class="text-center text-body-2 text-medium-emphasis mt-7 mb-0">
-            ¿Ya tienes una cuenta?
-            <v-btn variant="text" color="primary" size="small" to="/login">Inicia sesión</v-btn>
+            {{ t('auth.alreadyHaveAccount') }}
+            <v-btn variant="text" color="primary" size="small" to="/login">{{ t('auth.signIn') }}</v-btn>
           </p>
         </v-card>
       </v-col>
@@ -145,8 +145,10 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 
+const { t } = useI18n()
 const router = useRouter()
 const authStore = useAuthStore()
 
@@ -161,16 +163,16 @@ const resendLoading = ref(false)
 const notice = ref('')
 
 const rules = {
-  required: (value) => !!value || 'Campo obligatorio',
-  email: (value) => /.+@.+\..+/.test(value) || 'Correo inválido',
-  password: (value) => (value.length >= 10 && new TextEncoder().encode(value).length <= 72) || 'Usa entre 10 y 72 caracteres',
-  confirmPassword: (value) => value === password.value || 'Las contraseñas no coinciden',
-  code: (value) => /^\d{6}$/.test(value) || 'Ingresa los 6 dígitos',
+  required: (value) => !!value || t('auth.requiredField'),
+  email: (value) => /.+@.+\..+/.test(value) || t('auth.invalidEmail'),
+  password: (value) => (value.length >= 10 && new TextEncoder().encode(value).length <= 72) || t('profile.passwordRuleError'),
+  confirmPassword: (value) => value === password.value || t('auth.passwordsDontMatch'),
+  code: (value) => /^\d{6}$/.test(value) || t('profile.codeRuleError'),
 }
 
 const handleRegister = async () => {
   if (password.value !== confirmPassword.value) {
-    authStore.error = 'Las contraseñas no coinciden'
+    authStore.error = t('auth.passwordsDontMatch')
     return
   }
   const result = await authStore.register({ name: name.value, email: email.value, password: password.value })

@@ -1,51 +1,73 @@
 <template>
   <div>
     <div class="page-intro">
-      <div class="page-intro__eyebrow">Tu cuenta</div>
-      <h1 :class="isMobile ? 'text-h5' : 'text-h4'">Perfil y seguridad</h1>
-      <p class="page-intro__subtitle">Administra tus datos, moneda preferida y métodos de acceso.</p>
+      <div class="page-intro__eyebrow">{{ t('profile.yourAccount') }}</div>
+      <h1 :class="isMobile ? 'text-h5' : 'text-h4'">{{ t('profile.title') }}</h1>
+      <p class="page-intro__subtitle">{{ t('profile.subtitle') }}</p>
     </div>
 
     <v-row>
       <v-col cols="12" md="6">
-        <v-card title="Información personal">
+        <v-card :title="t('profile.personalInfo')">
           <v-card-text>
             <v-form @submit.prevent="saveProfile">
-              <v-text-field v-model="profileForm.name" label="Nombre" variant="outlined" density="compact" required class="mb-3" />
+              <v-text-field v-model="profileForm.name" :label="t('profile.name')" variant="outlined" density="compact" required class="mb-3" />
               <v-text-field :model-value="authStore.user?.email" label="Email" variant="outlined" density="compact" disabled class="mb-3" />
               <v-chip color="success" variant="tonal" size="small" prepend-icon="mdi-email-check-outline" class="mb-4">
-                Correo verificado
+                {{ t('profile.emailVerified') }}
               </v-chip>
-              <v-text-field v-model="profileForm.currency" label="Moneda preferida" variant="outlined" density="compact" class="mb-3" />
-              <v-btn type="submit" class="form-actions__primary" :loading="profileLoading" block>Guardar cambios</v-btn>
+              <v-select
+                v-model="profileForm.country"
+                :items="countryOptions"
+                item-title="label"
+                item-value="code"
+                :label="t('profile.country')"
+                variant="outlined"
+                density="compact"
+                class="mb-1"
+              />
+              <p class="text-caption text-medium-emphasis mb-3">
+                {{ t('profile.currencyFollowsCountry', { currency: currencyPreview }) }}
+              </p>
+              <v-select
+                v-model="profileForm.language"
+                :items="languageOptions"
+                item-title="label"
+                item-value="code"
+                :label="t('profile.language')"
+                variant="outlined"
+                density="compact"
+                class="mb-3"
+              />
+              <v-btn type="submit" class="form-actions__primary" :loading="profileLoading" block>{{ t('profile.saveChanges') }}</v-btn>
             </v-form>
           </v-card-text>
         </v-card>
       </v-col>
       <v-col cols="12" md="6">
-        <v-card title="Cambiar contraseña">
+        <v-card :title="t('profile.changePassword')">
           <v-card-text>
             <v-alert v-if="passMsg" :type="passSuccess ? 'success' : 'error'" density="compact" class="mb-2">{{ passMsg }}</v-alert>
             <v-form @submit.prevent="savePassword">
-              <v-text-field v-model="passForm.currentPassword" label="Contraseña actual" type="password" variant="outlined" density="compact" required class="mb-3" />
+              <v-text-field v-model="passForm.currentPassword" :label="t('profile.currentPassword')" type="password" variant="outlined" density="compact" required class="mb-3" />
               <v-text-field
                 v-model="passForm.newPassword"
-                label="Nueva contraseña"
+                :label="t('profile.newPassword')"
                 type="password"
                 variant="outlined"
                 density="compact"
-                hint="Entre 10 y 72 caracteres"
+                :hint="t('profile.passwordHint')"
                 :rules="[passwordRule]"
                 required
                 class="mb-3"
               />
-              <v-btn type="submit" class="form-actions__primary" :loading="passLoading" block>Actualizar contraseña</v-btn>
+              <v-btn type="submit" class="form-actions__primary" :loading="passLoading" block>{{ t('profile.updatePassword') }}</v-btn>
             </v-form>
           </v-card-text>
         </v-card>
       </v-col>
       <v-col cols="12" md="6">
-        <v-card title="Verificación en dos pasos">
+        <v-card :title="t('profile.twoFactor')">
           <v-card-text>
             <template v-if="!twoFactorMode">
               <v-alert
@@ -56,8 +78,8 @@
                 :icon="authStore.user?.twoFactorEnabled ? 'mdi-shield-check' : 'mdi-shield-outline'"
               >
                 {{ authStore.user?.twoFactorEnabled
-                  ? 'Activa. Cada acceso con contraseña requiere un código enviado a tu correo.'
-                  : 'Añade un código de un solo uso después de tu contraseña.' }}
+                  ? t('profile.twoFactorActive')
+                  : t('profile.twoFactorInactive') }}
               </v-alert>
               <v-btn
                 v-if="!authStore.user?.twoFactorEnabled"
@@ -67,34 +89,34 @@
                 prepend-icon="mdi-two-factor-authentication"
                 @click="startTwoFactorSetup"
               >
-                Activar verificación en dos pasos
+                {{ t('profile.enableTwoFactor') }}
               </v-btn>
               <v-btn v-else color="error" variant="outlined" block @click="twoFactorMode = 'disable'">
-                Desactivar verificación en dos pasos
+                {{ t('profile.disableTwoFactor') }}
               </v-btn>
             </template>
 
             <template v-else-if="twoFactorMode === 'enable'">
-              <p class="text-body-2 text-medium-emphasis mb-3">Escribe el código enviado a {{ authStore.user?.email }}.</p>
+              <p class="text-body-2 text-medium-emphasis mb-3">{{ t('profile.codeSentTo', { email: authStore.user?.email }) }}</p>
               <v-text-field
                 v-model="twoFactorCode"
-                label="Código de 6 dígitos"
+                :label="t('profile.sixDigitCode')"
                 inputmode="numeric"
                 autocomplete="one-time-code"
                 maxlength="6"
                 prepend-inner-icon="mdi-shield-key-outline"
                 :rules="[codeRule]"
               />
-              <v-btn color="primary" block :loading="twoFactorLoading" @click="confirmTwoFactorSetup">Confirmar y activar</v-btn>
-              <v-btn variant="text" color="primary" block class="mt-2" :loading="twoFactorLoading" @click="startTwoFactorSetup">Reenviar código</v-btn>
-              <v-btn variant="text" block @click="cancelTwoFactorChange">Cancelar</v-btn>
+              <v-btn color="primary" block :loading="twoFactorLoading" @click="confirmTwoFactorSetup">{{ t('profile.confirmAndEnable') }}</v-btn>
+              <v-btn variant="text" color="primary" block class="mt-2" :loading="twoFactorLoading" @click="startTwoFactorSetup">{{ t('profile.resendCode') }}</v-btn>
+              <v-btn variant="text" block @click="cancelTwoFactorChange">{{ t('common.cancel') }}</v-btn>
             </template>
 
             <template v-else>
-              <p class="text-body-2 text-medium-emphasis mb-3">Confirma tu contraseña y el código enviado a tu correo.</p>
+              <p class="text-body-2 text-medium-emphasis mb-3">{{ t('profile.confirmPasswordAndCode') }}</p>
               <v-text-field
                 v-model="disablePassword"
-                label="Contraseña actual"
+                :label="t('profile.currentPassword')"
                 type="password"
                 autocomplete="current-password"
                 prepend-inner-icon="mdi-lock-outline"
@@ -103,7 +125,7 @@
               <v-text-field
                 v-if="disableCodeSent"
                 v-model="twoFactorCode"
-                label="Código de 6 dígitos"
+                :label="t('profile.sixDigitCode')"
                 inputmode="numeric"
                 autocomplete="one-time-code"
                 maxlength="6"
@@ -116,23 +138,23 @@
                 :loading="twoFactorLoading"
                 @click="disableCodeSent ? confirmTwoFactorDisable() : requestTwoFactorDisable()"
               >
-                {{ disableCodeSent ? 'Confirmar y desactivar' : 'Enviar código de confirmación' }}
+                {{ disableCodeSent ? t('profile.confirmAndDisable') : t('profile.sendConfirmationCode') }}
               </v-btn>
               <v-btn v-if="disableCodeSent" variant="text" color="primary" block class="mt-2" :loading="twoFactorLoading" @click="requestTwoFactorDisable">
-                Reenviar código
+                {{ t('profile.resendCode') }}
               </v-btn>
-              <v-btn variant="text" block @click="cancelTwoFactorChange">Cancelar</v-btn>
+              <v-btn variant="text" block @click="cancelTwoFactorChange">{{ t('common.cancel') }}</v-btn>
             </template>
           </v-card-text>
         </v-card>
       </v-col>
       <v-col cols="12" md="6">
-        <v-card title="Plan y facturación">
+        <v-card :title="t('profile.planAndBilling')">
           <v-card-text>
             <div class="d-flex align-center justify-space-between mb-3">
               <div>
-                <div class="text-subtitle-1 font-weight-bold">Knexura Finanzas Personal</div>
-                <div class="text-body-2 text-medium-emphasis">{{ formattedPlanPrice }} cada tres meses</div>
+                <div class="text-subtitle-1 font-weight-bold">{{ t('layout.brandName') }} Personal</div>
+                <div class="text-body-2 text-medium-emphasis">{{ t('profile.pricePerQuarter', { price: formattedPlanPrice }) }}</div>
               </div>
               <v-chip :color="billingStatusColor" variant="tonal" size="small">
                 {{ billingStatusLabel }}
@@ -140,13 +162,13 @@
             </div>
             <p class="text-body-2 text-medium-emphasis mb-4">{{ billingMessage }}</p>
             <v-btn color="primary" variant="outlined" block prepend-icon="mdi-credit-card-outline" to="/subscription">
-              Administrar suscripción
+              {{ t('profile.manageSubscription') }}
             </v-btn>
           </v-card-text>
         </v-card>
       </v-col>
       <v-col cols="12" md="6">
-        <v-card title="Privacidad e inteligencia artificial">
+        <v-card :title="t('profile.privacyAndAI')">
           <v-card-text>
             <v-alert
               v-if="authStore.hasAcceptedAIConsent"
@@ -156,13 +178,13 @@
               class="mb-3"
               icon="mdi-shield-check"
             >
-              Aceptaste que tus recibos, extractos y chat puedan enviarse a nuestro proveedor de IA (OpenAI / Google Gemini).
+              {{ t('profile.aiConsentAccepted') }}
             </v-alert>
             <v-alert v-else type="info" density="compact" variant="tonal" class="mb-3">
-              No has aceptado el uso de funciones de IA. Escanear recibos, subir extractos y el chat están deshabilitados.
+              {{ t('profile.aiConsentPending') }}
             </v-alert>
             <v-btn color="primary" variant="outlined" block prepend-icon="mdi-robot-outline" @click="showConsentDialog = true">
-              {{ authStore.hasAcceptedAIConsent ? 'Revisar o revocar permisos de IA' : 'Revisar permisos de IA' }}
+              {{ authStore.hasAcceptedAIConsent ? t('profile.reviewOrRevokeAI') : t('profile.reviewAI') }}
             </v-btn>
             <v-btn
               variant="text"
@@ -171,13 +193,13 @@
               prepend-icon="mdi-shield-lock-outline"
               @click="openPrivacyPolicy"
             >
-              Ver política de privacidad
+              {{ t('profile.viewPrivacyPolicy') }}
             </v-btn>
           </v-card-text>
         </v-card>
       </v-col>
       <v-col v-if="biometricSupported" cols="12" md="6">
-        <v-card title="Autenticación Biométrica">
+        <v-card :title="t('profile.biometricAuth')">
           <v-card-text>
             <v-alert
               v-if="authStore.hasBiometric"
@@ -187,7 +209,7 @@
               class="mb-3"
               icon="mdi-shield-check"
             >
-              Face ID / Huella activado
+              {{ t('profile.biometricEnabled') }}
             </v-alert>
             <v-alert
               v-else
@@ -196,7 +218,7 @@
               variant="tonal"
               class="mb-3"
             >
-              Inicia sesión más rápido usando tu rostro o huella dactilar.
+              {{ t('profile.biometricPitch') }}
             </v-alert>
             <v-btn
               v-if="authStore.hasBiometric"
@@ -206,7 +228,7 @@
               :loading="bioLoading"
               @click="handleRemoveBiometric"
             >
-              Desactivar Face ID / Huella
+              {{ t('profile.disableBiometric') }}
             </v-btn>
             <v-btn
               v-else
@@ -216,26 +238,24 @@
               prepend-icon="mdi-face-recognition"
               @click="handleRegisterBiometric"
             >
-              Activar Face ID / Huella
+              {{ t('profile.enableBiometric') }}
             </v-btn>
           </v-card-text>
         </v-card>
       </v-col>
       <v-col cols="12">
-        <v-card title="Eliminar cuenta" class="delete-account-card">
+        <v-card :title="t('profile.deleteAccount')" class="delete-account-card">
           <v-card-text>
             <p class="text-body-2 mb-3">
-              Al eliminar tu cuenta borramos permanentemente tu perfil y todos tus datos:
-              movimientos, cuentas, categorías, presupuestos, metas, créditos, extractos e
-              historial de IA. Esta acción no se puede deshacer.
+              {{ t('profile.deleteAccountBody') }}
             </p>
             <v-alert type="warning" density="compact" variant="tonal" class="mb-3">
-              Si tienes una suscripción activa, cancélala por separado antes de eliminar la
-              cuenta: <template v-if="manageHint">se cancela desde {{ manageHint }}</template>
-              <template v-else>gestiónala desde donde la contrataste</template>.
+              {{ t('profile.deleteAccountWarning') }}
+              <template v-if="manageHint">{{ t('profile.cancelFrom', { place: manageHint }) }}</template>
+              <template v-else>{{ t('profile.cancelFromStore') }}</template>.
             </v-alert>
             <v-btn color="error" variant="outlined" prepend-icon="mdi-delete-forever-outline" @click="showDeleteDialog = true">
-              Eliminar mi cuenta
+              {{ t('profile.deleteMyAccount') }}
             </v-btn>
           </v-card-text>
         </v-card>
@@ -249,15 +269,14 @@
     />
 
     <v-dialog v-model="showDeleteDialog" max-width="480" persistent>
-      <v-card title="Eliminar cuenta definitivamente">
+      <v-card :title="t('profile.deleteAccountConfirmTitle')">
         <v-card-text>
           <p class="text-body-2 mb-4">
-            Se eliminarán tu cuenta y todos tus datos financieros de forma permanente.
-            Escribe tu contraseña para confirmar.
+            {{ t('profile.deleteAccountConfirmBody') }}
           </p>
           <v-text-field
             v-model="deletePassword"
-            label="Contraseña"
+            :label="t('profile.password')"
             type="password"
             variant="outlined"
             density="comfortable"
@@ -267,7 +286,7 @@
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn variant="text" :disabled="deleteLoading" @click="closeDeleteDialog">Cancelar</v-btn>
+          <v-btn variant="text" :disabled="deleteLoading" @click="closeDeleteDialog">{{ t('common.cancel') }}</v-btn>
           <v-btn
             color="error"
             variant="flat"
@@ -275,7 +294,7 @@
             :disabled="!deletePassword"
             @click="handleDeleteAccount"
           >
-            Eliminar cuenta
+            {{ t('profile.deleteAccount') }}
           </v-btn>
         </v-card-actions>
       </v-card>
@@ -284,25 +303,48 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import AIConsentDialog from '@/components/AIConsentDialog.vue'
 import { useDisplay } from 'vuetify'
 import { useAuthStore } from '@/stores/auth'
 import { useSubscriptionStore } from '@/stores/subscriptions'
 import { useSnackbar } from '@/stores/snackbar'
+import { useLocale } from '@/composables/useLocale'
 import { openLegalLink, PRIVACY_POLICY_URL } from '@/utils/legalLinks'
 import { storeManageHint } from '@/utils/nativeIAP'
+import { COUNTRIES, findCountry, DEFAULT_COUNTRY_CODE } from '@/constants/countries'
+import { setLanguage, SUPPORTED_LANGUAGES } from '@/i18n'
 
+const { t, locale } = useI18n()
 const { mobile } = useDisplay()
 const router = useRouter()
 const isMobile = computed(() => mobile.value)
 const authStore = useAuthStore()
 const billingStore = useSubscriptionStore()
 const snackbar = useSnackbar()
+const { money } = useLocale()
 
-const profileForm = reactive({ name: authStore.user?.name, currency: authStore.user?.currency || 'USD' })
+const profileForm = reactive({
+  name: authStore.user?.name,
+  country: authStore.user?.country || DEFAULT_COUNTRY_CODE,
+  language: authStore.user?.language || 'es',
+})
 const profileLoading = ref(false)
+
+const countryOptions = computed(() => COUNTRIES.map((c) => ({
+  code: c.code,
+  label: `${c.flag} ${locale.value === 'en' ? c.nameEn : c.nameEs} · ${c.currency}`,
+})))
+const languageOptions = computed(() => SUPPORTED_LANGUAGES.map((code) => ({
+  code,
+  label: code === 'es' ? t('profile.spanish') : t('profile.english'),
+})))
+const currencyPreview = computed(() => findCountry(profileForm.country)?.currency || 'USD')
+
+// Cambiar el idioma actualiza la interfaz de inmediato; se persiste al guardar el perfil.
+watch(() => profileForm.language, (lang) => setLanguage(lang))
 const passForm = reactive({ currentPassword: '', newPassword: '' })
 const passLoading = ref(false)
 const passMsg = ref('')
@@ -322,23 +364,22 @@ const disableCodeSent = ref(false)
 
 const passwordRule = (value) => (
   value.length >= 10 && new TextEncoder().encode(value).length <= 72
-) || 'Usa entre 10 y 72 caracteres'
-const codeRule = (value) => /^\d{6}$/.test(value) || 'Ingresa los 6 dígitos'
+) || t('profile.passwordRuleError')
+const codeRule = (value) => /^\d{6}$/.test(value) || t('profile.codeRuleError')
 
-const formattedPlanPrice = computed(() => new Intl.NumberFormat('es-CO', {
-  style: 'currency',
-  currency: billingStore.status?.plan?.currency || 'COP',
-  maximumFractionDigits: 0,
-}).format(billingStore.status?.plan?.amount || 15000))
+const formattedPlanPrice = computed(() => money(
+  billingStore.status?.plan?.amount || 15000,
+  billingStore.status?.plan?.currency || undefined,
+))
 const billingStatusLabel = computed(() => ({
-  trialing: 'Prueba gratuita',
-  active: 'Activa',
-  past_due: 'Pago pendiente',
-  canceled: 'Cancelada',
-  incomplete: 'Registro pendiente',
-  expired: 'Vencida',
-  exempt: 'Cortesía',
-}[billingStore.status?.status] || 'Consultando'))
+  trialing: t('profile.billingTrialing'),
+  active: t('profile.billingActive'),
+  past_due: t('profile.billingPastDue'),
+  canceled: t('profile.billingCanceled'),
+  incomplete: t('profile.billingIncomplete'),
+  expired: t('profile.billingExpired'),
+  exempt: t('profile.billingExempt'),
+}[billingStore.status?.status] || t('profile.billingChecking')))
 const billingStatusColor = computed(() => ({
   active: 'success',
   trialing: 'info',
@@ -350,20 +391,25 @@ const billingStatusColor = computed(() => ({
 }[billingStore.status?.status] || 'default'))
 const billingMessage = computed(() => {
   if (billingStore.status?.status === 'trialing') {
-    return `Te quedan ${billingStore.status.daysRemaining} días de prueba gratuita.`
+    return t('profile.billingTrialDaysLeft', { days: billingStore.status.daysRemaining })
   }
-  if (billingStore.status?.status === 'active') return 'Tu suscripción está al día.'
-  if (billingStore.status?.status === 'canceled') return 'Conservarás acceso hasta terminar el periodo pagado.'
-  if (billingStore.status?.requiresSubscription) return 'Actualiza tu suscripción para recuperar el acceso completo.'
-  return 'Consulta los detalles y el historial de cobros de tu plan.'
+  if (billingStore.status?.status === 'active') return t('profile.billingUpToDate')
+  if (billingStore.status?.status === 'canceled') return t('profile.billingKeepsAccess')
+  if (billingStore.status?.requiresSubscription) return t('profile.billingUpgrade')
+  return t('profile.billingSeeDetails')
 })
 
 const saveProfile = async () => {
   profileLoading.value = true
   try {
-    await authStore.updateProfile({ name: profileForm.name, currency: profileForm.currency })
-    snackbar.success('Perfil actualizado')
-  } catch { snackbar.error('Error al actualizar') }
+    await authStore.updateProfile({
+      name: profileForm.name,
+      country: profileForm.country,
+      currency: currencyPreview.value,
+      language: profileForm.language,
+    })
+    snackbar.success(t('profile.profileUpdated'))
+  } catch { snackbar.error(t('profile.profileUpdateError')) }
   profileLoading.value = false
 }
 
@@ -393,7 +439,7 @@ const handleDeleteAccount = async () => {
   deleteLoading.value = false
   if (!result.success) return snackbar.error(result.message)
   closeDeleteDialog()
-  snackbar.success('Tu cuenta y todos tus datos fueron eliminados.')
+  snackbar.success(t('profile.accountDeleted'))
   router.push('/login')
 }
 
@@ -413,7 +459,7 @@ const confirmTwoFactorSetup = async () => {
   twoFactorLoading.value = false
   if (result.success) {
     cancelTwoFactorChange()
-    snackbar.success('Verificación en dos pasos activada')
+    snackbar.success(t('profile.twoFactorEnabled'))
   } else snackbar.error(result.message)
 }
 
@@ -433,7 +479,7 @@ const confirmTwoFactorDisable = async () => {
   twoFactorLoading.value = false
   if (result.success) {
     cancelTwoFactorChange()
-    snackbar.success('Verificación en dos pasos desactivada')
+    snackbar.success(t('profile.twoFactorDisabled'))
   } else snackbar.error(result.message)
 }
 
@@ -449,7 +495,7 @@ const handleRegisterBiometric = async () => {
   const result = await authStore.registerBiometric()
   bioLoading.value = false
   if (result.success) {
-    snackbar.success('Face ID / Huella activado')
+    snackbar.success(t('profile.biometricActivated'))
   } else {
     snackbar.error(result.message)
   }
@@ -460,7 +506,7 @@ const handleRemoveBiometric = async () => {
   const result = await authStore.removeBiometric()
   bioLoading.value = false
   if (result.success) {
-    snackbar.success('Face ID / Huella desactivado')
+    snackbar.success(t('profile.biometricDeactivated'))
   } else {
     snackbar.error(result.message)
   }

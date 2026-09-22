@@ -1,6 +1,7 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { subscriptionsAPI } from '@/api'
+import { i18n } from '@/i18n'
 import {
   isNativeIAPAvailable,
   isNativePlatform,
@@ -9,6 +10,8 @@ import {
   restoreNativePurchases,
   configureNativeProducts,
 } from '@/utils/nativeIAP'
+
+const t = i18n.global.t
 
 export const useSubscriptionStore = defineStore('subscriptions', () => {
   const status = ref(null)
@@ -53,7 +56,7 @@ export const useSubscriptionStore = defineStore('subscriptions', () => {
       lastFetchedAt.value = Date.now()
       return status.value
     } catch (e) {
-      error.value = e.response?.data?.message || 'No se pudo consultar la suscripción'
+      error.value = e.response?.data?.message || t('subscriptionStore.fetchError')
       return null
     } finally {
       loading.value = false
@@ -86,7 +89,7 @@ export const useSubscriptionStore = defineStore('subscriptions', () => {
     // tries to call this on a native build — sending an Android user to the Mercado
     // Pago checkout is grounds for removal from Play, not just a rejection.
     if (isNativePlatform()) {
-      error.value = 'La compra dentro de la app no está disponible en este momento. Inténtalo de nuevo en unos segundos.'
+      error.value = t('subscriptionStore.inAppPurchaseUnavailable')
       return { success: false, message: error.value }
     }
 
@@ -97,7 +100,7 @@ export const useSubscriptionStore = defineStore('subscriptions', () => {
       window.location.assign(response.data.checkoutUrl)
       return { success: true }
     } catch (e) {
-      error.value = e.response?.data?.message || 'No se pudo iniciar el pago'
+      error.value = e.response?.data?.message || t('subscriptionStore.startPaymentError')
       return { success: false, message: error.value }
     } finally {
       actionLoading.value = false
@@ -127,7 +130,7 @@ export const useSubscriptionStore = defineStore('subscriptions', () => {
       lastFetchedAt.value = Date.now()
       return { success: true, status: status.value }
     } catch (e) {
-      error.value = e.response?.data?.message || 'No se pudo verificar el pago'
+      error.value = e.response?.data?.message || t('subscriptionStore.verifyPaymentError')
       return { success: false, message: error.value }
     } finally {
       actionLoading.value = false
@@ -176,7 +179,7 @@ export const useSubscriptionStore = defineStore('subscriptions', () => {
       lastFetchedAt.value = Date.now()
       return { success: true }
     } catch (e) {
-      error.value = e.response?.data?.message || 'No se pudo cancelar la suscripción'
+      error.value = e.response?.data?.message || t('subscriptionStore.cancelError')
       return { success: false, message: error.value }
     } finally {
       actionLoading.value = false

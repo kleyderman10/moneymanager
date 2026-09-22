@@ -1,6 +1,9 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { adminAPI } from '@/api'
+import { i18n } from '@/i18n'
+
+const t = i18n.global.t
 
 export const useAdminStore = defineStore('admin', () => {
   const overview = ref(null)
@@ -16,7 +19,7 @@ export const useAdminStore = defineStore('admin', () => {
       const res = await adminAPI.getOverview()
       overview.value = res.data
     } catch (e) {
-      error.value = e.response?.data?.message || 'No se pudo cargar el resumen'
+      error.value = e.response?.data?.message || t('adminStore.loadOverviewError')
     }
   }
 
@@ -33,7 +36,7 @@ export const useAdminStore = defineStore('admin', () => {
         totalPages: res.data.totalPages,
       }
     } catch (e) {
-      error.value = e.response?.data?.message || 'No se pudieron cargar los usuarios'
+      error.value = e.response?.data?.message || t('adminStore.loadUsersError')
     } finally {
       loading.value = false
     }
@@ -46,7 +49,7 @@ export const useAdminStore = defineStore('admin', () => {
       if (index !== -1) users.value[index] = { ...users.value[index], ...res.data }
       return { success: true }
     } catch (e) {
-      return { success: false, message: e.response?.data?.message || 'No se pudo actualizar el usuario' }
+      return { success: false, message: e.response?.data?.message || t('adminStore.updateUserError') }
     }
   }
 
@@ -57,7 +60,7 @@ export const useAdminStore = defineStore('admin', () => {
       if (index !== -1) users.value[index] = { ...users.value[index], ...res.data }
       return { success: true }
     } catch (e) {
-      return { success: false, message: e.response?.data?.message || 'No se pudo actualizar el rol' }
+      return { success: false, message: e.response?.data?.message || t('adminStore.updateRoleError') }
     }
   }
 
@@ -74,7 +77,7 @@ export const useAdminStore = defineStore('admin', () => {
         totalPages: res.data.totalPages,
       }
     } catch (e) {
-      error.value = e.response?.data?.message || 'No se pudieron cargar las suscripciones'
+      error.value = e.response?.data?.message || t('adminStore.loadSubscriptionsError')
     } finally {
       loading.value = false
     }
@@ -87,7 +90,7 @@ export const useAdminStore = defineStore('admin', () => {
       if (index !== -1) subscriptions.value[index] = { ...subscriptions.value[index], ...res.data }
       return { success: true }
     } catch (e) {
-      return { success: false, message: e.response?.data?.message || 'No se pudo actualizar la suscripción' }
+      return { success: false, message: e.response?.data?.message || t('adminStore.updateSubscriptionError') }
     }
   }
 

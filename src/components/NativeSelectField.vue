@@ -16,8 +16,8 @@
       @change="onChange"
     >
       <option v-if="placeholder" value="" :disabled="required">{{ placeholder }}</option>
-      <option v-if="loading" value="" disabled>{{ loadingText }}</option>
-      <option v-else-if="items.length === 0" value="" disabled>{{ noDataText }}</option>
+      <option v-if="loading" value="" disabled>{{ loadingText || t('common.loading') }}</option>
+      <option v-else-if="items.length === 0" value="" disabled>{{ noDataText || t('common.noOptions') }}</option>
       <option
         v-for="(item, index) in items"
         :key="String(getValue(item) ?? index)"
@@ -39,6 +39,9 @@
 
 <script setup>
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 const props = defineProps({
   modelValue: { type: [String, Number], default: null },
@@ -51,8 +54,8 @@ const props = defineProps({
   disabled: Boolean,
   required: Boolean,
   error: Boolean,
-  loadingText: { type: String, default: 'Cargando...' },
-  noDataText: { type: String, default: 'No hay opciones disponibles' },
+  loadingText: { type: String, default: null },
+  noDataText: { type: String, default: null },
 })
 
 const emit = defineEmits(['update:modelValue'])

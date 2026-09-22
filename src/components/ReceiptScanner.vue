@@ -3,7 +3,7 @@
     <button v-if="isSupported" type="button" class="tool-tile" :disabled="loading" @click="capture">
       <v-progress-circular v-if="loading" indeterminate size="20" width="2" color="primary" />
       <v-icon v-else size="22" color="primary">mdi-camera</v-icon>
-      <span class="tool-tile__label">Escanear recibo</span>
+      <span class="tool-tile__label">{{ t('receiptScanner.scanReceipt') }}</span>
     </button>
     <input
       ref="fileInput"
@@ -18,8 +18,11 @@
 
 <script setup>
 import { ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { aiAPI } from '@/api'
 import { readAndCompressImage } from '@/utils/imageUtils'
+
+const { t } = useI18n()
 
 const emit = defineEmits(['scanned'])
 const loading = ref(false)

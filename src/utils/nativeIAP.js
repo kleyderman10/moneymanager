@@ -1,5 +1,8 @@
 import { Capacitor } from '@capacitor/core'
 import { subscriptionsAPI } from '@/api'
+import { i18n } from '@/i18n'
+
+const t = i18n.global.t
 
 // cordova-plugin-purchase is a Cordova (not Capacitor) plugin: it attaches a global
 // `window.CdvPurchase` at runtime instead of exposing an ES module, so it's referenced
@@ -16,10 +19,8 @@ const STORES = {
     platformKey: 'APPLE_APPSTORE',
     planField: 'appleProductId',
     name: 'App Store',
-    manageHint: 'Ajustes > tu nombre > Suscripciones',
-    configHint: 'Verifica en App Store Connect que el ID del producto coincida exactamente, '
-      + 'que el Contrato de Aplicaciones de Pago esté activo y que la suscripción esté '
-      + 'disponible en tu país.',
+    get manageHint() { return t('nativeIAP.iosManageHint') },
+    get configHint() { return t('nativeIAP.iosConfigHint') },
     verify: (transaction) => subscriptionsAPI.verifyApplePurchase(
       transaction.originalTransactionId || transaction.transactionId
     ),
@@ -28,10 +29,8 @@ const STORES = {
     platformKey: 'GOOGLE_PLAY',
     planField: 'googleProductId',
     name: 'Google Play',
-    manageHint: 'Play Store > Pagos y suscripciones > Suscripciones',
-    configHint: 'Verifica en Play Console que el ID del producto coincida exactamente, que el '
-      + 'plan base esté activo, que tengas un perfil de pagos de comerciante y que la '
-      + 'suscripción esté disponible en tu país.',
+    get manageHint() { return t('nativeIAP.androidManageHint') },
+    get configHint() { return t('nativeIAP.androidConfigHint') },
     // Play identifies a subscription by its purchase token, which stays stable across
     // automatic renewals — the equivalent of Apple's originalTransactionId. On the
     // transaction that token is exposed as `purchaseId`; `purchaseToken` itself lives on
@@ -115,8 +114,8 @@ const loadErrors = new Map()
 const describeLoadFailure = (productId) => {
   const store = currentStore()
   const reported = loadErrors.get(productId)
-  const detail = reported ? ` (${store.name} respondió: ${reported})` : ''
-  return `${store.name} no reconoce el producto "${productId}"${detail}. ${store.configHint}`
+  const detail = reported ? ` (${t('nativeIAP.storeResponded', { store: store.name, reported })})` : ''
+  return `${t('nativeIAP.productNotRecognized', { store: store.name, productId })}${detail}. ${store.configHint}`
 }
 
 const setup = () => {
@@ -137,7 +136,7 @@ const setup = () => {
     })))
 
     store.error((error) => {
-      if (error?.productId) loadErrors.set(error.productId, error.message || `código ${error.code}`)
+      if (error?.productId) loadErrors.set(error.productId, error.message || t('nativeIAP.code', { code: error.code }))
     })
 
     // Verification happens on our own backend (App Store Server API / Play Developer API),
@@ -153,7 +152,7 @@ const setup = () => {
         await transaction.finish()
         settled?.resolve({ success: true })
       } catch (e) {
-        settled?.resolve({ success: false, message: e.response?.data?.message || e.message || 'No se pudo verificar la compra' })
+        settled?.resolve({ success: false, message: e.response?.data?.message || e.message || t('nativeIAP.verifyPurchaseError') })
       }
     })
 
@@ -165,13 +164,13 @@ const setup = () => {
     const { ErrorCode } = window.CdvPurchase
     const fatal = (errors || []).filter((e) => {
       if (e?.productId) {
-        loadErrors.set(e.productId, e.message || `código ${e.code}`)
+        loadErrors.set(e.productId, e.message || t('nativeIAP.code', { code: e.code }))
         return false
       }
       return e?.code !== ErrorCode.INVALID_PRODUCT_ID
     })
     if (fatal.length) {
-      throw new Error(fatal[0]?.message || `No se pudo inicializar ${currentStore().name}`)
+      throw new Error(fatal[0]?.message || t('nativeIAP.initError', { store: currentStore().name }))
     }
 
     // initialize() resolves once the platform adapter is set up — it does NOT wait for the
@@ -197,28 +196,28 @@ const setup = () => {
 // and the entitlement comes back without charging again.
 export const restoreNativePurchases = async () => {
   if (!isNativeIAPAvailable()) {
-    return { success: false, message: 'Las compras dentro de la app no están disponibles en este dispositivo' }
+    return { success: false, message: t('nativeIAP.inAppPurchasesUnavailable') }
   }
 
   try {
     await setup()
   } catch (e) {
     setupPromise = null
-    return { success: false, message: e.message || `No se pudo conectar con ${currentStore().name}` }
+    return { success: false, message: e.message || t('nativeIAP.connectError', { store: currentStore().name }) }
   }
 
   try {
     await window.CdvPurchase.store.restorePurchases()
     return { success: true }
   } catch (e) {
-    return { success: false, message: e.message || 'No se pudieron restaurar tus compras' }
+    return { success: false, message: e.message || t('nativeIAP.restoreError') }
   }
 }
 
 export const purchaseNativeSubscription = async (planCode) => {
   const productId = productIdsByPlanCode[planCode]
   if (!isNativeIAPAvailable() || !productId) {
-    return { success: false, message: 'Este plan no está disponible como compra dentro de la app' }
+    return { success: false, message: t('nativeIAP.planNotAvailable') }
   }
 
   // The plan list can arrive after setup() already registered an older (or empty) set of
@@ -232,7 +231,7 @@ export const purchaseNativeSubscription = async (planCode) => {
     await setup()
   } catch (e) {
     setupPromise = null
-    return { success: false, message: e.message || `No se pudo conectar con ${currentStore().name}` }
+    return { success: false, message: e.message || t('nativeIAP.connectError', { store: currentStore().name }) }
   }
 
   const { store } = window.CdvPurchase
@@ -245,7 +244,7 @@ export const purchaseNativeSubscription = async (planCode) => {
   }
   const offer = product.getOffer()
   if (!offer) {
-    return { success: false, message: 'El producto de suscripción no tiene una oferta de precio configurada todavía' }
+    return { success: false, message: t('nativeIAP.noOfferConfigured') }
   }
 
   return new Promise((resolve) => {
@@ -253,7 +252,7 @@ export const purchaseNativeSubscription = async (planCode) => {
     store.order(offer).then((err) => {
       if (err && pendingPurchase) {
         pendingPurchase = null
-        resolve({ success: false, message: err.message || 'No se pudo iniciar la compra' })
+        resolve({ success: false, message: err.message || t('nativeIAP.startPurchaseError') })
       }
     })
   })
