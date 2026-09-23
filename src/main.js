@@ -12,6 +12,7 @@ import './styles/finance.css'
 import App from './App.vue'
 import router from './router'
 import { i18n } from './i18n'
+import { snapshotStatePlugin } from './stores/resetStores'
 
 if (Capacitor.isNativePlatform()) {
   // The Capacitor build no longer registers a service worker (see vite.config.js), but the
@@ -100,7 +101,9 @@ const vuetify = createVuetify({
 })
 
 const app = createApp(App)
-app.use(createPinia())
+const pinia = createPinia()
+pinia.use(snapshotStatePlugin)
+app.use(pinia)
 app.use(router)
 app.use(vuetify)
 app.use(i18n)

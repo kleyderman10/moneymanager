@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { Capacitor } from '@capacitor/core'
 import { authAPI, webauthnAPI } from '@/api'
+import { resetAllStores } from '@/stores/resetStores'
 import { startRegistration, startAuthentication } from '@simplewebauthn/browser'
 import { useSubscriptionStore } from '@/stores/subscriptions'
 import { BIOMETRIC_SERVER } from '@/constants/biometric'
@@ -269,24 +270,23 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   const logout = async (notifyServer = true) => {
-    // The server only keeps a single refresh token per user (not per device), and
-    // logout wipes it there. If Face ID/huella is enabled, that's the very token
-    // stored in the Keychain/Keystore, so notifying the server here would silently
-    // orphan it — the next biometric login would always fail as "expired", even
-    // though nothing about the local device's biometric enrollment changed. Skip the
-    // server call in that case: this device's copy is already gated by the OS
-    // biometric prompt (verifyIdentity), so leaving it valid server-side doesn't
-    // weaken anything, and it's what makes "log out, then unlock with Face ID" work.
+    // Logout revokes this device's session on the server (other devices stay signed in).
+    // If Face ID/huella is enabled, that session is the very refresh token stored in the
+    // Keychain/Keystore, so revoking it would orphan it — the next biometric login would
+    // always fail as "expired". Skip the server call in that case: the copy is gated by the
+    // OS biometric prompt (verifyIdentity) and the server expires unused sessions after 30
+    // days, and it's what makes "log out, then unlock with Face ID" work.
     const skipServerLogout = isNative() && user.value?.email
       && localStorage.getItem('biometricEmail') === user.value.email
     try {
-      if (notifyServer && !skipServerLogout && localStorage.getItem('accessToken')) await authAPI.logout()
+      if (notifyServer && !skipServerLogout && localStorage.getItem('accessToken')) await authAPI.logout(localStorage.getItem('refreshToken'))
     } catch {
       // Local logout must always succeed, even when the token or network has expired.
     } finally {
       user.value = null
       clearTokens()
       useSubscriptionStore().reset()
+      resetAllStores(['auth', 'snackbar'])
     }
   }
 
@@ -360,7 +360,7 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  const registerBiometric = async () => {
+  const registerBiometric = async (currentPassword) => {
     if (isNative()) {
       try {
         const refreshToken = localStorage.getItem('refreshToken')
@@ -383,7 +383,7 @@ export const useAuthStore = defineStore('auth', () => {
       }
     }
     try {
-      const optsRes = await webauthnAPI.registerOptions()
+      const optsRes = await webauthnAPI.registerOptions({ currentPassword })
       const { options, challengeToken } = optsRes.data
       const credential = await startRegistration({ optionsJSON: options })
       await webauthnAPI.registerVerify({ credential, challengeToken })
@@ -391,7 +391,7 @@ export const useAuthStore = defineStore('auth', () => {
       hasBiometric.value = true
       return { success: true }
     } catch (e) {
-      return { success: false, message: e.message || t('authStore.enableBiometricError') }
+      return { success: false, message: messageFrom(e, t('authStore.enableBiometricError')) }
     }
   }
 

@@ -674,7 +674,14 @@ const toggleSelected = (id, value) => {
 
 const exportSelected = () => {
   const rows = store.registers.filter((r) => selected.value.includes(r._id))
-  const escape = (value) => `"${String(value ?? '').replace(/"/g, '""')}"`
+  // Escapes quotes and neutralises spreadsheet formulas (=, +, -, @) so a description can't
+  // run as a formula when the file is opened in Excel. Numbers are left as numbers.
+  const escape = (value) => {
+    if (typeof value === 'number') return String(value)
+    let text = String(value ?? '')
+    if (/^[=+\-@\t\r]/.test(text)) text = `'${text}`
+    return `"${text.replace(/"/g, '""')}"`
+  }
   const header = [t('transactions.date'), t('transactions.type'), t('transactions.category'), t('transactions.description'), t('transactions.account'), t('wallets.amount')]
   const lines = rows.map((r) => [
     formatDate(r.date),

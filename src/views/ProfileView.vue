@@ -254,6 +254,11 @@
               <template v-if="manageHint">{{ t('profile.cancelFrom', { place: manageHint }) }}</template>
               <template v-else>{{ t('profile.cancelFromStore') }}</template>.
             </v-alert>
+            <p class="text-body-2 mb-2">{{ t('profile.downloadMyDataHint') }}</p>
+            <v-btn variant="outlined" prepend-icon="mdi-download" class="mb-4" :loading="exportLoading" @click="downloadMyData">
+              {{ t('profile.downloadMyData') }}
+            </v-btn>
+            <br />
             <v-btn color="error" variant="outlined" prepend-icon="mdi-delete-forever-outline" @click="showDeleteDialog = true">
               {{ t('profile.deleteMyAccount') }}
             </v-btn>
@@ -299,16 +304,43 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <v-dialog v-model="showBioPasswordDialog" max-width="420" persistent>
+      <v-card :title="t('profile.enableBiometric')">
+        <v-card-text>
+          <p class="text-body-2 mb-4">{{ t('profile.biometricConfirmPassword') }}</p>
+          <v-text-field
+            v-model="bioPassword"
+            :label="t('profile.password')"
+            type="password"
+            variant="outlined"
+            density="comfortable"
+            autocomplete="current-password"
+            :disabled="bioLoading"
+            @keyup.enter="bioPassword && confirmRegisterBiometric()"
+          />
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" :disabled="bioLoading" @click="closeBioPasswordDialog">{{ t('common.cancel') }}</v-btn>
+          <v-btn color="primary" variant="flat" :loading="bioLoading" :disabled="!bioPassword" @click="confirmRegisterBiometric">
+            {{ t('common.confirm') }}
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { Capacitor } from '@capacitor/core'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import AIConsentDialog from '@/components/AIConsentDialog.vue'
 import { useDisplay } from 'vuetify'
 import { useAuthStore } from '@/stores/auth'
+import { authAPI } from '@/api'
 import { useSubscriptionStore } from '@/stores/subscriptions'
 import { useSnackbar } from '@/stores/snackbar'
 import { useLocale } from '@/composables/useLocale'
@@ -428,6 +460,27 @@ const savePassword = async () => {
 
 const openPrivacyPolicy = () => openLegalLink(PRIVACY_POLICY_URL)
 
+// Right of access / portability (Ley 1581): a JSON copy of everything the account holds.
+const exportLoading = ref(false)
+const downloadMyData = async () => {
+  exportLoading.value = true
+  try {
+    const res = await authAPI.exportData()
+    const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/json' }))
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', `mis-datos-${new Date().toISOString().slice(0, 10)}.json`)
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    window.URL.revokeObjectURL(url)
+  } catch {
+    snackbar.error(t('profile.downloadMyDataError'))
+  } finally {
+    exportLoading.value = false
+  }
+}
+
 const closeDeleteDialog = () => {
   showDeleteDialog.value = false
   deletePassword.value = ''
@@ -490,10 +543,29 @@ const cancelTwoFactorChange = () => {
   disableCodeSent.value = false
 }
 
+// On the web a passkey is a persistent credential on the server, so the API asks for the
+// current password first; the native flow only stores the session in the device keychain.
+const showBioPasswordDialog = ref(false)
+const bioPassword = ref('')
+
+const closeBioPasswordDialog = () => {
+  showBioPasswordDialog.value = false
+  bioPassword.value = ''
+}
+
 const handleRegisterBiometric = async () => {
+  if (!Capacitor.isNativePlatform()) {
+    showBioPasswordDialog.value = true
+    return
+  }
+  await confirmRegisterBiometric()
+}
+
+const confirmRegisterBiometric = async () => {
   bioLoading.value = true
-  const result = await authStore.registerBiometric()
+  const result = await authStore.registerBiometric(bioPassword.value)
   bioLoading.value = false
+  closeBioPasswordDialog()
   if (result.success) {
     snackbar.success(t('profile.biometricActivated'))
   } else {

@@ -9,7 +9,8 @@ export const authAPI = {
   forgotPassword: (data) => api.post('/auth/forgot-password', data),
   resetPassword: (data) => api.post('/auth/reset-password', data),
   refreshToken: (data) => api.post('/auth/refresh-token', data),
-  logout: () => api.post('/auth/logout'),
+  logout: (refreshToken) => api.post('/auth/logout', { refreshToken }),
+  exportData: () => api.get('/auth/me/export', { responseType: 'blob' }),
   getMe: () => api.get('/auth/me'),
   updateProfile: (data) => api.put('/auth/profile', data),
   acceptAIConsent: () => api.put('/auth/ai-consent'),
@@ -23,7 +24,7 @@ export const authAPI = {
 }
 
 export const webauthnAPI = {
-  registerOptions: () => api.post('/auth/webauthn/register-options'),
+  registerOptions: (data) => api.post('/auth/webauthn/register-options', data),
   registerVerify: (data) => api.post('/auth/webauthn/register-verify', data),
   loginOptions: (credentialId) => api.post('/auth/webauthn/login-options', { credentialId }),
   loginVerify: (data) => api.post('/auth/webauthn/login-verify', data),

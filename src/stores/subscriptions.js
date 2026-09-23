@@ -97,7 +97,10 @@ export const useSubscriptionStore = defineStore('subscriptions', () => {
     error.value = null
     try {
       const response = await subscriptionsAPI.createCheckout(planCode)
-      window.location.assign(response.data.checkoutUrl)
+      // Only follow an https checkout link (never javascript: or plain http).
+      const checkoutUrl = String(response.data?.checkoutUrl || '')
+      if (!checkoutUrl.startsWith('https://')) throw new Error('invalid checkout url')
+      window.location.assign(checkoutUrl)
       return { success: true }
     } catch (e) {
       error.value = e.response?.data?.message || t('subscriptionStore.startPaymentError')

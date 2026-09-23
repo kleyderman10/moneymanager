@@ -83,17 +83,14 @@ const startBelvoFlow = async () => {
       locale: 'es',
       country_codes: ['CO'],
       callback: (link, institution) => {
-        console.log('Belvo Success. Link:', link, 'Institución:', institution)
         emit('success', { linkId: link, institution })
         isLoading.value = false
       },
-      onExit: (data) => {
-        console.log('El usuario cerró el widget de Belvo:', data)
+      // The bank-link payloads are not logged: on Android the WebView console reaches logcat.
+      onExit: () => {
         isLoading.value = false
       },
-      onEvent: (data) => {
-        console.log('Evento de Belvo:', data)
-      }
+      onEvent: () => {}
     }).build()
     
   } catch (err) {

@@ -17,16 +17,36 @@ const apiBaseURL = import.meta.env.VITE_API_BASE_URL || '/api'
 // plugin's own recommended pattern of gating access with verifyIdentity() at login
 // time instead of encrypting the write itself (see src/stores/auth.js).
 const syncBiometricRefreshToken = (refreshToken) => {
-  if (!Capacitor.isNativePlatform()) return
+  if (!Capacitor.isNativePlatform()) return Promise.resolve()
   const username = localStorage.getItem('biometricEmail')
-  if (!username) return
-  import('@capgo/capacitor-native-biometric').then(({ NativeBiometric }) =>
+  if (!username) return Promise.resolve()
+  return import('@capgo/capacitor-native-biometric').then(({ NativeBiometric }) =>
     NativeBiometric.setCredentials({
       username,
       password: refreshToken,
       server: BIOMETRIC_SERVER,
     })
   ).catch(() => {})
+}
+
+// Single-flight refresh: the refresh token is single-use, so when several requests hit a
+// 401 at once they must share one refresh call. Otherwise the second call presents a
+// token the first one already rotated, fails, and logs the user out.
+let refreshPromise = null
+
+const refreshSession = () => {
+  if (!refreshPromise) {
+    const refreshToken = localStorage.getItem('refreshToken')
+    refreshPromise = axios.post(`${apiBaseURL}/auth/refresh-token`, { refreshToken }, { timeout: 20_000 })
+      .then(async ({ data }) => {
+        localStorage.setItem('accessToken', data.accessToken)
+        localStorage.setItem('refreshToken', data.refreshToken)
+        await syncBiometricRefreshToken(data.refreshToken)
+        return data.accessToken
+      })
+      .finally(() => { refreshPromise = null })
+  }
+  return refreshPromise
 }
 
 const api = axios.create({
@@ -72,11 +92,8 @@ api.interceptors.response.use(
       const refreshToken = localStorage.getItem('refreshToken')
       if (refreshToken) {
         try {
-          const { data } = await axios.post(`${apiBaseURL}/auth/refresh-token`, { refreshToken }, { timeout: 20_000 })
-          localStorage.setItem('accessToken', data.accessToken)
-          localStorage.setItem('refreshToken', data.refreshToken)
-          await syncBiometricRefreshToken(data.refreshToken)
-          originalRequest.headers.Authorization = `Bearer ${data.accessToken}`
+          const accessToken = await refreshSession()
+          originalRequest.headers.Authorization = `Bearer ${accessToken}`
           return api(originalRequest)
         } catch {
           localStorage.removeItem('accessToken')
