@@ -128,6 +128,15 @@ workflows:
         script: npm ci
       - name: Build web app and sync Capacitor (native mode)
         script: npm run cap:sync
+      # The marketing version (CFBundleShortVersionString) comes from package.json, the same
+      # source Android uses for versionName. Once a version is approved, App Store Connect
+      # closes its "train" and rejects new builds for it (errors 90062/90186), so bump
+      # package.json's "version" for each App Store release.
+      - name: Set marketing version from package.json
+        script: |
+          APP_VERSION=$(node -p "require('./package.json').version")
+          echo "Setting MARKETING_VERSION to $APP_VERSION"
+          sed -i '' "s/MARKETING_VERSION = [0-9.]*;/MARKETING_VERSION = $APP_VERSION;/g" ios/App/App.xcodeproj/project.pbxproj
       - name: Increment build number
         script: |
           LATEST_BUILD_NUMBER=$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID")
