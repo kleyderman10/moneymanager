@@ -1,13 +1,21 @@
 import api from './client'
+import { getDeviceId, getTrustToken } from '@/utils/device'
+
+// Flows that verify an email code on this device send its id, so the server can remember
+// it as trusted and stop asking for the two-step verification code on later logins.
+const withDevice = (data = {}) => ({ ...data, deviceId: getDeviceId() })
 
 export const authAPI = {
   register: (data) => api.post('/auth/register', data),
-  verifyEmail: (data) => api.post('/auth/verify-email', data),
+  verifyEmail: (data) => api.post('/auth/verify-email', withDevice(data)),
   resendVerification: (data) => api.post('/auth/resend-verification', data),
-  login: (data) => api.post('/auth/login', data),
+  login: (data) => api.post('/auth/login', { ...withDevice(data), deviceToken: getTrustToken() }),
   verifyTwoFactor: (data) => api.post('/auth/2fa/verify', data),
   forgotPassword: (data) => api.post('/auth/forgot-password', data),
-  resetPassword: (data) => api.post('/auth/reset-password', data),
+  resetPassword: (data) => api.post('/auth/reset-password', withDevice(data)),
+  biometricLogin: (data) => api.post('/auth/biometric/login', data),
+  biometricEnroll: (data) => api.post('/auth/biometric/enroll', withDevice(data)),
+  biometricRemove: (deviceId) => api.delete(`/auth/biometric/${deviceId}`),
   refreshToken: (data) => api.post('/auth/refresh-token', data),
   logout: (refreshToken) => api.post('/auth/logout', { refreshToken }),
   exportData: () => api.get('/auth/me/export', { responseType: 'blob' }),
@@ -16,9 +24,10 @@ export const authAPI = {
   acceptAIConsent: () => api.put('/auth/ai-consent'),
   revokeAIConsent: () => api.delete('/auth/ai-consent'),
   deleteAccount: (data) => api.post('/auth/delete-account', data),
-  changePassword: (data) => api.put('/auth/change-password', data),
+  requestPasswordChange: (data) => api.post('/auth/change-password/send-code', data),
+  changePassword: (data) => api.put('/auth/change-password', withDevice(data)),
   requestTwoFactorSetup: () => api.post('/auth/2fa/setup/send'),
-  confirmTwoFactorSetup: (data) => api.post('/auth/2fa/setup/verify', data),
+  confirmTwoFactorSetup: (data) => api.post('/auth/2fa/setup/verify', withDevice(data)),
   requestTwoFactorDisable: (data) => api.post('/auth/2fa/disable/send', data),
   disableTwoFactor: (data) => api.post('/auth/2fa/disable', data),
 }

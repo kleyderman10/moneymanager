@@ -127,18 +127,18 @@
             {{ t('wallets.belvoLinked') }}
           </v-alert>
 
-          <div class="d-flex align-end ga-4 mb-1">
-            <MoneyField
-              class="flex-grow-1"
-              :model-value="form.balance"
-              :currency="form.currency"
-              @update:model-value="(v) => (form.balance = v)"
-              :label="form.type === 'credit' ? t('wallets.currentUsedBalance') : t('wallets.balance')"
-              size="hero"
-              required
-            />
-            <NativeSelectField v-model="form.currency" :items="currencyOptions" item-title="label" item-value="code" :label="t('wallets.currency')" style="max-width: 150px" />
-          </div>
+          <!-- Full-width row, chosen before the balance: the balance's symbol depends on it,
+               and a narrow select next to the hero amount truncated "COP · Peso colombiano". -->
+          <NativeSelectField v-model="form.currency" :items="currencyOptions" item-title="label" item-value="code" :label="t('wallets.currency')" />
+          <MoneyField
+            class="mb-1"
+            :model-value="form.balance"
+            :currency="form.currency"
+            @update:model-value="(v) => (form.balance = v)"
+            :label="form.type === 'credit' ? t('wallets.currentUsedBalance') : t('wallets.balance')"
+            size="hero"
+            required
+          />
           <div v-if="form.type === 'credit'" class="form-hint mb-3">{{ t('wallets.creditFormHint') }}</div>
 
           <template v-if="form.type === 'credit'">

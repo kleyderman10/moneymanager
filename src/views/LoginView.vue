@@ -221,7 +221,8 @@ const handleBiometricLogin = async () => {
   try {
     const result = await authStore.loginWithBiometric()
     if (result.success) {
-      router.push('/')
+      // Older Face ID/huella setups are migrated once: re-enable it with the password.
+      router.push(result.needsBiometricUpgrade ? '/profile?upgradeBiometric=1' : '/')
     } else if (result.prefillEmail) {
       email.value = result.prefillEmail
     }

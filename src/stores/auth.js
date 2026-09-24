@@ -7,40 +7,50 @@ import { startRegistration, startAuthentication } from '@simplewebauthn/browser'
 import { useSubscriptionStore } from '@/stores/subscriptions'
 import { BIOMETRIC_SERVER } from '@/constants/biometric'
 import { setLanguage, i18n } from '@/i18n'
+import { getDeviceId, setTrustToken, clearTrustToken } from '@/utils/device'
 
 const t = i18n.global.t
 
-// Native apps use the device's own biometric hardware (Keystore/Keychain) to
-// guard the refresh token, since WebAuthn platform authenticators aren't
-// reliably available inside a Capacitor WebView. The web build keeps using
-// WebAuthn passkeys, verified server-side.
+// Native apps use the device's own biometric hardware (Keystore/Keychain), since WebAuthn
+// platform authenticators aren't reliably available inside a Capacitor WebView. The web
+// build keeps using WebAuthn passkeys, verified server-side.
 const isNative = () => Capacitor.isNativePlatform()
 
-// Credentials are stored WITHOUT the plugin's `accessControl` (biometric-gated
-// Keystore/Keychain) option, and the biometric prompt is triggered explicitly with
-// verifyIdentity() before reading them back — this is the pattern the plugin's own
-// README recommends ("Secure Usage Pattern"). On Android, storing a credential
-// *with* accessControl always launches a live BiometricPrompt, even for a
-// background write with no user gesture: setCredentials() with BIOMETRY_ANY/
-// BIOMETRY_CURRENT_SET starts an Activity that requires a fresh fingerprint/face
-// scan to encrypt the value, every single call. Since this sync runs silently after
-// every password login and every silent token refresh, that meant an unexpected,
-// easy-to-miss biometric prompt could pop up mid-session; if the user didn't
-// complete it, the write was swallowed by the catch below and the Keystore copy
-// went stale, so the next Face ID/huella login was rejected as "expired". Plain
-// storage keeps the write silent (as intended) on both platforms, and the
-// biometric gate still happens at login time via verifyIdentity().
-const syncBiometricCredential = async (email, refreshToken) => {
+// Face ID/huella works like a banking app: enabling it registers this device with the server
+// and stores a per-device secret in the Keychain/Keystore ONCE, protected with
+// BIOMETRY_CURRENT_SET. The secret never rotates and doesn't depend on any session, so it
+// can't go stale and doesn't expire with inactivity or logout. The OS itself makes it
+// unreadable as soon as the phone's enrolled fingerprints/faces change, and the server can
+// revoke it (disable, password reset, password change from another device).
+//
+// Earlier versions stored the rotating refresh token instead, in plain storage, re-saving it
+// after every refresh. Those installs are marked by 'biometricEmail' without
+// BIOMETRIC_VERSION and are migrated on their next biometric login.
+const BIOMETRIC_VERSION = '2'
+
+const clearBiometricFlags = () => {
+  localStorage.removeItem('biometricEmail')
+  localStorage.removeItem('biometricVersion')
+}
+
+const deleteNativeCredential = async () => {
   try {
-    if (!isNative() || localStorage.getItem('biometricEmail') !== email) return
     const { NativeBiometric } = await import('@capgo/capacitor-native-biometric')
-    await NativeBiometric.setCredentials({
-      username: email,
-      password: refreshToken,
-      server: BIOMETRIC_SERVER,
-    })
+    await NativeBiometric.deleteCredentials({ server: BIOMETRIC_SERVER })
   } catch {
-    // Best-effort: a normal login/refresh must never fail because of this.
+    // Best-effort cleanup; the local flags are what actually hide the option.
+  }
+}
+
+const hasLegacyBiometric = () => Boolean(localStorage.getItem('biometricEmail'))
+  && localStorage.getItem('biometricVersion') !== BIOMETRIC_VERSION
+
+const parseStoredCredential = (credentials) => {
+  try {
+    const { email, deviceId } = JSON.parse(credentials.username)
+    return { email, deviceId, secret: credentials.password }
+  } catch {
+    return null
   }
 }
 
@@ -80,11 +90,9 @@ export const useAuthStore = defineStore('auth', () => {
       aiConsentAcceptedAt: data.aiConsentAcceptedAt,
     }
     if (data.language) setLanguage(data.language)
-    // Awaited so the Keystore/Keychain always holds the just-issued (still valid) refresh
-    // token before the caller can navigate away or the app gets backgrounded — the refresh
-    // token is single-use, so if this write is left in-flight and never completes, the next
-    // Face ID/huella attempt sends the already-rotated token and is rejected as "expired".
-    await syncBiometricCredential(data.email, data.refreshToken)
+    // Sent back after an email code is verified on this device: later password logins skip
+    // the two-step verification code here.
+    setTrustToken(data.deviceToken)
   }
 
   const messageFrom = (e, fallback = t('common.error')) => e.response?.data?.message || fallback
@@ -175,6 +183,7 @@ export const useAuthStore = defineStore('auth', () => {
   const resetPassword = async (data) => {
     try {
       const res = await authAPI.resetPassword(data)
+      setTrustToken(res.data.deviceToken)
       return { success: true, message: res.data.message }
     } catch (e) {
       return { success: false, message: messageFrom(e, t('authStore.resetPasswordError')) }
@@ -242,15 +251,9 @@ export const useAuthStore = defineStore('auth', () => {
     // The account no longer exists server-side, so every local trace of it has to go
     // too — above all the biometric credential in the Keychain/Keystore, which would
     // otherwise keep offering a Face ID login for a deleted user.
-    try {
-      if (isNative()) {
-        const { NativeBiometric } = await import('@capgo/capacitor-native-biometric')
-        await NativeBiometric.deleteCredentials({ server: BIOMETRIC_SERVER })
-      }
-    } catch {
-      // Best-effort: the local flags cleared below are what actually hide the option.
-    }
-    localStorage.removeItem('biometricEmail')
+    if (isNative()) await deleteNativeCredential()
+    clearBiometricFlags()
+    clearTrustToken()
     localStorage.removeItem('webauthnCredentialId')
     localStorage.removeItem('aiConsentDismissed')
     aiConsentDismissed.value = false
@@ -260,9 +263,21 @@ export const useAuthStore = defineStore('auth', () => {
     return { success: true }
   }
 
+  const requestPasswordChange = async (currentPassword) => {
+    try {
+      const res = await authAPI.requestPasswordChange({ currentPassword })
+      return { success: true, message: res.data.message }
+    } catch (e) {
+      return { success: false, message: messageFrom(e, t('authStore.sendCodeError')) }
+    }
+  }
+
+  // This device stays signed in (the server returns a fresh session) and keeps its Face ID/
+  // huella; every other device is signed out.
   const changePassword = async (data) => {
     try {
       const res = await authAPI.changePassword(data)
+      await setSession(res.data)
       return { success: true, message: res.data.message }
     } catch (e) {
       return { success: false, message: messageFrom(e, t('authStore.updatePasswordError')) }
@@ -271,15 +286,13 @@ export const useAuthStore = defineStore('auth', () => {
 
   const logout = async (notifyServer = true) => {
     // Logout revokes this device's session on the server (other devices stay signed in).
-    // If Face ID/huella is enabled, that session is the very refresh token stored in the
-    // Keychain/Keystore, so revoking it would orphan it — the next biometric login would
-    // always fail as "expired". Skip the server call in that case: the copy is gated by the
-    // OS biometric prompt (verifyIdentity) and the server expires unused sessions after 30
-    // days, and it's what makes "log out, then unlock with Face ID" work.
-    const skipServerLogout = isNative() && user.value?.email
-      && localStorage.getItem('biometricEmail') === user.value.email
+    // Face ID/huella doesn't depend on that session, so it keeps working afterwards — except
+    // on installs still using the pre-migration credential, which IS this device's refresh
+    // token: revoking it would break the one biometric login that migrates them.
+    const legacyBiometric = isNative() && hasLegacyBiometric()
+      && localStorage.getItem('biometricEmail') === user.value?.email
     try {
-      if (notifyServer && !skipServerLogout && localStorage.getItem('accessToken')) await authAPI.logout(localStorage.getItem('refreshToken'))
+      if (notifyServer && !legacyBiometric && localStorage.getItem('accessToken')) await authAPI.logout(localStorage.getItem('refreshToken'))
     } catch {
       // Local logout must always succeed, even when the token or network has expired.
     } finally {
@@ -363,23 +376,31 @@ export const useAuthStore = defineStore('auth', () => {
   const registerBiometric = async (currentPassword) => {
     if (isNative()) {
       try {
-        const refreshToken = localStorage.getItem('refreshToken')
-        if (!refreshToken || !user.value?.email) {
-          return { success: false, message: t('authStore.reloginForBiometric') }
-        }
-        const { NativeBiometric } = await import('@capgo/capacitor-native-biometric')
-        await NativeBiometric.setCredentials({
-          username: user.value.email,
-          password: refreshToken,
-          server: BIOMETRIC_SERVER,
+        if (!user.value?.email) return { success: false, message: t('authStore.reloginForBiometric') }
+        const deviceId = getDeviceId()
+        const res = await authAPI.biometricEnroll({
+          currentPassword,
+          label: Capacitor.getPlatform(),
         })
-        // Marks this account as biometric-enabled so setSession/client.js keep the
-        // Keystore/Keychain copy in sync on every later token rotation, not just this one.
+        const { NativeBiometric, AccessControl } = await import('@capgo/capacitor-native-biometric')
+        // Replaces any older (plain) entry for this server before writing the protected one.
+        await deleteNativeCredential()
+        // Written once, right after the user tapped "Activar": on Android this shows the
+        // biometric prompt to encrypt the secret, which is expected at this moment.
+        await NativeBiometric.setCredentials({
+          username: JSON.stringify({ email: user.value.email, deviceId }),
+          password: res.data.secret,
+          server: BIOMETRIC_SERVER,
+          accessControl: AccessControl.BIOMETRY_CURRENT_SET,
+          title: t('profile.biometricAuth'),
+        })
         localStorage.setItem('biometricEmail', user.value.email)
+        localStorage.setItem('biometricVersion', BIOMETRIC_VERSION)
         hasBiometric.value = true
         return { success: true }
       } catch (e) {
-        return { success: false, message: e.message || t('authStore.enableBiometricError') }
+        if (e.code === '15' || e.code === '16') return { success: false, cancelled: true }
+        return { success: false, message: messageFrom(e, e.message || t('authStore.enableBiometricError')) }
       }
     }
     try {
@@ -396,69 +417,91 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   // Wipes the local biometric credential and tells the UI to fall back to a password
-  // login. Used both when the server rejects the stored refresh token as stale, and
-  // when the local credential itself can't be read at all — e.g. an install that
-  // registered biometrics before this app version, whose entry lives under the
-  // plugin's older accessControl-protected storage and is invisible to the plain
-  // getCredentials() read (see syncBiometricCredential above).
-  const resetBiometricCredential = async (prefillEmail) => {
-    try {
-      const { NativeBiometric } = await import('@capgo/capacitor-native-biometric')
-      await NativeBiometric.deleteCredentials({ server: BIOMETRIC_SERVER })
-    } catch {
-      // Best-effort cleanup; the stale local flag below is what actually hides the button.
-    }
-    localStorage.removeItem('biometricEmail')
+  // login, explaining why (the phone's biometrics changed, or it was revoked server-side).
+  const resetBiometricCredential = async (prefillEmail, message = t('authStore.biometricChanged')) => {
+    await deleteNativeCredential()
+    clearBiometricFlags()
     hasBiometric.value = false
-    error.value = t('authStore.biometricSessionExpired')
+    error.value = message
     return { success: false, prefillEmail }
+  }
+
+  // One-time path for installs that enabled Face ID/huella before per-device credentials:
+  // their plain Keychain/Keystore entry holds a refresh token. If it still works, sign in and
+  // ask the user to re-enable biometrics once (password confirmation) in the new format.
+  const loginWithLegacyBiometric = async (NativeBiometric) => {
+    try {
+      await NativeBiometric.verifyIdentity({
+        reason: t('authStore.biometricPromptReason'),
+        title: t('auth.signIn'),
+      })
+    } catch (e) {
+      if (e.code === '15' || e.code === '16') return { success: false, cancelled: true }
+      error.value = e.message || t('auth.biometricLoginError')
+      return { success: false }
+    }
+
+    let credentials
+    try {
+      credentials = await NativeBiometric.getCredentials({ server: BIOMETRIC_SERVER })
+    } catch {
+      return resetBiometricCredential(undefined, t('authStore.biometricSessionExpired'))
+    }
+
+    try {
+      const res = await authAPI.refreshToken({ refreshToken: credentials.password })
+      await setSession(res.data)
+      await deleteNativeCredential()
+      clearBiometricFlags()
+      hasBiometric.value = false
+      return { success: true, needsBiometricUpgrade: true }
+    } catch (e) {
+      if (e.response?.data?.code === 'INVALID_REFRESH_TOKEN') {
+        return resetBiometricCredential(credentials.username, t('authStore.biometricSessionExpired'))
+      }
+      error.value = e.response?.data?.message || e.message || t('auth.biometricLoginError')
+      return { success: false }
+    }
   }
 
   const loginWithBiometric = async () => {
     if (isNative()) {
       const { NativeBiometric } = await import('@capgo/capacitor-native-biometric')
+      if (hasLegacyBiometric()) return loginWithLegacyBiometric(NativeBiometric)
 
+      let stored
       try {
-        // The prompt is the security gate; the credential read right after it is
-        // plain (unprotected) storage, so it doesn't trigger a second, redundant
-        // authentication — see the note on syncBiometricCredential above.
-        await NativeBiometric.verifyIdentity({
+        // A single call: the OS shows Face ID/huella and only then decrypts the secret.
+        const credentials = await NativeBiometric.getSecureCredentials({
+          server: BIOMETRIC_SERVER,
           reason: t('authStore.biometricPromptReason'),
           title: t('auth.signIn'),
         })
+        stored = parseStoredCredential(credentials)
       } catch (e) {
-        // The user dismissed the prompt or the OS canceled it (e.g. app backgrounded
-        // mid-authentication) — not a failure worth alarming them about.
-        if (e.code === '15' || e.code === '16') return { success: false, cancelled: true }
-        error.value = e.message || t('auth.biometricLoginError')
+        const code = String(e.code)
+        // Dismissed by the user or the OS (e.g. app backgrounded) — nothing to report.
+        if (['11', '15', '16', '17'].includes(code)) return { success: false, cancelled: true }
+        // 21: the OS made the secret unreadable because the enrolled fingerprints/faces
+        // changed (BIOMETRY_CURRENT_SET). 3: no biometrics enrolled anymore.
+        if (code === '21' || code === '3') return resetBiometricCredential()
+        error.value = ['2', '4'].includes(code)
+          ? t('authStore.biometricLockedOut')
+          : e.message || t('auth.biometricLoginError')
         return { success: false }
       }
-
-      let credentials
-      try {
-        credentials = await NativeBiometric.getCredentials({ server: BIOMETRIC_SERVER })
-      } catch {
-        // Identity is confirmed but there's nothing usable to read — most commonly a
-        // pre-upgrade credential this version can no longer see. Recover it like an
-        // expired one instead of leaving the user stuck on a Face ID button that can
-        // never succeed.
-        return resetBiometricCredential()
-      }
+      if (!stored?.deviceId || !stored.secret) return resetBiometricCredential()
 
       try {
-        const res = await authAPI.refreshToken({ refreshToken: credentials.password })
-        // setSession() re-saves the freshly rotated refresh token into the Keystore/Keychain
-        // itself (via syncBiometricCredential), since 'biometricEmail' is already set from
-        // registration — no need to duplicate that write here.
+        const res = await authAPI.biometricLogin({ deviceId: stored.deviceId, secret: stored.secret })
         await setSession(res.data)
         hasBiometric.value = true
         return { success: true }
       } catch (e) {
-        // A regular logout invalidates the server-side refresh token, which orphans
-        // the one held locally. Face ID / huella already confirmed it's the device
-        // owner, so prefill the email too and save them from retyping it.
-        if (e.response?.data?.code === 'INVALID_REFRESH_TOKEN') {
-          return resetBiometricCredential(credentials.username)
+        // Disabled from another device, password reset, or changed elsewhere. Face ID /
+        // huella already confirmed it's the device owner, so prefill the email.
+        if (e.response?.data?.code === 'BIOMETRIC_REVOKED') {
+          return resetBiometricCredential(stored.email, t('authStore.biometricRevoked'))
         }
         error.value = e.response?.data?.message || e.message || t('auth.biometricLoginError')
         return { success: false }
@@ -482,9 +525,13 @@ export const useAuthStore = defineStore('auth', () => {
   const removeBiometric = async () => {
     if (isNative()) {
       try {
+        // Best-effort server revocation: the local credential is removed regardless.
+        if (localStorage.getItem('accessToken')) {
+          await authAPI.biometricRemove(getDeviceId()).catch(() => {})
+        }
         const { NativeBiometric } = await import('@capgo/capacitor-native-biometric')
         await NativeBiometric.deleteCredentials({ server: BIOMETRIC_SERVER })
-        localStorage.removeItem('biometricEmail')
+        clearBiometricFlags()
         hasBiometric.value = false
         return { success: true }
       } catch (e) {
@@ -524,6 +571,7 @@ export const useAuthStore = defineStore('auth', () => {
     resetPassword,
     fetchProfile,
     updateProfile,
+    requestPasswordChange,
     changePassword,
     logout,
     requestTwoFactorSetup,

@@ -1,33 +1,6 @@
 import axios from 'axios'
-import { Capacitor } from '@capacitor/core'
-import { BIOMETRIC_SERVER } from '@/constants/biometric'
 
 const apiBaseURL = import.meta.env.VITE_API_BASE_URL || '/api'
-
-// The refresh token is single-use and rotates on every call, including this silent,
-// store-bypassing refresh. If biometric login is enabled, the copy held in the
-// Keystore/Keychain must be updated too, or it goes stale the moment a session refresh
-// happens through any path other than the biometric login itself — the next Face ID/huella
-// attempt then fails as "expired" even though the session is perfectly alive.
-//
-// Stored WITHOUT `accessControl`: on Android, setCredentials() with BIOMETRY_ANY/
-// BIOMETRY_CURRENT_SET always pops a live BiometricPrompt to do the write, even here
-// where there's no user gesture behind this call — an axios 401 can fire while the
-// user is just navigating the app. Plain storage keeps this silent, matching the
-// plugin's own recommended pattern of gating access with verifyIdentity() at login
-// time instead of encrypting the write itself (see src/stores/auth.js).
-const syncBiometricRefreshToken = (refreshToken) => {
-  if (!Capacitor.isNativePlatform()) return Promise.resolve()
-  const username = localStorage.getItem('biometricEmail')
-  if (!username) return Promise.resolve()
-  return import('@capgo/capacitor-native-biometric').then(({ NativeBiometric }) =>
-    NativeBiometric.setCredentials({
-      username,
-      password: refreshToken,
-      server: BIOMETRIC_SERVER,
-    })
-  ).catch(() => {})
-}
 
 // Single-flight refresh: the refresh token is single-use, so when several requests hit a
 // 401 at once they must share one refresh call. Otherwise the second call presents a
@@ -38,10 +11,9 @@ const refreshSession = () => {
   if (!refreshPromise) {
     const refreshToken = localStorage.getItem('refreshToken')
     refreshPromise = axios.post(`${apiBaseURL}/auth/refresh-token`, { refreshToken }, { timeout: 20_000 })
-      .then(async ({ data }) => {
+      .then(({ data }) => {
         localStorage.setItem('accessToken', data.accessToken)
         localStorage.setItem('refreshToken', data.refreshToken)
-        await syncBiometricRefreshToken(data.refreshToken)
         return data.accessToken
       })
       .finally(() => { refreshPromise = null })
@@ -52,9 +24,7 @@ const refreshSession = () => {
 const api = axios.create({
   baseURL: apiBaseURL,
   // Without a timeout, a stalled connection (e.g. the API's host waking up from an idle
-  // sleep) leaves axios' promise pending forever — no error, no loading state reset, and
-  // for Face ID/huella login specifically, no chance to re-sync the just-rotated refresh
-  // token into the Keystore/Keychain, so the next attempt is rejected as "expired".
+  // sleep) leaves axios' promise pending forever — no error and no loading state reset.
   timeout: 20_000,
 })
 
@@ -84,6 +54,7 @@ api.interceptors.response.use(
       '/auth/forgot-password',
       '/auth/reset-password',
       '/auth/refresh-token',
+      '/auth/biometric/login',
     ].some((path) => originalRequest.url?.includes(path))
     const hadAccessToken = Boolean(originalRequest.headers?.Authorization)
 

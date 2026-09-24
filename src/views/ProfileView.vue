@@ -61,7 +61,25 @@
                 required
                 class="mb-3"
               />
-              <v-btn type="submit" class="form-actions__primary" :loading="passLoading" block>{{ t('profile.updatePassword') }}</v-btn>
+              <template v-if="passCodeSent">
+                <p class="text-body-2 mb-3">{{ t('profile.passwordCodeSent') }}</p>
+                <v-text-field
+                  v-model="passForm.code"
+                  :label="t('profile.sixDigitCode')"
+                  inputmode="numeric"
+                  autocomplete="one-time-code"
+                  maxlength="6"
+                  prepend-inner-icon="mdi-shield-key-outline"
+                  variant="outlined"
+                  density="compact"
+                  :rules="[codeRule]"
+                  class="mb-3"
+                />
+                <v-btn type="submit" class="form-actions__primary" :loading="passLoading" block>{{ t('profile.updatePassword') }}</v-btn>
+                <v-btn variant="text" color="primary" block class="mt-2" :loading="passLoading" @click="sendPasswordCode">{{ t('profile.resendCode') }}</v-btn>
+                <v-btn variant="text" block @click="resetPasswordForm">{{ t('common.cancel') }}</v-btn>
+              </template>
+              <v-btn v-else type="submit" class="form-actions__primary" :loading="passLoading" block>{{ t('auth.sendCode') }}</v-btn>
             </v-form>
           </v-card-text>
         </v-card>
@@ -334,8 +352,7 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted, watch } from 'vue'
-import { Capacitor } from '@capacitor/core'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import AIConsentDialog from '@/components/AIConsentDialog.vue'
 import { useDisplay } from 'vuetify'
@@ -352,6 +369,7 @@ import { setLanguage, SUPPORTED_LANGUAGES } from '@/i18n'
 const { t, locale } = useI18n()
 const { mobile } = useDisplay()
 const router = useRouter()
+const route = useRoute()
 const isMobile = computed(() => mobile.value)
 const authStore = useAuthStore()
 const billingStore = useSubscriptionStore()
@@ -377,7 +395,8 @@ const currencyPreview = computed(() => findCountry(profileForm.country)?.currenc
 
 // Cambiar el idioma actualiza la interfaz de inmediato; se persiste al guardar el perfil.
 watch(() => profileForm.language, (lang) => setLanguage(lang))
-const passForm = reactive({ currentPassword: '', newPassword: '' })
+const passForm = reactive({ currentPassword: '', newPassword: '', code: '' })
+const passCodeSent = ref(false)
 const passLoading = ref(false)
 const passMsg = ref('')
 const passSuccess = ref(false)
@@ -445,16 +464,40 @@ const saveProfile = async () => {
   profileLoading.value = false
 }
 
-const savePassword = async () => {
+const resetPasswordForm = () => {
+  passForm.currentPassword = ''; passForm.newPassword = ''; passForm.code = ''
+  passCodeSent.value = false
+}
+
+// Step 1: the current password is checked and a confirmation code is emailed.
+const sendPasswordCode = async () => {
+  if (!passForm.currentPassword || passwordRule(passForm.newPassword) !== true) return
   passLoading.value = true; passMsg.value = ''
-  const result = await authStore.changePassword({ currentPassword: passForm.currentPassword, newPassword: passForm.newPassword })
-  passLoading.value = false; passSuccess.value = result.success
-  passMsg.value = result.success ? result.message : result.message
+  const result = await authStore.requestPasswordChange(passForm.currentPassword)
+  passLoading.value = false
   if (result.success) {
-    passForm.currentPassword = ''; passForm.newPassword = ''
+    passCodeSent.value = true
+  } else {
+    passSuccess.value = false; passMsg.value = result.message
+  }
+}
+
+// Step 2: this device stays signed in (and keeps Face ID/huella); other devices are signed out.
+const savePassword = async () => {
+  if (!passCodeSent.value) return sendPasswordCode()
+  if (codeRule(passForm.code) !== true) return
+  passLoading.value = true; passMsg.value = ''
+  const result = await authStore.changePassword({
+    currentPassword: passForm.currentPassword,
+    newPassword: passForm.newPassword,
+    code: passForm.code,
+  })
+  passLoading.value = false
+  if (result.success) {
+    resetPasswordForm()
     snackbar.success(result.message)
-    await authStore.logout(false)
-    router.push('/login')
+  } else {
+    passSuccess.value = false; passMsg.value = result.message
   }
 }
 
@@ -543,8 +586,8 @@ const cancelTwoFactorChange = () => {
   disableCodeSent.value = false
 }
 
-// On the web a passkey is a persistent credential on the server, so the API asks for the
-// current password first; the native flow only stores the session in the device keychain.
+// Both passkeys (web) and the native Face ID/huella credential are persistent on the server,
+// so enabling either asks for the current password first.
 const showBioPasswordDialog = ref(false)
 const bioPassword = ref('')
 
@@ -553,12 +596,8 @@ const closeBioPasswordDialog = () => {
   bioPassword.value = ''
 }
 
-const handleRegisterBiometric = async () => {
-  if (!Capacitor.isNativePlatform()) {
-    showBioPasswordDialog.value = true
-    return
-  }
-  await confirmRegisterBiometric()
+const handleRegisterBiometric = () => {
+  showBioPasswordDialog.value = true
 }
 
 const confirmRegisterBiometric = async () => {
@@ -568,7 +607,7 @@ const confirmRegisterBiometric = async () => {
   closeBioPasswordDialog()
   if (result.success) {
     snackbar.success(t('profile.biometricActivated'))
-  } else {
+  } else if (!result.cancelled) {
     snackbar.error(result.message)
   }
 }
@@ -589,6 +628,11 @@ onMounted(async () => {
   biometricSupported.value = await authStore.checkBiometricSupport()
   if (biometricSupported.value) {
     await authStore.checkBiometricStatus()
+    // Coming from a one-time migration of an older Face ID/huella setup.
+    if (route.query.upgradeBiometric && !authStore.hasBiometric) {
+      snackbar.info(t('profile.biometricUpgradeNotice'))
+      showBioPasswordDialog.value = true
+    }
   }
 })
 </script>
