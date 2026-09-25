@@ -1,16 +1,16 @@
 <template>
   <div>
-    <div class="page-intro d-flex align-start align-sm-center flex-column flex-sm-row ga-3">
+    <div data-tour="page-intro" class="page-intro d-flex align-start align-sm-center flex-column flex-sm-row ga-3">
       <div>
         <div class="page-intro__eyebrow">{{ t('recurring.automation') }}</div>
         <h1 :class="isMobile ? 'text-h5' : 'text-h4'">{{ t('nav.recurring') }}</h1>
         <p class="page-intro__subtitle">{{ t('recurring.subtitle') }}</p>
       </div>
       <v-spacer />
-      <v-btn v-if="!isMobile && !billingStore.isReadOnly" color="primary" prepend-icon="mdi-plus" @click="openCreate">{{ t('recurring.newRecurring') }}</v-btn>
+      <v-btn v-if="!isMobile && !billingStore.isReadOnly" data-tour="page-add" color="primary" prepend-icon="mdi-plus" @click="openCreate">{{ t('recurring.newRecurring') }}</v-btn>
     </div>
 
-    <v-card class="mb-2">
+    <v-card class="mb-2" data-tour="recurring-upcoming">
       <v-card-title :class="isMobile ? 'text-body-2' : 'text-h6'">{{ t('recurring.upcomingPayments') }}</v-card-title>
       <v-card-text v-if="store.upcoming.length === 0" class="text-center text-grey py-2">
         <div class="text-caption">{{ t('dashboard.noUpcomingPayments') }}</div>
@@ -98,7 +98,7 @@
         <v-card-actions><v-spacer /><v-btn variant="text" @click="deleteDialog = false">{{ t('common.cancel') }}</v-btn><v-btn color="error" @click="doDelete">{{ t('common.delete') }}</v-btn></v-card-actions></v-card>
     </v-dialog>
 
-    <v-btn v-if="isMobile && !billingStore.isReadOnly" icon="mdi-plus" color="primary" size="x-large" class="finance-fab" @click="openCreate" />
+    <v-btn v-if="isMobile && !billingStore.isReadOnly" icon="mdi-plus" color="primary" size="x-large" class="finance-fab" data-tour="page-add" @click="openCreate" />
   </div>
 </template>
 

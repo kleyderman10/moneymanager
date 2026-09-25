@@ -1,13 +1,13 @@
 <template>
   <div>
-    <div class="page-intro d-flex align-start align-sm-center flex-column flex-sm-row ga-3">
+    <div data-tour="page-intro" class="page-intro d-flex align-start align-sm-center flex-column flex-sm-row ga-3">
       <div>
         <div class="page-intro__eyebrow">{{ t('goals.yourFuture') }}</div>
         <h1 :class="isMobile ? 'text-h5' : 'text-h4'">{{ t('nav.goals') }}</h1>
         <p class="page-intro__subtitle">{{ t('goals.subtitle') }}</p>
       </div>
       <v-spacer />
-      <v-btn v-if="!isMobile && !billingStore.isReadOnly" color="primary" prepend-icon="mdi-plus" @click="openCreate">{{ t('goals.newGoal') }}</v-btn>
+      <v-btn v-if="!isMobile && !billingStore.isReadOnly" data-tour="page-add" color="primary" prepend-icon="mdi-plus" @click="openCreate">{{ t('goals.newGoal') }}</v-btn>
     </div>
 
     <v-card v-if="store.goals.length === 0" class="pa-8 text-center text-grey">
@@ -34,7 +34,7 @@
             </div>
           </v-card-text>
           <v-card-actions>
-            <v-btn v-if="!billingStore.isReadOnly" size="small" variant="text" color="success" prepend-icon="mdi-plus" @click="openProgress(goal)">{{ t('common.add') }}</v-btn>
+            <v-btn v-if="!billingStore.isReadOnly" size="small" variant="text" color="success" prepend-icon="mdi-plus" data-tour="goals-progress" @click="openProgress(goal)">{{ t('common.add') }}</v-btn>
             <v-spacer />
             <v-btn v-if="!billingStore.isReadOnly" size="small" variant="text" icon="mdi-pencil" @click="openEdit(goal)" />
             <v-btn v-if="!billingStore.isReadOnly" size="small" variant="text" icon="mdi-delete" color="error" @click="confirmDelete(goal)" />
@@ -74,7 +74,7 @@
         <v-card-actions><v-spacer /><v-btn variant="text" @click="deleteDialog = false">{{ t('common.cancel') }}</v-btn><v-btn color="error" @click="doDelete">{{ t('common.delete') }}</v-btn></v-card-actions></v-card>
     </v-dialog>
 
-    <v-btn v-if="isMobile && !billingStore.isReadOnly" icon="mdi-plus" color="primary" size="x-large" class="finance-fab" @click="openCreate" />
+    <v-btn v-if="isMobile && !billingStore.isReadOnly" icon="mdi-plus" color="primary" size="x-large" class="finance-fab" data-tour="page-add" @click="openCreate" />
   </div>
 </template>
 

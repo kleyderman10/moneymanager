@@ -9,6 +9,7 @@
     :permanent="!isMobile"
     :width="272"
     class="finance-sidebar"
+    data-tour="nav-sidebar"
   >
     <template #prepend>
       <div class="finance-brand">
@@ -23,11 +24,11 @@
     <v-list nav density="comfortable">
       <v-list-subheader>{{ t('nav.overview') }}</v-list-subheader>
       <v-list-item prepend-icon="mdi-view-dashboard-outline" :title="t('nav.dashboard')" value="dashboard" to="/" exact />
-      <v-list-item prepend-icon="mdi-swap-vertical" :title="t('nav.transactions')" value="transactions" to="/transactions" />
+      <v-list-item prepend-icon="mdi-swap-vertical" :title="t('nav.transactions')" value="transactions" to="/transactions" data-tour="nav-transactions" />
       <v-list-item prepend-icon="mdi-chart-donut" :title="t('nav.reports')" value="reports" to="/reports" />
 
-      <v-list-subheader class="mt-3">{{ t('nav.planning') }}</v-list-subheader>
-      <v-list-item prepend-icon="mdi-wallet-outline" :title="t('nav.wallets')" value="wallets" to="/wallets" />
+      <v-list-subheader class="mt-3" data-tour="nav-planning">{{ t('nav.planning') }}</v-list-subheader>
+      <v-list-item prepend-icon="mdi-wallet-outline" :title="t('nav.wallets')" value="wallets" to="/wallets" data-tour="nav-wallets" />
       <v-list-item prepend-icon="mdi-bank-minus" :title="t('nav.credits')" value="credits" to="/credits" />
       <v-list-item prepend-icon="mdi-chart-pie-outline" :title="t('nav.budgets')" value="budgets" to="/budgets" />
       <v-list-item prepend-icon="mdi-target" :title="t('nav.goals')" value="goals" to="/goals" />
@@ -39,6 +40,7 @@
       <v-list-item prepend-icon="mdi-account-outline" :title="t('nav.profile')" value="profile" to="/profile" />
       <v-list-item prepend-icon="mdi-credit-card-outline" :title="t('nav.subscription')" value="subscription" to="/subscription" />
       <v-list-item prepend-icon="mdi-information-outline" :title="t('nav.about')" value="about" to="/about" />
+      <v-list-item prepend-icon="mdi-lifebuoy" :title="t('nav.help')" value="help" to="/help" />
 
       <template v-if="authStore.isAdmin">
         <v-list-subheader class="mt-3">{{ t('nav.adminSection') }}</v-list-subheader>
@@ -73,6 +75,35 @@
     </template>
 
     <v-spacer v-if="!isMobile" />
+
+    <v-menu location="bottom end">
+      <template #activator="{ props: menuProps }">
+        <v-btn
+          v-bind="menuProps"
+          icon="mdi-help-circle-outline"
+          variant="text"
+          :size="isMobile ? 'default' : 'small'"
+          :class="isMobile ? 'order-last ms-auto mr-2' : 'mr-1'"
+          data-tour="topbar-help"
+          :aria-label="t('help.menuLabel')"
+        />
+      </template>
+      <v-list density="comfortable" min-width="240">
+        <v-list-item
+          v-if="currentTourId"
+          prepend-icon="mdi-map-marker-path"
+          :title="t('help.screenGuide')"
+          @click="startTour(currentTourId, { force: true })"
+        />
+        <v-list-item
+          v-if="currentTourId !== 'welcome'"
+          prepend-icon="mdi-compass-outline"
+          :title="t('help.replayWelcome')"
+          @click="replayWelcome"
+        />
+        <v-list-item prepend-icon="mdi-lifebuoy" :title="t('help.center')" to="/help" />
+      </v-list>
+    </v-menu>
 
     <v-btn
       class="topbar-profile"
@@ -131,16 +162,17 @@
     app
     grow
     class="finance-bottom-nav"
+    data-tour="nav-bottom"
   >
     <v-btn value="dashboard" to="/" exact>
       <v-icon>mdi-view-dashboard-outline</v-icon>
       <span>{{ t('nav.dashboard') }}</span>
     </v-btn>
-    <v-btn value="transactions" to="/transactions">
+    <v-btn value="transactions" to="/transactions" data-tour="nav-transactions">
       <v-icon>mdi-swap-vertical</v-icon>
       <span>{{ t('nav.transactions') }}</span>
     </v-btn>
-    <v-btn value="wallets" to="/wallets">
+    <v-btn value="wallets" to="/wallets" data-tour="nav-wallets">
       <v-icon>mdi-wallet-outline</v-icon>
       <span>{{ t('nav.wallets') }}</span>
     </v-btn>
@@ -148,7 +180,7 @@
       <v-icon>mdi-chart-donut</v-icon>
       <span>{{ t('nav.reports') }}</span>
     </v-btn>
-    <v-btn value="more" @click.prevent="drawer = !drawer">
+    <v-btn value="more" data-tour="nav-menu" @click.prevent="drawer = !drawer">
       <v-icon>mdi-menu</v-icon>
       <span>{{ t('nav.menu') }}</span>
     </v-btn>
@@ -165,6 +197,8 @@ import { useLocale } from '@/composables/useLocale'
 import { useDisplay } from 'vuetify'
 import AIChatPanel from '@/components/AIChatPanel.vue'
 import AIConsentDialog from '@/components/AIConsentDialog.vue'
+import { useTour } from '@/composables/useTour'
+import { TOUR_BY_ROUTE } from '@/tours/definitions'
 
 const { t } = useI18n()
 const { money, dateLong } = useLocale()
@@ -207,6 +241,31 @@ const showAIConsent = computed(() => (
 ))
 const dismissAIConsent = () => authStore.dismissAIConsent()
 
+// Guided tours: the welcome tour on the dashboard, then one per screen on its first visit.
+// They wait for the AI consent decision and the billing status, so they never open on top
+// of the consent dialog or of a screen the subscription gate is about to redirect away from.
+const { startTour, scheduleTour, stopTour, maybeStartTour, activeTourRoute } = useTour()
+const currentTourId = computed(() => TOUR_BY_ROUTE[route.name] || null)
+const toursReady = computed(() => (
+  Boolean(authStore.user) && !showAIConsent.value && Boolean(billingStore.status)
+))
+
+watch(
+  [currentTourId, toursReady, () => authStore.user?.completedTours?.length],
+  ([id, ready]) => { if (id && ready) maybeStartTour(id) },
+  { immediate: true },
+)
+
+watch(() => route.name, (name) => {
+  const tourRoute = activeTourRoute()
+  if (tourRoute && tourRoute !== name) stopTour()
+})
+
+const replayWelcome = async () => {
+  if (route.name !== 'Dashboard') await router.push('/')
+  scheduleTour('welcome', { force: true })
+}
+
 const firstName = computed(() => authStore.user?.name?.trim().split(' ')[0] || '')
 const initials = computed(() => {
   const name = authStore.user?.name?.trim()
@@ -242,6 +301,7 @@ const currentRouteTitle = computed(() => {
     Profile: t('nav.profile'),
     Subscription: t('nav.subscription'),
     About: t('nav.about'),
+    Help: t('nav.help'),
     Admin: t('nav.admin'),
   }
   if (route.name === 'Simulators' && route.query.tab === 'capacity') return t('layout.creditCapacity')

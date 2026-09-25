@@ -4,6 +4,7 @@
       color="secondary"
       size="large"
       class="ai-fab"
+      data-tour="ai-chat"
       :style="fabStyle"
       @click="chatStore.toggle"
     >

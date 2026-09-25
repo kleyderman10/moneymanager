@@ -1,6 +1,6 @@
 <template>
   <div>
-    <div class="page-intro d-flex align-start align-sm-center flex-column flex-sm-row ga-3">
+    <div data-tour="page-intro" class="page-intro d-flex align-start align-sm-center flex-column flex-sm-row ga-3">
       <div>
         <div class="page-intro__eyebrow">{{ t('transactions.dailyControl') }}</div>
         <h1 :class="isMobile ? 'text-h5' : 'text-h4'">{{ t('nav.transactions') }}</h1>
@@ -8,8 +8,8 @@
       </div>
       <v-spacer />
       <div v-if="!isMobile" class="d-flex ga-2">
-        <v-btn variant="outlined" prepend-icon="mdi-download" @click="doExport">{{ t('transactions.export') }}</v-btn>
-        <v-btn v-if="!billingStore.isReadOnly" color="primary" prepend-icon="mdi-plus" @click="openModeDialog">{{ t('transactions.newTransaction') }}</v-btn>
+        <v-btn variant="outlined" prepend-icon="mdi-download" data-tour="tx-export" @click="doExport">{{ t('transactions.export') }}</v-btn>
+        <v-btn v-if="!billingStore.isReadOnly" data-tour="page-add" color="primary" prepend-icon="mdi-plus" @click="openModeDialog">{{ t('transactions.newTransaction') }}</v-btn>
       </div>
     </div>
 
@@ -40,7 +40,7 @@
       </v-col>
     </v-row>
 
-    <v-expansion-panels v-model="filtersOpen" class="mb-2">
+    <v-expansion-panels v-model="filtersOpen" class="mb-2" data-tour="tx-filters">
       <v-expansion-panel>
         <v-expansion-panel-title>
           <div class="d-flex align-center w-100">
@@ -486,7 +486,7 @@
       icon="mdi-plus"
       color="primary"
       size="x-large"
-      class="finance-fab"
+      class="finance-fab" data-tour="page-add"
       @click="openModeDialog"
     />
   </div>

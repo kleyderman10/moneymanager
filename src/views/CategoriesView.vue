@@ -1,16 +1,16 @@
 <template>
   <div>
-    <div class="page-intro d-flex align-start align-sm-center flex-column flex-sm-row ga-3">
+    <div data-tour="page-intro" class="page-intro d-flex align-start align-sm-center flex-column flex-sm-row ga-3">
       <div>
         <div class="page-intro__eyebrow">{{ t('categories.organization') }}</div>
         <h1 :class="isMobile ? 'text-h5' : 'text-h4'">{{ t('nav.categories') }}</h1>
         <p class="page-intro__subtitle">{{ t('categories.subtitle') }}</p>
       </div>
       <v-spacer />
-      <v-btn v-if="!isMobile && !billingStore.isReadOnly" color="primary" prepend-icon="mdi-plus" @click="openCreate">{{ t('categories.newCategory') }}</v-btn>
+      <v-btn v-if="!isMobile && !billingStore.isReadOnly" data-tour="page-add" color="primary" prepend-icon="mdi-plus" @click="openCreate">{{ t('categories.newCategory') }}</v-btn>
     </div>
 
-    <v-tabs v-model="tab" color="primary" class="mb-2">
+    <v-tabs v-model="tab" data-tour="page-tabs" color="primary" class="mb-2">
       <v-tab value="all">{{ t('common.all') }}</v-tab>
       <v-tab value="income">{{ t('categories.incomes') }}</v-tab>
       <v-tab value="expense">{{ t('dashboard.expenses') }}</v-tab>
@@ -99,7 +99,7 @@
       icon="mdi-plus"
       color="primary"
       size="x-large"
-      class="finance-fab"
+      class="finance-fab" data-tour="page-add"
       @click="openCreate"
     />
   </div>

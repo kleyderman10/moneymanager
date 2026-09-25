@@ -1,6 +1,6 @@
 <template>
   <div class="dashboard-page">
-    <header class="dashboard-welcome d-flex align-start align-sm-center flex-column flex-sm-row ga-3">
+    <header data-tour="page-intro" class="dashboard-welcome d-flex align-start align-sm-center flex-column flex-sm-row ga-3">
       <div>
         <div class="page-intro__eyebrow">{{ t('dashboard.financialSummary') }}</div>
         <h1 :class="isMobile ? 'text-h5' : 'text-h4'">{{ t('dashboard.title') }}</h1>
@@ -18,7 +18,7 @@
       </v-btn>
     </header>
 
-    <v-row v-if="summary" class="mb-3">
+    <v-row v-if="summary" class="mb-3" data-tour="dashboard-summary">
       <v-col cols="12">
         <v-card class="dashboard-hero">
           <v-card-text class="pa-6 pa-md-7">
@@ -111,7 +111,7 @@
 
     <v-row class="mb-3">
       <v-col cols="12" lg="8">
-        <v-card class="section-card">
+        <v-card class="section-card" data-tour="dashboard-quick">
           <v-card-title class="d-flex align-center">
             <span class="section-icon mr-3"><v-icon size="20">mdi-lightning-bolt-outline</v-icon></span>
             <div>
@@ -213,7 +213,7 @@
       v-if="isMobile && !billingStore.isReadOnly"
       color="primary"
       icon="mdi-plus"
-      class="finance-fab"
+      class="finance-fab" data-tour="page-add"
       :aria-label="t('dashboard.logTransaction')"
       @click="goToNewTransaction"
     />

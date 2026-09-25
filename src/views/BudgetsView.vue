@@ -1,13 +1,13 @@
 <template>
   <div>
-    <div class="page-intro d-flex align-start align-sm-center flex-column flex-sm-row ga-3">
+    <div data-tour="page-intro" class="page-intro d-flex align-start align-sm-center flex-column flex-sm-row ga-3">
       <div>
         <div class="page-intro__eyebrow">{{ t('budgets.monthlyPlan') }}</div>
         <h1 :class="isMobile ? 'text-h5' : 'text-h4'">{{ t('nav.budgets') }}</h1>
         <p class="page-intro__subtitle">{{ t('budgets.subtitle') }}</p>
       </div>
       <v-spacer />
-      <v-btn v-if="!isMobile && !billingStore.isReadOnly" color="primary" prepend-icon="mdi-plus" @click="openCreate">{{ t('budgets.newBudget') }}</v-btn>
+      <v-btn v-if="!isMobile && !billingStore.isReadOnly" data-tour="page-add" color="primary" prepend-icon="mdi-plus" @click="openCreate">{{ t('budgets.newBudget') }}</v-btn>
     </div>
 
     <v-card v-if="!isMobile">
@@ -83,7 +83,7 @@
       icon="mdi-plus"
       color="primary"
       size="x-large"
-      class="finance-fab"
+      class="finance-fab" data-tour="page-add"
       @click="openCreate"
     />
   </div>

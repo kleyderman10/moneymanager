@@ -1,3 +1,5 @@
+import guide from './guide.en'
+
 export default {
   common: {
     save: 'Save',
@@ -44,6 +46,7 @@ export default {
     adminSection: 'Administration',
     admin: 'Admin panel',
     menu: 'Menu',
+    help: 'Help',
   },
   layout: {
     brandName: 'Knexura Finance',
@@ -1010,4 +1013,5 @@ export default {
   app: {
     newVersionAvailable: 'New version available. Update?',
   },
+  ...guide,
 }

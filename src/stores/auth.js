@@ -88,6 +88,7 @@ export const useAuthStore = defineStore('auth', () => {
       emailVerified: data.emailVerified,
       twoFactorEnabled: data.twoFactorEnabled,
       aiConsentAcceptedAt: data.aiConsentAcceptedAt,
+      completedTours: data.completedTours || [],
     }
     if (data.language) setLanguage(data.language)
     // Sent back after an email code is verified on this device: later password logins skip
@@ -238,6 +239,31 @@ export const useAuthStore = defineStore('auth', () => {
       return { success: true }
     } catch (e) {
       return { success: false, message: messageFrom(e, t('authStore.revokeConsentError')) }
+    }
+  }
+
+  const hasCompletedTour = (id) => Boolean(user.value?.completedTours?.includes(id))
+
+  // Marked locally first so the tour can't start again while the request is in flight (or
+  // if it fails — it'll just be offered again on the next session).
+  const completeTour = async (id) => {
+    if (!user.value) return
+    user.value = { ...user.value, completedTours: [...(user.value.completedTours || []), id] }
+    try {
+      const res = await authAPI.completeTour(id)
+      user.value = res.data
+    } catch {
+      // Not worth interrupting the user over.
+    }
+  }
+
+  const resetTours = async () => {
+    try {
+      const res = await authAPI.resetTours()
+      user.value = res.data
+      return { success: true }
+    } catch (e) {
+      return { success: false, message: messageFrom(e, t('help.resetError')) }
     }
   }
 
@@ -561,6 +587,9 @@ export const useAuthStore = defineStore('auth', () => {
     revokeAIConsent,
     aiConsentDismissed,
     dismissAIConsent,
+    hasCompletedTour,
+    completeTour,
+    resetTours,
     deleteAccount,
     register,
     verifyEmail,

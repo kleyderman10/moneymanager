@@ -1,6 +1,6 @@
 <template>
   <div>
-    <div class="page-intro">
+    <div data-tour="page-intro" class="page-intro">
       <div class="page-intro__eyebrow">{{ t('profile.yourAccount') }}</div>
       <h1 :class="isMobile ? 'text-h5' : 'text-h4'">{{ t('profile.title') }}</h1>
       <p class="page-intro__subtitle">{{ t('profile.subtitle') }}</p>
@@ -8,7 +8,7 @@
 
     <v-row>
       <v-col cols="12" md="6">
-        <v-card :title="t('profile.personalInfo')">
+        <v-card :title="t('profile.personalInfo')" data-tour="profile-personal">
           <v-card-text>
             <v-form @submit.prevent="saveProfile">
               <v-text-field v-model="profileForm.name" :label="t('profile.name')" variant="outlined" density="compact" required class="mb-3" />
@@ -85,7 +85,7 @@
         </v-card>
       </v-col>
       <v-col cols="12" md="6">
-        <v-card :title="t('profile.twoFactor')">
+        <v-card :title="t('profile.twoFactor')" data-tour="profile-security">
           <v-card-text>
             <template v-if="!twoFactorMode">
               <v-alert
@@ -186,7 +186,7 @@
         </v-card>
       </v-col>
       <v-col cols="12" md="6">
-        <v-card :title="t('profile.privacyAndAI')">
+        <v-card :title="t('profile.privacyAndAI')" data-tour="profile-ai">
           <v-card-text>
             <v-alert
               v-if="authStore.hasAcceptedAIConsent"

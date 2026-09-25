@@ -1,12 +1,12 @@
 <template>
   <div class="simulators-page">
-    <div class="page-intro">
+    <div data-tour="page-intro" class="page-intro">
       <div class="page-intro__eyebrow">{{ t('simulators.financialDecisions') }}</div>
       <h1 :class="isMobile ? 'text-h5' : 'text-h4'">{{ t('nav.simulators') }}</h1>
       <p class="page-intro__subtitle">{{ t('simulators.subtitle') }}</p>
     </div>
 
-    <v-tabs v-model="tab" color="primary" class="mb-4">
+    <v-tabs v-model="tab" data-tour="page-tabs" color="primary" class="mb-4">
       <v-tab value="loan" prepend-icon="mdi-cash-multiple">{{ t('nav.credits') }}</v-tab>
       <v-tab value="cdt" prepend-icon="mdi-bank-outline">CDT</v-tab>
       <v-tab value="savings" prepend-icon="mdi-piggy-bank-outline">{{ t('simulators.savings') }}</v-tab>

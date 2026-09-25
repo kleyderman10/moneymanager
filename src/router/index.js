@@ -95,6 +95,12 @@ const routes = [
         meta: { billingExempt: true },
       },
       {
+        path: 'help',
+        name: 'Help',
+        component: () => import('@/views/HelpView.vue'),
+        meta: { billingExempt: true },
+      },
+      {
         path: 'admin',
         name: 'Admin',
         component: () => import('@/views/AdminView.vue'),

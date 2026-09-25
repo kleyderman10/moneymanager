@@ -1,13 +1,13 @@
 <template>
   <div>
-    <div class="page-intro d-flex align-start align-sm-center flex-column flex-sm-row ga-3">
+    <div data-tour="page-intro" class="page-intro d-flex align-start align-sm-center flex-column flex-sm-row ga-3">
       <div>
         <div class="page-intro__eyebrow">{{ t('wallets.equity') }}</div>
         <h1 :class="isMobile ? 'text-h5' : 'text-h4'">{{ t('nav.wallets') }}</h1>
         <p class="page-intro__subtitle">{{ t('wallets.subtitle') }}</p>
       </div>
       <v-spacer />
-      <v-btn v-if="!isMobile && !billingStore.isReadOnly" color="primary" prepend-icon="mdi-plus" @click="openCreate">{{ t('wallets.newAccount') }}</v-btn>
+      <v-btn v-if="!isMobile && !billingStore.isReadOnly" data-tour="page-add" color="primary" prepend-icon="mdi-plus" @click="openCreate">{{ t('wallets.newAccount') }}</v-btn>
     </div>
 
 
@@ -17,7 +17,7 @@
       <v-btn v-if="!billingStore.isReadOnly" color="primary" variant="text" class="mt-2" @click="openCreate">{{ t('wallets.createManualAccount') }}</v-btn>
     </v-card>
 
-    <v-card v-if="store.wallets.length > 0" class="net-worth-card mb-4">
+    <v-card v-if="store.wallets.length > 0" class="net-worth-card mb-4" data-tour="wallets-networth">
       <v-card-text class="pa-6">
         <div class="net-worth-card__label">{{ t('wallets.totalEquity') }}</div>
         <div class="net-worth-card__amount">{{ money(netWorth) }}</div>
@@ -85,7 +85,7 @@
             </template>
           </v-card-text>
           <v-card-actions>
-            <v-btn v-if="!billingStore.isReadOnly" size="small" variant="text" prepend-icon="mdi-swap-horizontal" @click="openTransfer(wallet)">{{ t('wallets.transfer') }}</v-btn>
+            <v-btn v-if="!billingStore.isReadOnly" size="small" variant="text" prepend-icon="mdi-swap-horizontal" data-tour="wallets-transfer" @click="openTransfer(wallet)">{{ t('wallets.transfer') }}</v-btn>
             <v-spacer />
             <v-btn v-if="!billingStore.isReadOnly" size="small" variant="text" icon="mdi-pencil" @click="openEdit(wallet)" />
             <v-btn v-if="!billingStore.isReadOnly" size="small" variant="text" icon="mdi-delete" color="error" @click="confirmDelete(wallet)" />
@@ -178,7 +178,7 @@
         <v-card-actions><v-spacer /><v-btn variant="text" @click="deleteDialog = false">{{ t('common.cancel') }}</v-btn><v-btn color="error" @click="doDelete">{{ t('common.delete') }}</v-btn></v-card-actions></v-card>
     </v-dialog>
 
-    <v-btn v-if="isMobile && !billingStore.isReadOnly" icon="mdi-plus" color="primary" size="x-large" class="finance-fab" @click="openCreate" />
+    <v-btn v-if="isMobile && !billingStore.isReadOnly" icon="mdi-plus" color="primary" size="x-large" class="finance-fab" data-tour="page-add" @click="openCreate" />
   </div>
 </template>
 

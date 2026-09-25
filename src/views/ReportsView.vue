@@ -1,12 +1,12 @@
 <template>
   <div>
-    <div class="page-intro">
+    <div data-tour="page-intro" class="page-intro">
       <div class="page-intro__eyebrow">{{ t('reports.financialAnalysis') }}</div>
       <h1 :class="isMobile ? 'text-h5' : 'text-h4'">{{ t('nav.reports') }}</h1>
       <p class="page-intro__subtitle">{{ t('reports.subtitle') }}</p>
     </div>
 
-    <v-tabs v-model="tab" color="primary" class="mb-2">
+    <v-tabs v-model="tab" data-tour="page-tabs" color="primary" class="mb-2">
       <v-tab value="monthly">{{ t('reports.monthly') }}</v-tab>
       <v-tab value="yearly">{{ t('reports.yearly') }}</v-tab>
       <v-tab value="ai">{{ t('reports.smartAnalysis') }}</v-tab>
@@ -16,7 +16,7 @@
       <v-card-text class="pa-2 pa-md-4">
         <v-row dense>
           <v-col cols="6" sm="5">
-            <v-select v-model="monthlyMonth" :items="monthOptions" :label="t('budgets.month')" density="compact" hide-details @update:model-value="loadMonthly" />
+            <v-select v-model="monthlyMonth" data-tour="reports-period" :items="monthOptions" :label="t('budgets.month')" density="compact" hide-details @update:model-value="loadMonthly" />
           </v-col>
           <v-col cols="6" sm="5">
             <v-text-field v-model="monthlyYear" :label="t('budgets.year')" type="number" density="compact" hide-details @update:model-value="loadMonthly" />

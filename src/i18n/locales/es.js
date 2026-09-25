@@ -1,3 +1,5 @@
+import guide from './guide.es'
+
 export default {
   common: {
     save: 'Guardar',
@@ -44,6 +46,7 @@ export default {
     adminSection: 'Administración',
     admin: 'Panel administrativo',
     menu: 'Menú',
+    help: 'Ayuda',
   },
   layout: {
     brandName: 'Knexura Finanzas',
@@ -1010,4 +1013,5 @@ export default {
   app: {
     newVersionAvailable: 'Nueva versión disponible. ¿Actualizar?',
   },
+  ...guide,
 }
