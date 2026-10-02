@@ -995,6 +995,10 @@ export default {
   assistant: {
     open: 'Hablar con Knexura',
     speak: 'Hablar',
+    voiceListening: 'Escuchando',
+    voiceProcessing: 'Procesando solicitud',
+    voiceSuccess: 'Respuesta disponible',
+    voiceError: 'Error al procesar la solicitud',
     title: 'Asistente',
     hint: 'Dime qué quieres hacer',
     tapToSpeak: 'Toca el micrófono y habla',

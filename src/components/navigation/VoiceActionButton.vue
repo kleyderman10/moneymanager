@@ -4,15 +4,18 @@
     class="kf-voice-btn"
     :class="[`kf-voice-btn--${variant}`, `kf-voice-btn--${status}`]"
     :aria-label="t('assistant.open')"
+    :aria-describedby="`${variant}-voice-status`"
+    :aria-busy="status === 'processing'"
     :title="variant === 'compact' ? `${t('assistant.open')} (Ctrl+Shift+Space)` : undefined"
     data-tour="nav-assistant"
     @click="$emit('voice-click')"
   >
     <span class="kf-voice-btn__orb">
       <v-progress-circular v-if="status === 'processing'" indeterminate size="22" width="2" color="on-primary" />
-      <v-icon v-else :size="variant === 'nav' ? 28 : 20">mdi-microphone</v-icon>
+      <v-icon v-else :size="variant === 'nav' ? 28 : 20">{{ status === 'error' ? 'mdi-alert-circle-outline' : status === 'success' ? 'mdi-check' : 'mdi-microphone' }}</v-icon>
     </span>
     <span v-if="variant === 'nav'" class="kf-voice-btn__label">{{ t('assistant.speak') }}</span>
+    <span :id="`${variant}-voice-status`" class="kf-voice-btn__status" role="status">{{ statusLabel }}</span>
   </button>
 </template>
 
@@ -34,13 +37,18 @@ const assistant = useAssistantStore()
 const status = computed(() => {
   if (!assistant.visible) return 'idle'
   if (assistant.state === 'listening') return 'listening'
-  if (assistant.state === 'thinking') return 'processing'
+  if (assistant.state === 'thinking' || assistant.busy) return 'processing'
+  if (assistant.state === 'error' || assistant.result?.type === 'error' || assistant.result?.error) return 'error'
+  if (assistant.state === 'result' && assistant.result?.type !== 'confirm') return 'success'
   return 'idle'
 })
+const statusLabel = computed(() => status.value === 'idle' ? '' : t(`assistant.voice${status.value[0].toUpperCase()}${status.value.slice(1)}`))
 </script>
 
 <style scoped>
 .kf-voice-btn {
+  min-width: 44px;
+  min-height: 44px;
   display: inline-flex;
   flex-direction: column;
   align-items: center;
@@ -95,9 +103,21 @@ const status = computed(() => {
 
 /* Desktop top bar. */
 .kf-voice-btn--compact .kf-voice-btn__orb {
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   box-shadow: 0 4px 16px rgba(0, 229, 208, 0.28);
+}
+
+.kf-voice-btn--error .kf-voice-btn__orb { background: var(--kf-danger); }
+.kf-voice-btn--success .kf-voice-btn__orb { background: var(--kf-success); }
+.kf-voice-btn__status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 /* Listening: a soft pulse only while the microphone is open. */

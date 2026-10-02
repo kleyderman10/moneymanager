@@ -40,3 +40,18 @@
 - iOS/Android device validation and native binary builds remain pending.
 - Shared styles cover all routes, but screen-by-screen rendered review, touch targets and full WCAG validation remain pending. Do not treat the visual migration as fully approved until that review is complete.
 - No lint/test scripts are defined in package.json.
+
+## Flow redesign, second pass (mockups + supplied backgrounds)
+
+| Area | Files | Change |
+| --- | --- | --- |
+| Tokens & theme | src/styles/design-tokens.css; src/main.js; @fontsource-variable/inter | Semantic `--kf-*` palette (old `--knexura-*`/`--finance-*` kept as aliases), Vuetify dark theme on the same values, Inter bundled locally (works offline in Capacitor). |
+| Visual layer | src/styles/flow.css; finance.css (pruned) | Glass cards, hero cards, KPI/icon tiles, segmented tabs, fields, tables, insight alerts (gold), `.kf-row` mobile rows, FAB positioned above the bottom nav. |
+| Backgrounds | src/assets/backgrounds/flow-bg-1..6.webp | The six supplied artworks converted to WebP (23–48 KB each). 5: auth screens, 6: app background, 4: drawer, 3: assistant sheet, 1: desktop auth panel, 2: hero cards. |
+| Navigation | src/components/navigation/{MobileBottomNavigation,AppDrawer,VoiceActionButton}.vue; MainLayout.vue | Inicio · Movimientos · [Hablar] · Reportes · Menú; raised voice button calls the existing `openAssistant()` (AI-consent gate unchanged). Mic removed from the mobile header; mobile header shows avatar on main tabs and "back" elsewhere. Desktop keeps a compact voice button + Ctrl+Shift+Space. |
+| Shared components | src/components/ui/KfSegmented.vue; src/components/finance/{KpiCard,BudgetCard}.vue; src/constants/chartTheme.js; src/utils/categoryIcon.js (+goalIcon) | Reused across Movimientos, Reportes, Metas, Simuladores, Admin. |
+| Screens | Login/Register/Forgot, Dashboard, Transactions, Budgets, Reports, Wallets, Credits, Goals, Simulators, Recurring, Profile, Subscription, About, Admin | Markup/styles only; handlers, stores and API calls unchanged. Mobile tables (admin users/subscriptions, billing history, recurring) render as card rows. |
+
+Fixes found during QA: invalid `mdi-auto-awesome` icon (rendered blank), progress-bar track tinted by the theme class, Profile form empty when the page was opened before the user profile loaded.
+
+Pending: device validation on iOS/Android; iOS status-bar text color (no @capacitor/status-bar plugin; with UIViewControllerBasedStatusBarAppearance the style follows the system appearance and may render dark text on the dark header).

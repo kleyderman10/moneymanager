@@ -8,6 +8,8 @@
       class="kf-segmented__option"
       :class="{ 'kf-segmented__option--active': option.value === modelValue }"
       :aria-checked="option.value === modelValue"
+      :tabindex="option.value === modelValue || (!options.some(item => item.value === modelValue) && option === options[0]) ? 0 : -1"
+      @keydown="onKeydown($event, option)"
       @click="option.value !== modelValue && $emit('update:modelValue', option.value)"
     >
       <v-icon v-if="option.icon" size="18" class="mr-1">{{ option.icon }}</v-icon>
@@ -19,13 +21,25 @@
 
 <script setup>
 // Pill-style segmented control (Todos · Ingresos · Gastos, etc.) shared across screens.
-defineProps({
+const props = defineProps({
   modelValue: { type: [String, Number, Boolean, null], default: null },
   options: { type: Array, required: true }, // [{ value, label, icon?, count? }]
   label: { type: String, default: undefined },
   block: { type: Boolean, default: false },
 })
-defineEmits(['update:modelValue'])
+const emit = defineEmits(['update:modelValue'])
+
+function onKeydown(event, option) {
+  const keys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End']
+  if (!keys.includes(event.key) || !props.options.length) return
+  event.preventDefault()
+  const current = props.options.indexOf(option)
+  const direction = ['ArrowLeft', 'ArrowUp'].includes(event.key) ? -1 : 1
+  const index = event.key === 'Home' ? 0 : event.key === 'End' ? props.options.length - 1
+    : (current + direction + props.options.length) % props.options.length
+  emit('update:modelValue', props.options[index].value)
+  event.currentTarget.parentElement.querySelectorAll('[role="radio"]')[index]?.focus()
+}
 </script>
 
 <style scoped>
@@ -62,7 +76,7 @@ defineEmits(['update:modelValue'])
   align-items: center;
   justify-content: center;
   gap: 6px;
-  min-height: 40px;
+  min-height: 44px;
   padding: 0 16px;
   border: 0;
   border-radius: var(--kf-radius-pill);

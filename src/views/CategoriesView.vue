@@ -10,11 +10,7 @@
       <v-btn v-if="!isMobile && !billingStore.isReadOnly" data-tour="page-add" color="primary" prepend-icon="mdi-plus" @click="openCreate">{{ t('categories.newCategory') }}</v-btn>
     </div>
 
-    <v-tabs v-model="tab" data-tour="page-tabs" color="primary" class="mb-2">
-      <v-tab value="all">{{ t('common.all') }}</v-tab>
-      <v-tab value="income">{{ t('categories.incomes') }}</v-tab>
-      <v-tab value="expense">{{ t('dashboard.expenses') }}</v-tab>
-    </v-tabs>
+    <KfSegmented v-model="tab" :options="tabOptions" :block="isMobile" class="mb-4" data-tour="page-tabs" />
 
     <v-card v-if="filteredCategories.length === 0" class="pa-8 text-center text-grey">
       <v-icon size="x-large" color="grey">mdi-shape-plus</v-icon>
@@ -115,6 +111,7 @@ import { useCategoriesStore } from '@/stores/categories'
 import { useSnackbar } from '@/stores/snackbar'
 import { useSubscriptionStore } from '@/stores/subscriptions'
 import AIIconButton from '@/components/AIIconButton.vue'
+import KfSegmented from '@/components/ui/KfSegmented.vue'
 
 const { t } = useI18n()
 const { mobile } = useDisplay()
@@ -124,6 +121,11 @@ const store = useCategoriesStore()
 const snackbar = useSnackbar()
 const billingStore = useSubscriptionStore()
 const tab = ref('all')
+const tabOptions = computed(() => [
+  { value: 'all', label: t('common.all') },
+  { value: 'income', label: t('categories.incomes') },
+  { value: 'expense', label: t('dashboard.expenses') },
+])
 const dialog = ref(false)
 const deleteDialog = ref(false)
 const editing = ref(null)

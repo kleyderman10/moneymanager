@@ -134,7 +134,7 @@ html { background: var(--kf-bg-deep); }
   font-weight: 650 !important;
   transition: background var(--kf-motion), box-shadow var(--kf-motion), transform var(--kf-motion);
 }
-.v-btn--size-small, .v-btn--size-x-small { min-height: 0; }
+.v-btn--size-small, .v-btn--size-x-small { min-height: 44px; }
 .v-btn--icon { min-width: 44px; border-radius: 50% !important; }
 .v-btn--variant-elevated, .v-btn--variant-flat { box-shadow: none !important; }
 .v-btn.bg-primary:not(.v-btn--variant-text):not(.v-btn--variant-outlined),
@@ -176,7 +176,7 @@ html { background: var(--kf-bg-deep); }
   background: rgba(4, 22, 31, 0.7);
   box-shadow: none;
 }
-.v-tabs .v-btn { min-height: 38px; border-radius: var(--kf-radius-pill) !important; color: var(--kf-text-secondary); }
+.v-tabs .v-btn { min-height: 44px; border-radius: var(--kf-radius-pill) !important; color: var(--kf-text-secondary); }
 .v-tabs .v-tab--selected {
   background: var(--kf-gradient-primary);
   color: var(--kf-on-primary) !important;
