@@ -147,6 +147,20 @@ export const aiAPI = {
   healthScore: () => api.get('/ai/health-score'),
 }
 
+export const assistantAPI = {
+  interpret: (text, route) => api.post('/assistant/interpret', { text, route }),
+  confirm: (id, params) => api.post(`/assistant/actions/${id}/confirm`, params ? { params } : {}),
+  cancel: (id) => api.delete(`/assistant/actions/${id}`),
+  undo: () => api.post('/assistant/undo'),
+}
+
+export const whatsappAPI = {
+  status: () => api.get('/whatsapp/status'),
+  createLinkCode: () => api.post('/whatsapp/link-code'),
+  unlink: () => api.delete('/whatsapp/link'),
+  updateSettings: (data) => api.patch('/whatsapp/settings', data),
+}
+
 export const statementsAPI = {
   analyze: (data) => api.post('/statements/analyze', data),
   import: (data) => api.post('/statements/import', data),

@@ -216,6 +216,7 @@
           </v-card-text>
         </v-card>
       </v-col>
+      <WhatsAppLinkCard />
       <v-col v-if="biometricSupported" cols="12" md="6">
         <v-card :title="t('profile.biometricAuth')">
           <v-card-text>
@@ -355,6 +356,7 @@ import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import AIConsentDialog from '@/components/AIConsentDialog.vue'
+import WhatsAppLinkCard from '@/components/WhatsAppLinkCard.vue'
 import { useDisplay } from 'vuetify'
 import { useAuthStore } from '@/stores/auth'
 import { authAPI } from '@/api'

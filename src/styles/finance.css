@@ -421,6 +421,26 @@ body {
   color: #718588;
 }
 
+.finance-bottom-nav .finance-bottom-nav__assistant {
+  overflow: visible;
+}
+
+.finance-bottom-nav .finance-bottom-nav__assistant::before {
+  display: none;
+}
+
+.assistant-nav-fab {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--finance-primary);
+  box-shadow: 0 6px 18px rgba(11, 107, 93, 0.35);
+  transform: translateY(-10px);
+}
+
 .finance-bottom-nav .v-btn--active {
   color: var(--finance-primary) !important;
 }

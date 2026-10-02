@@ -1,6 +1,7 @@
 <template>
   <AIChatPanel v-if="!billingStore.requiresSubscription && authStore.hasAcceptedAIConsent" />
-  <AIConsentDialog :visible="showAIConsent" @decline="dismissAIConsent" @accept="dismissAIConsent" />
+  <AIConsentDialog :visible="showAIConsent || assistantConsentRequested" @decline="onConsentDecline" @accept="onConsentAccept" />
+  <AssistantSheet />
 
   <v-navigation-drawer
     v-model="drawer"
@@ -75,6 +76,19 @@
     </template>
 
     <v-spacer v-if="!isMobile" />
+
+    <v-btn
+      v-if="!isMobile"
+      icon="mdi-microphone-outline"
+      variant="tonal"
+      color="primary"
+      size="small"
+      class="mr-2"
+      data-tour="topbar-assistant"
+      :title="`${t('assistant.open')} (Ctrl+Shift+Space)`"
+      :aria-label="t('assistant.open')"
+      @click="openAssistant"
+    />
 
     <v-menu location="bottom end">
       <template #activator="{ props: menuProps }">
@@ -152,7 +166,11 @@
           <v-btn variant="text" color="primary" to="/subscription">{{ t('layout.viewMyPlan') }}</v-btn>
         </template>
       </v-alert>
-      <router-view />
+      <!-- Remounting on dataVersion makes the current view reload its data after the assistant
+           saves something, using its own filters. -->
+      <router-view v-slot="{ Component }">
+        <component :is="Component" :key="assistantStore.dataVersion" />
+      </router-view>
     </v-container>
   </v-main>
 
@@ -172,6 +190,9 @@
       <v-icon>mdi-swap-vertical</v-icon>
       <span>{{ t('nav.transactions') }}</span>
     </v-btn>
+    <v-btn value="assistant" class="finance-bottom-nav__assistant" data-tour="nav-assistant" :aria-label="t('assistant.open')" @click.prevent="openAssistant">
+      <span class="assistant-nav-fab"><v-icon color="white">mdi-microphone</v-icon></span>
+    </v-btn>
     <v-btn value="wallets" to="/wallets" data-tour="nav-wallets">
       <v-icon>mdi-wallet-outline</v-icon>
       <span>{{ t('nav.wallets') }}</span>
@@ -188,7 +209,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
@@ -197,6 +218,8 @@ import { useLocale } from '@/composables/useLocale'
 import { useDisplay } from 'vuetify'
 import AIChatPanel from '@/components/AIChatPanel.vue'
 import AIConsentDialog from '@/components/AIConsentDialog.vue'
+import AssistantSheet from '@/components/assistant/AssistantSheet.vue'
+import { useAssistantStore } from '@/stores/assistant'
 import { useTour } from '@/composables/useTour'
 import { TOUR_BY_ROUTE } from '@/tours/definitions'
 
@@ -240,6 +263,38 @@ const showAIConsent = computed(() => (
   authStore.isAuthenticated && !authStore.hasAcceptedAIConsent && !authStore.aiConsentDismissed
 ))
 const dismissAIConsent = () => authStore.dismissAIConsent()
+
+// Global assistant: available to every user once they accept the AI consent. Without it,
+// the button opens the consent dialog first and the assistant right after accepting.
+const assistantStore = useAssistantStore()
+const assistantConsentRequested = ref(false)
+const openAssistant = () => {
+  // The center button lives inside the bottom nav's toggle group; keep the current tab highlighted.
+  const currentTab = bottomNav.value
+  nextTick(() => { bottomNav.value = currentTab })
+  if (!authStore.hasAcceptedAIConsent) {
+    assistantConsentRequested.value = true
+    return
+  }
+  assistantStore.open()
+}
+const onConsentAccept = () => {
+  dismissAIConsent()
+  if (assistantConsentRequested.value) {
+    assistantConsentRequested.value = false
+    assistantStore.open()
+  }
+}
+const onConsentDecline = () => {
+  dismissAIConsent()
+  assistantConsentRequested.value = false
+}
+const handleAssistantShortcut = (event) => {
+  if (event.ctrlKey && event.shiftKey && event.code === 'Space') {
+    event.preventDefault()
+    openAssistant()
+  }
+}
 
 // Guided tours: the welcome tour on the dashboard, then one per screen on its first visit.
 // They wait for the AI consent decision and the billing status, so they never open on top
@@ -343,6 +398,7 @@ onMounted(async () => {
   // Rotating the device swaps which edge has the notch/Dynamic Island inset.
   window.addEventListener('resize', readSafeAreaTop)
   window.addEventListener('billing:read-only', handleReadOnlyStatus)
+  window.addEventListener('keydown', handleAssistantShortcut)
   if (!authStore.user && localStorage.getItem('accessToken')) authStore.fetchProfile()
   await billingStore.fetchStatus(true)
 })
@@ -350,5 +406,6 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   window.removeEventListener('resize', readSafeAreaTop)
   window.removeEventListener('billing:read-only', handleReadOnlyStatus)
+  window.removeEventListener('keydown', handleAssistantShortcut)
 })
 </script>
