@@ -4,11 +4,9 @@
       <v-col cols="12" md="7" class="auth-story d-none d-md-flex">
         <div class="auth-story__content">
           <div class="finance-brand pa-0">
-            <div class="finance-brand__mark" aria-hidden="true">
-              <v-icon size="25">mdi-chart-timeline-variant-shimmer</v-icon>
-            </div>
+            <img src="/knexura-flow-icon.webp" alt="" aria-hidden="true" class="finance-brand__logo" />
             <div>
-              <div class="finance-brand__name">{{ t('layout.brandName') }}</div>
+              <div class="finance-brand__name kf-brand-word">Knexura <span>Flow</span></div>
               <div class="finance-brand__tagline">{{ t('layout.brandTagline') }}</div>
             </div>
           </div>
@@ -25,11 +23,9 @@
       <v-col cols="12" md="5" class="auth-form-side">
         <v-card class="auth-card">
           <div class="auth-card__mobile-brand">
-            <div class="finance-brand__mark" aria-hidden="true">
-              <v-icon size="23">mdi-chart-timeline-variant-shimmer</v-icon>
-            </div>
+            <img src="/knexura-flow-icon.webp" alt="" aria-hidden="true" class="finance-brand__logo" />
             <div>
-              <div class="finance-brand__name">{{ t('layout.brandName') }}</div>
+              <div class="finance-brand__name kf-brand-word">Knexura <span>Flow</span></div>
               <div class="finance-brand__tagline">{{ t('layout.brandTagline') }}</div>
             </div>
           </div>
@@ -53,7 +49,7 @@
           </v-alert>
 
           <v-form v-if="!awaitingCode" @submit.prevent="handleRegister">
-            <label class="text-caption font-weight-bold d-block mb-2">{{ t('profile.name') }}</label>
+            <label class="auth-label">{{ t('profile.name') }}</label>
             <v-text-field
               v-model="name"
               :placeholder="t('auth.namePlaceholder')"
@@ -65,7 +61,7 @@
               class="mb-2"
             />
 
-            <label class="text-caption font-weight-bold d-block mb-2">{{ t('auth.email') }}</label>
+            <label class="auth-label">{{ t('auth.email') }}</label>
             <v-text-field
               v-model="email"
               placeholder="nombre@correo.com"
@@ -78,7 +74,7 @@
               class="mb-2"
             />
 
-            <label class="text-caption font-weight-bold d-block mb-2">{{ t('auth.password') }}</label>
+            <label class="auth-label">{{ t('auth.password') }}</label>
             <v-text-field
               v-model="password"
               :placeholder="t('auth.minChars')"
@@ -93,7 +89,7 @@
               @click:append-inner="showPassword = !showPassword"
             />
 
-            <label class="text-caption font-weight-bold d-block mb-2">{{ t('auth.confirmPassword') }}</label>
+            <label class="auth-label">{{ t('auth.confirmPassword') }}</label>
             <v-text-field
               v-model="confirmPassword"
               :placeholder="t('auth.repeatPassword')"
@@ -111,7 +107,7 @@
           </v-form>
 
           <v-form v-else @submit.prevent="handleVerification">
-            <label class="text-caption font-weight-bold d-block mb-2">{{ t('auth.verificationCode') }}</label>
+            <label class="auth-label">{{ t('auth.verificationCode') }}</label>
             <v-text-field
               v-model="code"
               placeholder="000000"

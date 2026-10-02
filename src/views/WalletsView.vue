@@ -17,10 +17,15 @@
       <v-btn v-if="!billingStore.isReadOnly" color="primary" variant="text" class="mt-2" @click="openCreate">{{ t('wallets.createManualAccount') }}</v-btn>
     </v-card>
 
-    <v-card v-if="store.wallets.length > 0" class="net-worth-card mb-4" data-tour="wallets-networth">
+    <v-card v-if="store.wallets.length > 0" class="net-worth-card kf-card-hero mb-4" data-tour="wallets-networth">
       <v-card-text class="pa-6">
-        <div class="net-worth-card__label">{{ t('wallets.totalEquity') }}</div>
-        <div class="net-worth-card__amount">{{ money(netWorth) }}</div>
+        <div class="d-flex align-start justify-space-between ga-3">
+          <div>
+            <div class="net-worth-card__label">{{ t('wallets.totalEquity') }}</div>
+            <div class="net-worth-card__amount kf-amount">{{ money(netWorth) }}</div>
+          </div>
+          <span class="kf-icon-tile kf-icon-tile--lg"><v-icon size="26">mdi-database-outline</v-icon></span>
+        </div>
         <div class="net-worth-card__bar">
           <div class="net-worth-card__bar-positive" :style="{ width: `${netWorthPositiveShare}%` }" />
           <div class="net-worth-card__bar-negative" :style="{ width: `${100 - netWorthPositiveShare}%` }" />
@@ -34,11 +39,11 @@
     <v-row>
       <v-col v-for="wallet in store.wallets" :key="wallet._id" cols="12" sm="6" md="4">
         <v-card>
-          <v-card-title :class="isMobile ? 'text-body-1' : undefined" class="d-flex align-center">
-            <v-avatar v-if="wallet.institution?.logo || wallet.institutionLogo" size="32" class="mr-2">
+          <v-card-title :class="isMobile ? 'text-body-1' : undefined" class="d-flex align-center ga-3 wallet-card__title">
+            <v-avatar v-if="wallet.institution?.logo || wallet.institutionLogo" size="44" class="wallet-card__logo">
               <img :src="wallet.institution?.logo || wallet.institutionLogo" :alt="wallet.institution?.name || wallet.institutionName || t('wallets.financialInstitution')" />
             </v-avatar>
-            <v-icon v-else :color="walletColors[wallet.type]" class="mr-2">{{ walletIcons[wallet.type] }}</v-icon>
+            <span v-else class="kf-icon-tile kf-icon-tile--lg"><v-icon :color="walletColors[wallet.type]">{{ walletIcons[wallet.type] }}</v-icon></span>
             <div class="min-w-0">
               <div class="text-truncate">{{ wallet.name }}</div>
               <div class="text-caption text-medium-emphasis text-truncate">{{ wallet.institution?.name || wallet.institutionName || walletLabels[wallet.accountKind] || walletLabels[wallet.type] }}</div>
@@ -47,7 +52,7 @@
           <v-card-text>
             <template v-if="wallet.type === 'credit'">
               <div class="text-caption text-medium-emphasis">{{ t('wallets.available') }}</div>
-              <div :class="isMobile ? 'text-h5' : 'text-h4'">{{ walletMoney(wallet.creditSummary?.availableCredit, wallet.currency) }}</div>
+              <div class="wallet-card__amount kf-amount">{{ walletMoney(wallet.creditSummary?.availableCredit, wallet.currency) }}</div>
               <v-progress-linear
                 v-if="wallet.creditSummary?.creditLimit"
                 class="mt-3"
@@ -60,24 +65,25 @@
                 {{ t('wallets.usedOf', { used: walletMoney(wallet.creditSummary.usedCredit, wallet.currency), limit: walletMoney(wallet.creditSummary.creditLimit, wallet.currency), percent: percent(wallet.creditSummary.utilizationRate) }) }}
               </div>
               <div class="credit-metrics mt-3">
-                <div><span>{{ t('wallets.estMinPayment') }}</span><strong>{{ walletMoney(wallet.creditSummary?.minimumPayment, wallet.currency) }}</strong></div>
-                <div><span>{{ t('wallets.estMonthlyInterest') }}</span><strong>{{ walletMoney(wallet.creditSummary?.estimatedInterest, wallet.currency) }}</strong></div>
-                <div><span>{{ t('wallets.managementFee') }} ({{ wallet.managementFeePeriod === 'annual' ? t('wallets.annual') : t('wallets.monthly') }})</span><strong>{{ walletMoney(wallet.creditSummary?.managementFee, wallet.currency) }}</strong></div>
-                <div><span>{{ t('wallets.cyclePurchases') }}</span><strong>{{ walletMoney(wallet.creditSummary?.cyclePurchases, wallet.currency) }}</strong></div>
-                <div><span>{{ t('wallets.cyclePayments') }}</span><strong>{{ walletMoney(wallet.creditSummary?.cyclePayments, wallet.currency) }}</strong></div>
+                <div><v-icon size="18">mdi-calendar-text-outline</v-icon><span>{{ t('wallets.estMinPayment') }}</span><strong>{{ walletMoney(wallet.creditSummary?.minimumPayment, wallet.currency) }}</strong></div>
+                <div><v-icon size="18">mdi-percent-outline</v-icon><span>{{ t('wallets.estMonthlyInterest') }}</span><strong>{{ walletMoney(wallet.creditSummary?.estimatedInterest, wallet.currency) }}</strong></div>
+                <div><v-icon size="18">mdi-credit-card-outline</v-icon><span>{{ t('wallets.managementFee') }} ({{ wallet.managementFeePeriod === 'annual' ? t('wallets.annual') : t('wallets.monthly') }})</span><strong>{{ walletMoney(wallet.creditSummary?.managementFee, wallet.currency) }}</strong></div>
+                <div><v-icon size="18">mdi-cart-outline</v-icon><span>{{ t('wallets.cyclePurchases') }}</span><strong>{{ walletMoney(wallet.creditSummary?.cyclePurchases, wallet.currency) }}</strong></div>
+                <div><v-icon size="18">mdi-swap-horizontal</v-icon><span>{{ t('wallets.cyclePayments') }}</span><strong>{{ walletMoney(wallet.creditSummary?.cyclePayments, wallet.currency) }}</strong></div>
               </div>
               <div v-if="wallet.creditSummary" class="credit-dates mt-3">
                 <div><v-icon size="16">mdi-calendar-refresh</v-icon> {{ t('wallets.cutOff') }}: <strong>{{ formatDate(wallet.creditSummary.nextCutOffDate) }}</strong></div>
                 <div><v-icon size="16">mdi-calendar-check</v-icon> {{ t('wallets.payment') }}: <strong>{{ formatDate(wallet.creditSummary.nextPaymentDate) }}</strong></div>
               </div>
-              <v-alert v-if="wallet.creditSummary?.advice?.length" class="mt-3" type="info" variant="tonal" density="compact">
+              <v-alert v-if="wallet.creditSummary?.advice?.length" class="mt-3 kf-advice" color="primary" icon="mdi-lightbulb-on-outline" variant="tonal" density="compact">
                 <ul class="credit-advice">
                   <li v-for="tip in wallet.creditSummary.advice.slice(0, 2)" :key="tip">{{ tip }}</li>
                 </ul>
               </v-alert>
             </template>
             <template v-else>
-              <div :class="[isMobile ? 'text-h5' : 'text-h4', wallet.balance < 0 ? 'text-error' : null]">{{ walletMoney(wallet.balance, wallet.currency) }}</div>
+              <div class="text-caption text-medium-emphasis">{{ t('wallets.balance') }}</div>
+              <div class="wallet-card__amount kf-amount" :class="{ 'kf-expense': wallet.balance < 0 }">{{ walletMoney(wallet.balance, wallet.currency) }}</div>
               <div class="d-flex flex-wrap ga-1 mt-1">
                 <v-chip size="small">{{ walletLabels[wallet.accountKind] || walletLabels[wallet.type] }}</v-chip>
                 <v-chip v-if="wallet.balance < 0" size="small" color="error" variant="tonal" prepend-icon="mdi-alert-circle-outline">{{ t('wallets.overdrawnSingle') }}</v-chip>
@@ -87,8 +93,8 @@
           <v-card-actions>
             <v-btn v-if="!billingStore.isReadOnly" size="small" variant="text" prepend-icon="mdi-swap-horizontal" data-tour="wallets-transfer" @click="openTransfer(wallet)">{{ t('wallets.transfer') }}</v-btn>
             <v-spacer />
-            <v-btn v-if="!billingStore.isReadOnly" size="small" variant="text" icon="mdi-pencil" @click="openEdit(wallet)" />
-            <v-btn v-if="!billingStore.isReadOnly" size="small" variant="text" icon="mdi-delete" color="error" @click="confirmDelete(wallet)" />
+            <v-btn v-if="!billingStore.isReadOnly" size="small" variant="text" icon="mdi-pencil-outline" :aria-label="t('common.edit')" @click="openEdit(wallet)" />
+            <v-btn v-if="!billingStore.isReadOnly" size="small" variant="text" icon="mdi-delete-outline" color="error" :aria-label="t('common.delete')" @click="confirmDelete(wallet)" />
           </v-card-actions>
         </v-card>
       </v-col>
@@ -178,7 +184,7 @@
         <v-card-actions><v-spacer /><v-btn variant="text" @click="deleteDialog = false">{{ t('common.cancel') }}</v-btn><v-btn color="error" @click="doDelete">{{ t('common.delete') }}</v-btn></v-card-actions></v-card>
     </v-dialog>
 
-    <v-btn v-if="isMobile && !billingStore.isReadOnly" icon="mdi-plus" color="primary" size="x-large" class="finance-fab" data-tour="page-add" @click="openCreate" />
+    <v-btn v-if="isMobile && !billingStore.isReadOnly" icon="mdi-plus" color="primary" size="x-large" class="finance-fab" :aria-label="t('wallets.newAccount')" data-tour="page-add" @click="openCreate" />
   </div>
 </template>
 
@@ -374,22 +380,16 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.net-worth-card {
-  border: 0 !important;
-  background: #0C2630 !important;
-  color: #fff;
-}
-
 .net-worth-card__label {
-  color: #a8c8c4;
-  font-size: 0.78rem;
-  font-weight: 650;
+  color: var(--kf-text-secondary);
+  font-size: 0.84rem;
+  font-weight: 600;
 }
 
 .net-worth-card__amount {
-  margin: 7px 0 16px;
-  font-size: clamp(1.8rem, 3.6vw, 2.6rem);
-  font-weight: 780;
+  margin: 6px 0 18px;
+  color: var(--kf-text);
+  font-size: clamp(1.9rem, 4vw, 2.6rem);
   letter-spacing: -0.03em;
 }
 
@@ -398,61 +398,87 @@ onMounted(async () => {
   overflow: hidden;
   height: 8px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .net-worth-card__bar-positive {
-  background: #4FB587;
+  background: var(--kf-gradient-primary);
 }
 
 .net-worth-card__bar-negative {
-  background: #D9634F;
+  background: var(--kf-gold-bright);
 }
 
 .net-worth-card__alert {
-  color: #ffd9d0 !important;
-  background: rgba(217, 99, 79, 0.22) !important;
+  color: var(--kf-text) !important;
+  background: var(--kf-tint-danger) !important;
+}
+
+.wallet-card__title {
+  padding: 18px 18px 6px !important;
+}
+
+.wallet-card__logo {
+  border: 1px solid var(--kf-border-subtle);
+}
+
+.wallet-card__amount {
+  margin-top: 2px;
+  color: var(--kf-text);
+  font-size: 1.75rem;
+  letter-spacing: -0.02em;
 }
 
 .form-hint {
-  color: var(--finance-muted);
+  color: var(--kf-text-secondary);
   font-size: 0.74rem;
 }
 
+/* Card details as label/value rows (mockup "Cuentas"). */
 .credit-metrics {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  overflow: hidden;
+  border: 1px solid var(--kf-border-subtle);
+  border-radius: var(--kf-radius);
+  background: rgba(4, 22, 31, 0.35);
 }
 
 .credit-metrics > div {
-  padding: 8px;
-  border-radius: 10px;
-  background: var(--finance-soft);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 8px 12px;
+}
+
+.credit-metrics > div + div {
+  border-top: 1px solid var(--kf-divider);
+}
+
+.credit-metrics .v-icon {
+  color: var(--kf-text-secondary);
 }
 
 .credit-metrics span {
-  display: block;
-  color: var(--finance-muted);
-  font-size: 0.68rem;
+  flex: 1 1 auto;
+  color: var(--kf-text-secondary);
+  font-size: 0.8rem;
 }
 
 .credit-metrics strong {
-  display: block;
-  margin-top: 3px;
-  color: var(--finance-ink);
-  font-size: 0.85rem;
+  color: var(--kf-text);
+  font-size: 0.88rem;
+  font-variant-numeric: tabular-nums;
 }
 
 .credit-dates {
   display: grid;
   gap: 5px;
-  color: var(--finance-muted);
+  color: var(--kf-text-secondary);
   font-size: 0.78rem;
 }
 
 .credit-dates strong {
-  color: var(--finance-ink);
+  color: var(--kf-text);
 }
 
 .credit-advice {
@@ -461,9 +487,4 @@ onMounted(async () => {
   font-size: 0.78rem;
 }
 
-@media (max-width: 600px) {
-  .credit-metrics {
-    grid-template-columns: 1fr;
-  }
-}
 </style>

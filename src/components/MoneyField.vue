@@ -9,6 +9,8 @@
         inputmode="numeric"
         autocomplete="off"
         :placeholder="placeholder"
+        :aria-label="label || displayPrefix"
+        :aria-required="required"
         :value="displayValue"
         @input="onInput"
       />
@@ -83,7 +85,7 @@ const onInput = (event) => {
 
 .money-field__required {
   margin-left: 2px;
-  color: #C1443A;
+  color: var(--knexura-danger);
 }
 
 .money-field__row {
@@ -91,7 +93,7 @@ const onInput = (event) => {
   align-items: baseline;
   gap: 6px;
   padding: 6px 2px;
-  border-bottom: 2px solid rgba(12, 38, 48, 0.85);
+  border-bottom: 2px solid var(--knexura-border);
 }
 
 .money-field__prefix {
@@ -100,6 +102,7 @@ const onInput = (event) => {
 }
 
 .money-field__input {
+  min-height: 44px;
   flex: 1 1 auto;
   min-width: 0;
   border: 0;
@@ -111,7 +114,7 @@ const onInput = (event) => {
 }
 
 .money-field__input::placeholder {
-  color: rgba(12, 38, 48, 0.28);
+  color: var(--knexura-text-secondary);
 }
 
 .money-field--hero .money-field__prefix {

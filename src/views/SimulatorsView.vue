@@ -6,12 +6,7 @@
       <p class="page-intro__subtitle">{{ t('simulators.subtitle') }}</p>
     </div>
 
-    <v-tabs v-model="tab" data-tour="page-tabs" color="primary" class="mb-4">
-      <v-tab value="loan" prepend-icon="mdi-cash-multiple">{{ t('nav.credits') }}</v-tab>
-      <v-tab value="cdt" prepend-icon="mdi-bank-outline">CDT</v-tab>
-      <v-tab value="savings" prepend-icon="mdi-piggy-bank-outline">{{ t('simulators.savings') }}</v-tab>
-      <v-tab value="capacity" prepend-icon="mdi-finance">{{ t('layout.creditCapacity') }}</v-tab>
-    </v-tabs>
+    <KfSegmented v-model="tab" :options="tabOptions" :block="isMobile" class="mb-4" data-tour="page-tabs" />
 
     <v-window v-model="tab">
       <v-window-item value="capacity">
@@ -512,6 +507,7 @@ import { useSnackbar } from '@/stores/snackbar'
 import { useLocale } from '@/composables/useLocale'
 import InvestmentProjectionResults from '@/components/InvestmentProjectionResults.vue'
 import CircularGauge from '@/components/CircularGauge.vue'
+import KfSegmented from '@/components/ui/KfSegmented.vue'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Filler, Tooltip, Legend)
 
@@ -523,6 +519,12 @@ const route = useRoute()
 const { mobile } = useDisplay()
 const isMobile = computed(() => mobile.value)
 const tab = ref('loan')
+const tabOptions = computed(() => [
+  { value: 'loan', label: t('nav.credits'), icon: isMobile.value ? undefined : 'mdi-cash-multiple' },
+  { value: 'cdt', label: 'CDT', icon: isMobile.value ? undefined : 'mdi-bank-outline' },
+  { value: 'savings', label: t('simulators.savings'), icon: isMobile.value ? undefined : 'mdi-piggy-bank-outline' },
+  { value: 'capacity', label: t('simulators.capacityShort'), icon: isMobile.value ? undefined : 'mdi-finance' },
+])
 const loading = ref(false)
 const capacityLoading = ref(false)
 const cardLoading = ref(false)
@@ -618,7 +620,7 @@ const loanChartData = computed(() => ({
   datasets: [{
     label: t('simulators.outstandingBalance'),
     data: loanResult.value.schedule.map((row) => row.balance),
-    borderColor: '#0b6b5d',
+    borderColor: '#22D3C5',
     backgroundColor: 'rgba(11, 107, 93, 0.12)',
     fill: true,
     pointRadius: loanResult.value.termMonths > 60 ? 0 : 2,

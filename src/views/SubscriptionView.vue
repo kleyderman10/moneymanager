@@ -171,6 +171,17 @@
           <v-card-text v-if="!billingStore.payments.length" class="text-center text-medium-emphasis py-8">
             {{ t('subscription.noChargesYet') }}
           </v-card-text>
+          <!-- Phones: one row per charge instead of a four-column table. -->
+          <v-card-text v-else-if="isMobile" class="pt-0">
+            <div v-for="payment in billingStore.payments" :key="payment._id" class="kf-row">
+              <span class="kf-icon-tile"><v-icon size="20">mdi-receipt-text-outline</v-icon></span>
+              <div class="kf-row__body">
+                <div class="kf-row__title">{{ formatCurrency(payment.amount, payment.currency) }}</div>
+                <div class="kf-row__meta">{{ formatDate(payment.paidAt || payment.createdAt) }} · {{ payment.providerPaymentId || payment.providerInvoiceId }}</div>
+              </div>
+              <v-chip :color="paymentColor(payment.status)" size="small" variant="tonal">{{ paymentLabel(payment.status) }}</v-chip>
+            </div>
+          </v-card-text>
           <v-table v-else>
             <thead>
               <tr>
@@ -397,7 +408,7 @@ onMounted(async () => {
 <style scoped>
 .subscription-card {
   overflow: hidden;
-  background: radial-gradient(circle at 100% 0, rgba(21, 154, 114, 0.1), transparent 22rem), #fff;
+  background: radial-gradient(circle at 100% 0, rgba(21, 154, 114, 0.1), transparent 22rem), var(--knexura-surface);
 }
 
 .subscription-price {

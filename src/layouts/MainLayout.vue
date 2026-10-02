@@ -3,92 +3,53 @@
   <AIConsentDialog :visible="showAIConsent || assistantConsentRequested" @decline="onConsentDecline" @accept="onConsentAccept" />
   <AssistantSheet />
 
-  <v-navigation-drawer
+  <AppDrawer
     v-model="drawer"
-    app
-    :temporary="isMobile"
-    :permanent="!isMobile"
-    :width="272"
-    class="finance-sidebar"
-    data-tour="nav-sidebar"
-  >
-    <template #prepend>
-      <div class="finance-brand">
-        <img src="/icon.svg" alt="" aria-hidden="true" class="finance-brand__logo" />
-        <div>
-          <div class="finance-brand__name">{{ t('layout.brandName') }}</div>
-          <div class="finance-brand__tagline">{{ t('layout.brandTagline') }}</div>
-        </div>
-      </div>
-    </template>
+    :mobile="isMobile"
+    :rail="sidebarCollapsed"
+    :user="authStore.user"
+    :is-admin="authStore.isAdmin"
+    @logout="handleLogout"
+  />
 
-    <v-list nav density="comfortable">
-      <v-list-subheader>{{ t('nav.overview') }}</v-list-subheader>
-      <v-list-item prepend-icon="mdi-view-dashboard-outline" :title="t('nav.dashboard')" value="dashboard" to="/" exact />
-      <v-list-item prepend-icon="mdi-swap-vertical" :title="t('nav.transactions')" value="transactions" to="/transactions" data-tour="nav-transactions" />
-      <v-list-item prepend-icon="mdi-chart-donut" :title="t('nav.reports')" value="reports" to="/reports" />
-
-      <v-list-subheader class="mt-3" data-tour="nav-planning">{{ t('nav.planning') }}</v-list-subheader>
-      <v-list-item prepend-icon="mdi-wallet-outline" :title="t('nav.wallets')" value="wallets" to="/wallets" data-tour="nav-wallets" />
-      <v-list-item prepend-icon="mdi-bank-minus" :title="t('nav.credits')" value="credits" to="/credits" />
-      <v-list-item prepend-icon="mdi-chart-pie-outline" :title="t('nav.budgets')" value="budgets" to="/budgets" />
-      <v-list-item prepend-icon="mdi-target" :title="t('nav.goals')" value="goals" to="/goals" />
-      <v-list-item prepend-icon="mdi-calculator-variant-outline" :title="t('nav.simulators')" value="simulators" to="/simulators?tab=capacity" />
-      <v-list-item prepend-icon="mdi-sync" :title="t('nav.recurring')" value="recurring" to="/recurring" />
-      <v-list-item prepend-icon="mdi-shape-outline" :title="t('nav.categories')" value="categories" to="/categories" />
-
-      <v-list-subheader class="mt-3">{{ t('nav.account') }}</v-list-subheader>
-      <v-list-item prepend-icon="mdi-account-outline" :title="t('nav.profile')" value="profile" to="/profile" />
-      <v-list-item prepend-icon="mdi-credit-card-outline" :title="t('nav.subscription')" value="subscription" to="/subscription" />
-      <v-list-item prepend-icon="mdi-information-outline" :title="t('nav.about')" value="about" to="/about" />
-      <v-list-item prepend-icon="mdi-lifebuoy" :title="t('nav.help')" value="help" to="/help" />
-
-      <template v-if="authStore.isAdmin">
-        <v-list-subheader class="mt-3">{{ t('nav.adminSection') }}</v-list-subheader>
-        <v-list-item prepend-icon="mdi-shield-account-outline" :title="t('nav.admin')" value="admin" to="/admin" />
-      </template>
-    </v-list>
-
-    <template #append>
-      <div class="finance-sidebar__footer d-flex align-center ga-3">
-        <v-avatar size="34" class="finance-avatar">{{ initials }}</v-avatar>
-        <div class="finance-sidebar__user flex-grow-1">
-          <strong>{{ authStore.user?.name || t('layout.myAccount') }}</strong>
-          <span>{{ authStore.user?.email || t('layout.personalFinance') }}</span>
-        </div>
-        <v-btn icon="mdi-logout" size="x-small" variant="text" :title="t('layout.logout')" @click="handleLogout" />
-      </div>
-    </template>
-  </v-navigation-drawer>
-
-  <v-app-bar app :height="64 + safeAreaTop" class="finance-topbar" :elevation="isMobile ? 1 : 0">
+  <v-app-bar app :height="64 + safeAreaTop" class="finance-topbar kf-topbar" :elevation="0">
+    <!-- Desktop: rail toggle, greeting, voice, help and profile. -->
     <template v-if="!isMobile">
-      <div class="ml-4">
+      <v-btn :icon="sidebarCollapsed ? 'mdi-menu' : 'mdi-menu-open'" :aria-label="t('layout.toggleNavigation')" :aria-expanded="!sidebarCollapsed" variant="text" @click="sidebarCollapsed = !sidebarCollapsed" />
+      <div class="ml-3">
         <div class="topbar-greeting">{{ greeting }}{{ firstName ? `, ${firstName}` : '' }}</div>
         <div class="topbar-date">{{ currentDate }}</div>
       </div>
+      <v-spacer />
+      <VoiceActionButton variant="compact" class="mr-3" @voice-click="openAssistant" />
     </template>
-    
+
+    <!-- Mobile: back (or avatar on the main tabs), centered title, help. The voice action
+         lives in the bottom navigation. -->
     <template v-else>
-      <div class="mobile-app-title d-flex w-100 justify-center align-center">
-        <span class="font-weight-bold text-subtitle-1">{{ currentRouteTitle }}</span>
+      <v-btn
+        v-if="isRootTab"
+        class="kf-topbar__lead ml-2"
+        variant="text"
+        icon
+        to="/profile"
+        :aria-label="t('layout.openProfile')"
+      >
+        <v-avatar size="36" class="kf-avatar">{{ initials }}</v-avatar>
+      </v-btn>
+      <v-btn
+        v-else
+        class="kf-topbar__lead ml-2"
+        icon="mdi-arrow-left"
+        variant="tonal"
+        :aria-label="t('common.back')"
+        @click="goBack"
+      />
+      <div class="mobile-app-title kf-topbar__title">
+        <span>{{ currentRouteTitle }}</span>
       </div>
+      <v-spacer />
     </template>
-
-    <v-spacer v-if="!isMobile" />
-
-    <v-btn
-      v-if="!isMobile"
-      icon="mdi-microphone-outline"
-      variant="tonal"
-      color="primary"
-      size="small"
-      class="mr-2"
-      data-tour="topbar-assistant"
-      :title="`${t('assistant.open')} (Ctrl+Shift+Space)`"
-      :aria-label="t('assistant.open')"
-      @click="openAssistant"
-    />
 
     <v-menu location="bottom end">
       <template #activator="{ props: menuProps }">
@@ -96,8 +57,7 @@
           v-bind="menuProps"
           icon="mdi-help-circle-outline"
           variant="text"
-          :size="isMobile ? 'default' : 'small'"
-          :class="isMobile ? 'order-last ms-auto mr-2' : 'mr-1'"
+          :class="isMobile ? 'mr-2' : 'mr-1'"
           data-tour="topbar-help"
           :aria-label="t('help.menuLabel')"
         />
@@ -120,20 +80,19 @@
     </v-menu>
 
     <v-btn
-      class="topbar-profile"
-      :class="{ 'mr-2': true, 'px-0': isMobile }"
-      :variant="isMobile ? 'text' : 'flat'"
+      v-if="!isMobile"
+      class="topbar-profile mr-4"
+      variant="flat"
       to="/profile"
       :aria-label="t('layout.openProfile')"
-      :icon="isMobile"
     >
-      <v-avatar size="31" class="finance-avatar" :class="{ 'mr-sm-2': !isMobile }">{{ initials }}</v-avatar>
-      <span v-if="!isMobile" class="topbar-profile__name">{{ firstName || t('layout.profile') }}</span>
-      <v-icon v-if="!isMobile" size="17" class="ml-1">mdi-chevron-down</v-icon>
+      <v-avatar size="31" class="kf-avatar mr-2">{{ initials }}</v-avatar>
+      <span class="topbar-profile__name">{{ firstName || t('layout.profile') }}</span>
+      <v-icon size="17" class="ml-1">mdi-chevron-down</v-icon>
     </v-btn>
   </v-app-bar>
 
-  <v-main class="finance-main">
+  <v-main class="finance-main" :class="{ 'finance-main--with-nav': isMobile }">
     <v-container fluid class="finance-content">
       <v-alert
         v-if="showReadOnlyBanner"
@@ -174,42 +133,16 @@
     </v-container>
   </v-main>
 
-  <v-bottom-navigation
+  <MobileBottomNavigation
     v-if="isMobile"
-    v-model="bottomNav"
-    app
-    grow
-    class="finance-bottom-nav"
-    data-tour="nav-bottom"
-  >
-    <v-btn value="dashboard" to="/" exact>
-      <v-icon>mdi-view-dashboard-outline</v-icon>
-      <span>{{ t('nav.dashboard') }}</span>
-    </v-btn>
-    <v-btn value="transactions" to="/transactions" data-tour="nav-transactions">
-      <v-icon>mdi-swap-vertical</v-icon>
-      <span>{{ t('nav.transactions') }}</span>
-    </v-btn>
-    <v-btn value="assistant" class="finance-bottom-nav__assistant" data-tour="nav-assistant" :aria-label="t('assistant.open')" @click.prevent="openAssistant">
-      <span class="assistant-nav-fab"><v-icon color="white">mdi-microphone</v-icon></span>
-    </v-btn>
-    <v-btn value="wallets" to="/wallets" data-tour="nav-wallets">
-      <v-icon>mdi-wallet-outline</v-icon>
-      <span>{{ t('nav.wallets') }}</span>
-    </v-btn>
-    <v-btn value="reports" to="/reports">
-      <v-icon>mdi-chart-donut</v-icon>
-      <span>{{ t('nav.reports') }}</span>
-    </v-btn>
-    <v-btn value="more" data-tour="nav-menu" @click.prevent="drawer = !drawer">
-      <v-icon>mdi-menu</v-icon>
-      <span>{{ t('nav.menu') }}</span>
-    </v-btn>
-  </v-bottom-navigation>
+    :menu-open="drawer"
+    @voice-click="openAssistant"
+    @menu-click="drawer = !drawer"
+  />
 </template>
 
 <script setup>
-import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
@@ -219,6 +152,9 @@ import { useDisplay } from 'vuetify'
 import AIChatPanel from '@/components/AIChatPanel.vue'
 import AIConsentDialog from '@/components/AIConsentDialog.vue'
 import AssistantSheet from '@/components/assistant/AssistantSheet.vue'
+import AppDrawer from '@/components/navigation/AppDrawer.vue'
+import MobileBottomNavigation from '@/components/navigation/MobileBottomNavigation.vue'
+import VoiceActionButton from '@/components/navigation/VoiceActionButton.vue'
 import { useAssistantStore } from '@/stores/assistant'
 import { useTour } from '@/composables/useTour'
 import { TOUR_BY_ROUTE } from '@/tours/definitions'
@@ -229,6 +165,7 @@ const { mobile } = useDisplay()
 const isMobile = computed(() => mobile.value)
 
 const drawer = ref(!mobile.value)
+const sidebarCollapsed = ref(false)
 
 // Vuetify sizes the app bar (and reserves the matching space above the page content)
 // from this `height` prop, not from the element's actual rendered size — so on iOS,
@@ -253,7 +190,6 @@ const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
 const billingStore = useSubscriptionStore()
-const bottomNav = ref('dashboard')
 
 // Shown once right after login/registration so the user can decide before any AI
 // feature (scan, statement import, chat, suggestions) is reachable. If declined, it
@@ -269,9 +205,6 @@ const dismissAIConsent = () => authStore.dismissAIConsent()
 const assistantStore = useAssistantStore()
 const assistantConsentRequested = ref(false)
 const openAssistant = () => {
-  // The center button lives inside the bottom nav's toggle group; keep the current tab highlighted.
-  const currentTab = bottomNav.value
-  nextTick(() => { bottomNav.value = currentTab })
   if (!authStore.hasAcceptedAIConsent) {
     assistantConsentRequested.value = true
     return
@@ -378,11 +311,13 @@ const formattedPlanPrice = computed(() => money(
   billingStore.status?.plan?.currency || undefined,
 ))
 
-watch(() => route.path, (path) => {
-  const segment = path.split('/')[1] || 'dashboard'
-  const visibleTabs = ['dashboard', 'transactions', 'wallets', 'reports']
-  bottomNav.value = visibleTabs.includes(segment) ? segment : 'more'
-}, { immediate: true })
+// The main tabs show the avatar in the mobile header; every other screen shows "back".
+const ROOT_TABS = ['Dashboard', 'Transactions', 'Reports']
+const isRootTab = computed(() => ROOT_TABS.includes(route.name))
+const goBack = () => {
+  if (window.history.state?.back) router.back()
+  else router.push('/')
+}
 
 watch(mobile, (value) => { drawer.value = !value })
 

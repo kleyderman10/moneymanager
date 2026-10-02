@@ -10,53 +10,46 @@
       {{ admin.error }}
     </v-alert>
 
-    <v-tabs v-model="tab" class="mb-5">
-      <v-tab value="overview">{{ t('admin.overview') }}</v-tab>
-      <v-tab value="users">{{ t('admin.users') }}</v-tab>
-      <v-tab value="subscriptions">{{ t('admin.subscriptions') }}</v-tab>
-    </v-tabs>
+    <KfSegmented v-model="tab" :options="tabOptions" :block="isMobile" class="mb-5" />
 
     <v-window v-model="tab">
       <v-window-item value="overview">
-        <v-row v-if="admin.overview">
+        <v-row v-if="admin.overview" dense>
           <v-col cols="6" md="3">
-            <v-card class="pa-4">
-              <div class="text-caption text-medium-emphasis">{{ t('admin.totalUsers') }}</div>
-              <div class="text-h4 font-weight-bold">{{ admin.overview.users.total }}</div>
-            </v-card>
+            <KpiCard :label="t('admin.totalUsers')" :value="admin.overview.users.total" icon="mdi-account-outline" tone="primary" />
           </v-col>
           <v-col cols="6" md="3">
-            <v-card class="pa-4">
-              <div class="text-caption text-medium-emphasis">{{ t('admin.activeUsers') }}</div>
-              <div class="text-h4 font-weight-bold text-success">{{ admin.overview.users.active }}</div>
-            </v-card>
+            <KpiCard :label="t('admin.activeUsers')" :value="admin.overview.users.active" icon="mdi-account-group-outline" tone="income" />
           </v-col>
           <v-col cols="6" md="3">
-            <v-card class="pa-4">
-              <div class="text-caption text-medium-emphasis">{{ t('admin.deactivatedUsers') }}</div>
-              <div class="text-h4 font-weight-bold text-error">{{ admin.overview.users.inactive }}</div>
-            </v-card>
+            <KpiCard :label="t('admin.deactivatedUsers')" :value="admin.overview.users.inactive" icon="mdi-account-cancel-outline" tone="expense" />
           </v-col>
           <v-col cols="6" md="3">
-            <v-card class="pa-4">
-              <div class="text-caption text-medium-emphasis">{{ t('admin.admins') }}</div>
-              <div class="text-h4 font-weight-bold">{{ admin.overview.users.admins }}</div>
-            </v-card>
+            <KpiCard :label="t('admin.admins')" :value="admin.overview.users.admins" icon="mdi-crown-outline" tone="gold" />
           </v-col>
         </v-row>
 
-        <v-card v-if="admin.overview" class="mt-5">
-          <v-card-title>{{ t('admin.subscriptionsByStatus') }}</v-card-title>
+        <v-card v-if="admin.overview" class="mt-4">
+          <v-card-title class="d-flex align-center ga-3 admin-card__title">
+            <span class="kf-icon-tile kf-icon-tile--gold"><v-icon size="20">mdi-crown-outline</v-icon></span>
+            <span class="text-body-1 font-weight-bold">{{ t('admin.subscriptionsByStatus') }}</span>
+          </v-card-title>
           <v-card-text>
-            <div class="d-flex flex-wrap ga-3">
-              <v-chip
-                v-for="status in subscriptionStatuses"
-                :key="status"
-                :color="statusColor(status)"
-                variant="tonal"
-              >
-                {{ statusLabel(status) }}: {{ admin.overview.subscriptions.byStatus[status] || 0 }}
-              </v-chip>
+            <div class="status-grid">
+              <div v-for="status in subscriptionStatuses" :key="status" class="status-tile">
+                <div class="d-flex align-center justify-space-between">
+                  <span class="status-tile__label">{{ statusLabel(status) }}</span>
+                  <strong class="status-tile__count" :class="`text-${statusColor(status)}`">{{ admin.overview.subscriptions.byStatus[status] || 0 }}</strong>
+                </div>
+                <v-progress-linear
+                  :model-value="statusShare(status)"
+                  :color="statusColor(status)"
+                  height="6"
+                  rounded
+                  class="mt-2"
+                  :aria-label="statusLabel(status)"
+                />
+              </div>
             </div>
             <div class="text-body-2 text-medium-emphasis mt-4">
               {{ t('admin.withActiveAccess') }}: <strong>{{ admin.overview.subscriptions.activeEntitled }}</strong>
@@ -70,9 +63,10 @@
           <v-text-field
             v-model="userFilters.q"
             :label="t('admin.searchByNameOrEmail')"
+            prepend-inner-icon="mdi-magnify"
             density="compact"
             hide-details
-            style="max-width: 280px"
+            :style="isMobile ? 'flex: 1 1 100%' : 'max-width: 280px'"
             @keyup.enter="loadUsers(1)"
           />
           <v-select
@@ -81,7 +75,7 @@
             :label="t('subscription.status')"
             density="compact"
             hide-details
-            style="max-width: 180px"
+            :style="isMobile ? 'flex: 1 1 40%' : 'max-width: 180px'"
             @update:model-value="loadUsers(1)"
           />
           <v-select
@@ -90,13 +84,49 @@
             :label="t('admin.role')"
             density="compact"
             hide-details
-            style="max-width: 180px"
+            :style="isMobile ? 'flex: 1 1 40%' : 'max-width: 180px'"
             @update:model-value="loadUsers(1)"
           />
           <v-btn variant="tonal" prepend-icon="mdi-magnify" @click="loadUsers(1)">{{ t('common.search') }}</v-btn>
         </div>
 
-        <v-card>
+        <!-- Phones: one card per user instead of a wide table. -->
+        <div v-if="isMobile">
+          <div v-for="user in admin.users" :key="user._id" class="kf-row admin-row">
+            <div class="admin-row__main">
+              <v-avatar size="40" class="kf-avatar admin-avatar" :style="{ '--avatar-bg': avatarColor(user.name) }">{{ (user.name || '?').trim()[0]?.toUpperCase() }}</v-avatar>
+              <div class="kf-row__body">
+                <div class="kf-row__title">{{ user.name }}</div>
+                <div class="kf-row__meta">{{ user.email }}</div>
+              </div>
+            </div>
+            <div class="d-flex flex-wrap align-center ga-2 mt-2">
+              <v-chip size="small" :color="user.role === 'admin' ? 'primary' : 'default'" variant="tonal">
+                {{ user.role === 'admin' ? t('admin.administrator') : t('admin.user') }}
+              </v-chip>
+              <v-chip v-if="user.subscription" size="small" :color="statusColor(user.subscription.status)" variant="tonal">
+                {{ statusLabel(user.subscription.status) }}
+              </v-chip>
+              <span v-else class="text-caption text-medium-emphasis">{{ t('admin.noSubscription') }}</span>
+            </div>
+            <div class="d-flex align-center justify-space-between mt-1">
+              <v-switch
+                :model-value="user.isActive"
+                color="success"
+                density="compact"
+                hide-details
+                :label="user.isActive ? t('admin.active') : t('admin.inactive')"
+                @update:model-value="(value) => toggleUserStatus(user, value)"
+              />
+              <v-btn size="small" variant="text" color="primary" @click="toggleUserRole(user)">
+                {{ user.role === 'admin' ? t('admin.removeAdmin') : t('admin.makeAdmin') }}
+              </v-btn>
+            </div>
+          </div>
+          <div v-if="!admin.loading && admin.users.length === 0" class="text-center text-medium-emphasis py-6">{{ t('admin.noUsersFound') }}</div>
+        </div>
+
+        <v-card v-else>
           <v-table>
             <thead>
               <tr>
@@ -166,9 +196,10 @@
           <v-text-field
             v-model="subscriptionFilters.q"
             :label="t('admin.searchByNameOrEmail')"
+            prepend-inner-icon="mdi-magnify"
             density="compact"
             hide-details
-            style="max-width: 280px"
+            :style="isMobile ? 'flex: 1 1 100%' : 'max-width: 280px'"
             @keyup.enter="loadSubscriptions(1)"
           />
           <v-select
@@ -177,13 +208,29 @@
             :label="t('subscription.status')"
             density="compact"
             hide-details
-            style="max-width: 200px"
+            :style="isMobile ? 'flex: 1 1 50%' : 'max-width: 200px'"
             @update:model-value="loadSubscriptions(1)"
           />
           <v-btn variant="tonal" prepend-icon="mdi-magnify" @click="loadSubscriptions(1)">{{ t('common.search') }}</v-btn>
         </div>
 
-        <v-card>
+        <div v-if="isMobile">
+          <div v-for="sub in admin.subscriptions" :key="sub.id" class="kf-row">
+            <v-avatar size="40" class="kf-avatar admin-avatar" :style="{ '--avatar-bg': avatarColor(sub.user?.name) }">{{ (sub.user?.name || '?').trim()[0]?.toUpperCase() }}</v-avatar>
+            <div class="kf-row__body">
+              <div class="kf-row__title">{{ sub.user?.name }}</div>
+              <div class="kf-row__meta">{{ sub.user?.email }}</div>
+              <div class="d-flex align-center flex-wrap ga-2 mt-1">
+                <v-chip size="x-small" :color="statusColor(sub.status)" variant="tonal">{{ statusLabel(sub.status) }}</v-chip>
+                <span v-if="sub.trialEndsAt" class="text-caption text-medium-emphasis">{{ t('admin.trialEnds') }}: {{ formatDate(sub.trialEndsAt) }}</span>
+              </div>
+            </div>
+            <v-btn size="small" variant="text" icon="mdi-pencil" :aria-label="t('common.edit')" @click="openEdit(sub)" />
+          </div>
+          <div v-if="!admin.loading && admin.subscriptions.length === 0" class="text-center text-medium-emphasis py-6">{{ t('admin.noSubscriptionsFound') }}</div>
+        </div>
+
+        <v-card v-else>
           <v-table>
             <thead>
               <tr>
@@ -208,7 +255,7 @@
                 <td>{{ formatDate(sub.currentPeriodEnd) }}</td>
                 <td class="text-capitalize">{{ sub.provider || '—' }}</td>
                 <td class="text-right">
-                  <v-btn size="small" variant="text" icon="mdi-pencil" @click="openEdit(sub)" />
+                  <v-btn size="small" variant="text" icon="mdi-pencil" :aria-label="t('common.edit')" @click="openEdit(sub)" />
                 </td>
               </tr>
               <tr v-if="!admin.loading && admin.subscriptions.length === 0">
@@ -253,6 +300,8 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useDisplay } from 'vuetify'
+import KfSegmented from '@/components/ui/KfSegmented.vue'
+import KpiCard from '@/components/finance/KpiCard.vue'
 import { useI18n } from 'vue-i18n'
 import { useAdminStore } from '@/stores/admin'
 import { useSnackbar } from '@/stores/snackbar'
@@ -264,6 +313,18 @@ const { t } = useI18n()
 const { date } = useLocale()
 const { mobile } = useDisplay()
 const isMobile = computed(() => mobile.value)
+const tabOptions = computed(() => [
+  { value: 'overview', label: t('admin.overview') },
+  { value: 'users', label: t('admin.users') },
+  { value: 'subscriptions', label: t('admin.subscriptions') },
+])
+const statusShare = (status) => {
+  const total = Object.values(admin.overview?.subscriptions?.byStatus || {}).reduce((sum, n) => sum + (Number(n) || 0), 0)
+  return total ? Math.round(((admin.overview.subscriptions.byStatus[status] || 0) / total) * 100) : 0
+}
+// Stable avatar tint per user name (presentation only).
+const AVATAR_TINTS = ['#1f8fa8', '#7b5bd6', '#c48a3a', '#2a9d8f', '#c45b8a', '#4b7bd6']
+const avatarColor = (name = '') => AVATAR_TINTS[[...String(name)].reduce((sum, ch) => sum + ch.charCodeAt(0), 0) % AVATAR_TINTS.length]
 
 const admin = useAdminStore()
 const snackbar = useSnackbar()
@@ -376,3 +437,14 @@ onMounted(async () => {
   await loadSubscriptions(1)
 })
 </script>
+
+<style scoped>
+.admin-card__title { padding: 18px 18px 6px !important; }
+.status-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.status-tile { padding: 12px; border: 1px solid var(--kf-border-subtle); border-radius: var(--kf-radius-sm); background: rgba(4, 22, 31, 0.35); }
+.status-tile__label { color: var(--kf-text-secondary); font-size: 0.82rem; }
+.status-tile__count { font-size: 1.1rem; }
+.admin-row { display: block; }
+.kf-avatar.admin-avatar { border: 0; background: var(--avatar-bg) !important; color: #fff !important; }
+.admin-row__main { display: flex; align-items: center; gap: 12px; }
+</style>

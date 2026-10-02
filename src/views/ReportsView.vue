@@ -6,11 +6,7 @@
       <p class="page-intro__subtitle">{{ t('reports.subtitle') }}</p>
     </div>
 
-    <v-tabs v-model="tab" data-tour="page-tabs" color="primary" class="mb-2">
-      <v-tab value="monthly">{{ t('reports.monthly') }}</v-tab>
-      <v-tab value="yearly">{{ t('reports.yearly') }}</v-tab>
-      <v-tab value="ai">{{ t('reports.smartAnalysis') }}</v-tab>
-    </v-tabs>
+    <KfSegmented v-model="tab" :options="tabOptions" :block="isMobile" class="mb-4" data-tour="page-tabs" />
 
     <v-card v-if="tab === 'monthly'">
       <v-card-text class="pa-2 pa-md-4">
@@ -24,42 +20,28 @@
         </v-row>
 
         <template v-if="monthlyReport">
-          <v-row class="mt-2">
-            <v-col cols="6" sm="3">
-              <v-card variant="tonal" color="income">
-                <v-card-text class="text-center pa-2 pa-md-4">
-                  <div class="text-caption">{{ t('dashboard.income') }}</div>
-                  <div :class="isMobile ? 'text-body-1' : 'text-h5'">{{ money(monthlyReport.summary?.totalIncome) }}</div>
-                </v-card-text>
-              </v-card>
+          <v-row class="mt-2" dense>
+            <v-col cols="6" md="3">
+              <KpiCard :label="t('dashboard.income')" :value="money(monthlyReport.summary?.totalIncome)" icon="mdi-arrow-up" tone="income" />
             </v-col>
-            <v-col cols="6" sm="3">
-              <v-card variant="tonal" color="expense">
-                <v-card-text class="text-center pa-2 pa-md-4">
-                  <div class="text-caption">{{ t('dashboard.expenses') }}</div>
-                  <div :class="isMobile ? 'text-body-1' : 'text-h5'">{{ money(monthlyReport.summary?.totalExpenses) }}</div>
-                </v-card-text>
-              </v-card>
+            <v-col cols="6" md="3">
+              <KpiCard :label="t('dashboard.expenses')" :value="money(monthlyReport.summary?.totalExpenses)" icon="mdi-arrow-down" tone="expense" />
             </v-col>
-            <v-col cols="6" sm="3">
-              <v-card variant="tonal" :color="monthlyReport.summary?.balance >= 0 ? 'blue' : 'red'">
-                <v-card-text class="text-center pa-2 pa-md-4">
-                  <div class="text-caption">{{ t('reports.balance') }}</div>
-                  <div :class="isMobile ? 'text-body-1' : 'text-h5'">{{ money(Math.abs(monthlyReport.summary?.balance || 0)) }}</div>
-                </v-card-text>
-              </v-card>
+            <v-col cols="6" md="3">
+              <KpiCard
+                :label="t('reports.balance')"
+                :value="`${(monthlyReport.summary?.balance || 0) < 0 ? '−' : ''}${money(Math.abs(monthlyReport.summary?.balance || 0))}`"
+                icon="mdi-database-outline"
+                :tone="(monthlyReport.summary?.balance || 0) >= 0 ? 'primary' : 'expense'"
+              />
             </v-col>
-            <v-col cols="6" sm="3">
-              <v-card variant="tonal" color="grey">
-                <v-card-text class="text-center pa-2 pa-md-4">
-                  <div class="text-caption">{{ t('reports.vsLastMonth') }}</div>
-                  <div :class="isMobile ? 'text-body-1' : 'text-h5'">
-                    <span :class="monthlyReport.expenseChange > 0 ? 'text-red' : 'text-green'">
-                      {{ monthlyReport.expenseChange !== null ? (monthlyReport.expenseChange > 0 ? '+' : '') + monthlyReport.expenseChange + '%' : 'N/A' }}
-                    </span>
-                  </div>
-                </v-card-text>
-              </v-card>
+            <v-col cols="6" md="3">
+              <KpiCard
+                :label="t('reports.vsLastMonth')"
+                :value="monthlyReport.expenseChange !== null ? (monthlyReport.expenseChange > 0 ? '+' : '') + monthlyReport.expenseChange + '%' : 'N/A'"
+                icon="mdi-swap-vertical-variant"
+                :tone="monthlyReport.expenseChange === null ? 'neutral' : monthlyReport.expenseChange > 0 ? 'expense' : 'income'"
+              />
             </v-col>
           </v-row>
 
@@ -71,19 +53,15 @@
             <p class="spend-bar__caption">{{ spendCaptionText }}</p>
           </div>
 
-          <h3 class="mt-4 mb-1">{{ t('nav.budgets') }}</h3>
-          <v-row v-if="monthlyReport.budgetStatus?.length">
+          <h3 class="mt-5 mb-2">{{ t('nav.budgets') }}</h3>
+          <v-row v-if="monthlyReport.budgetStatus?.length" dense>
             <v-col v-for="bs in monthlyReport.budgetStatus" :key="bs.budget._id" cols="12" sm="6" md="4">
-              <v-card :color="bs.exceeded ? 'error' : 'success'" theme="dark">
-                <v-card-title class="text-body-2">{{ bs.budget.category?.name || t('budgets.general') }}</v-card-title>
-                <v-card-text class="pa-2">
-                  <v-progress-linear :model-value="Math.min(bs.percentage, 100)" height="14" rounded color="white" />
-                  <div class="d-flex justify-space-between mt-1 text-caption">
-                    <span>{{ money(bs.spent) }} / {{ money(bs.budget.amount) }}</span>
-                    <span>{{ Math.min(bs.percentage, 100) }}%</span>
-                  </div>
-                </v-card-text>
-              </v-card>
+              <BudgetCard
+                :budget="bs.budget"
+                :status="{ ...bs, remaining: Math.max(0, (bs.budget.amount || 0) - (bs.spent || 0)) }"
+                :period="`${monthOptions.find(m => m.value === monthlyMonth)?.title || ''} ${monthlyYear}`"
+                read-only
+              />
             </v-col>
           </v-row>
           <v-card v-else class="pa-8 text-center text-grey">
@@ -229,6 +207,10 @@ import { useSubscriptionStore } from '@/stores/subscriptions'
 import { useLocale } from '@/composables/useLocale'
 import { getCategoryColor } from '@/constants/categoryColors'
 import AIHealthScore from '@/components/AIHealthScore.vue'
+import KfSegmented from '@/components/ui/KfSegmented.vue'
+import KpiCard from '@/components/finance/KpiCard.vue'
+import BudgetCard from '@/components/finance/BudgetCard.vue'
+import { CHART } from '@/constants/chartTheme'
 
 ChartJS.register(BarElement, CategoryScale, LinearScale, Tooltip, Legend)
 
@@ -239,6 +221,11 @@ const isMobile = computed(() => mobile.value)
 const billingStore = useSubscriptionStore()
 const router = useRouter()
 const tab = ref('monthly')
+const tabOptions = computed(() => [
+  { value: 'monthly', label: t('reports.monthly') },
+  { value: 'yearly', label: t('reports.yearly') },
+  { value: 'ai', label: t('reports.smartAnalysis') },
+])
 const now = new Date()
 
 const monthlyMonth = ref(now.getMonth() + 1)
@@ -272,17 +259,17 @@ const spendCaptionText = computed(() => {
 const yearlyChartData = computed(() => ({
   labels: (yearlyReport.value?.months || []).map((m) => monthNames.value[m.month - 1]),
   datasets: [
-    { label: t('dashboard.income'), data: (yearlyReport.value?.months || []).map((m) => m.totalIncome), backgroundColor: '#1F8A5C', borderRadius: 4 },
-    { label: t('dashboard.expenses'), data: (yearlyReport.value?.months || []).map((m) => m.totalExpenses), backgroundColor: '#C1443A', borderRadius: 4 },
+    { label: t('dashboard.income'), data: (yearlyReport.value?.months || []).map((m) => m.totalIncome), backgroundColor: CHART.income, borderRadius: 6 },
+    { label: t('dashboard.expenses'), data: (yearlyReport.value?.months || []).map((m) => m.totalExpenses), backgroundColor: CHART.expense, borderRadius: 6 },
   ],
 }))
 const yearlyChartOptions = computed(() => ({
   responsive: true,
   maintainAspectRatio: false,
-  plugins: { legend: { position: 'top', align: 'end' } },
+  plugins: { legend: { position: 'top', align: 'end', labels: { color: CHART.text } }, tooltip: { backgroundColor: CHART.tooltip, titleColor: CHART.text, bodyColor: CHART.text, borderColor: CHART.grid, borderWidth: 1 } },
   scales: {
-    x: { grid: { display: false } },
-    y: { beginAtZero: true, ticks: { callback: (v) => money(v) } },
+    x: { grid: { display: false }, ticks: { color: CHART.muted } },
+    y: { beginAtZero: true, grid: { color: CHART.grid }, ticks: { color: CHART.muted, callback: (v) => money(v) } },
   },
 }))
 
@@ -311,8 +298,9 @@ onMounted(() => { loadMonthly(); loadYearly() })
   position: relative;
   height: 28px;
   overflow: hidden;
+  border: 1px solid var(--kf-border-subtle);
   border-radius: 999px;
-  background: var(--finance-soft, #eef4f3);
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .spend-bar__fill {
@@ -320,8 +308,9 @@ onMounted(() => { loadMonthly(); loadYearly() })
   top: 0;
   left: 0;
   height: 100%;
-  background: var(--finance-expense, #d94b5b);
-  transition: width 0.35s ease;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(255, 98, 109, 0.75), var(--kf-expense));
+  transition: width 180ms ease;
 }
 
 .spend-bar__label {
@@ -329,7 +318,7 @@ onMounted(() => { loadMonthly(); loadYearly() })
   top: 50%;
   right: 14px;
   transform: translateY(-50%);
-  color: #fff;
+  color: var(--kf-text);
   font-size: 0.76rem;
   font-weight: 700;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
@@ -337,7 +326,7 @@ onMounted(() => { loadMonthly(); loadYearly() })
 
 .spend-bar__caption {
   margin: 8px 0 0;
-  color: var(--finance-muted, #6b7f83);
+  color: var(--kf-text-secondary);
   font-size: 0.82rem;
 }
 

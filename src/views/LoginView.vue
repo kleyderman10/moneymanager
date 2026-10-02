@@ -4,14 +4,15 @@
       <v-col cols="12" md="7" class="auth-story d-none d-md-flex">
         <div class="auth-story__content">
           <div class="finance-brand pa-0">
-            <img src="/icon.svg" alt="" aria-hidden="true" class="finance-brand__logo" />
+            <img src="/knexura-flow-icon.webp" alt="" aria-hidden="true" class="finance-brand__logo" />
             <div>
-              <div class="finance-brand__name">{{ t('layout.brandName') }}</div>
+              <div class="finance-brand__name kf-brand-word">Knexura <span>Flow</span></div>
               <div class="finance-brand__tagline">{{ t('layout.brandTagline') }}</div>
             </div>
           </div>
           <h1>{{ t('auth.heroTitle') }}</h1>
           <p>{{ t('auth.heroSubtitle') }}</p>
+          <img :src="flowBanner" alt="" class="flow-brand-banner flow-brand-banner--auth" width="1794" height="876" />
           <div class="auth-proof">
             <div class="auth-proof__item"><v-icon color="success" size="19">mdi-shield-check</v-icon> {{ t('auth.proofProtectedAccess') }}</div>
             <div class="auth-proof__item"><v-icon color="success" size="19">mdi-check-circle</v-icon> {{ t('auth.proofSecureData') }}</div>
@@ -22,8 +23,8 @@
 
       <v-col cols="12" md="5" class="auth-form-side">
         <div class="auth-mobile-hero d-flex d-md-none">
-          <img src="/icon.svg" :alt="t('layout.brandName')" class="auth-mobile-hero__mark" />
-          <h1 class="auth-mobile-hero__title">{{ t('layout.brandName') }}</h1>
+          <img src="/knexura-flow-icon.webp" :alt="t('layout.brandName')" class="auth-mobile-hero__mark" />
+          <h1 class="auth-mobile-hero__title kf-brand-word">Knexura <span>Flow</span></h1>
           <p class="auth-mobile-hero__subtitle">{{ t('auth.mobileHeroSubtitle') }}</p>
         </div>
 
@@ -50,8 +51,9 @@
           </v-alert>
 
           <v-form v-if="step === 'credentials'" @submit.prevent="handleLogin">
-            <label class="text-caption font-weight-bold d-block mb-2">{{ t('auth.email') }}</label>
+            <label class="auth-label" for="login-email"><v-icon size="18">mdi-account-outline</v-icon>{{ t('auth.email') }}</label>
             <v-text-field
+              id="login-email"
               v-model="email"
               placeholder="nombre@correo.com"
               :prepend-inner-icon="mobile ? undefined : 'mdi-email-outline'"
@@ -63,8 +65,9 @@
               class="mb-2"
             />
 
-            <label class="text-caption font-weight-bold d-block mb-2">{{ t('auth.password') }}</label>
+            <label class="auth-label" for="login-password"><v-icon size="18">mdi-lock-outline</v-icon>{{ t('auth.password') }}</label>
             <v-text-field
+              id="login-password"
               v-model="password"
               :placeholder="t('auth.passwordPlaceholder')"
               :prepend-inner-icon="mobile ? undefined : 'mdi-lock-outline'"
@@ -81,7 +84,7 @@
               <v-btn variant="text" color="primary" size="x-small" class="auth-forgot-link px-0" to="/forgot-password">{{ t('auth.forgotPassword') }}</v-btn>
             </div>
 
-            <v-btn type="submit" color="primary" block size="large" class="auth-primary-btn mt-2" :loading="authStore.loading && !bioLoading">
+            <v-btn type="submit" color="primary" block size="large" class="auth-primary-btn mt-2" append-icon="mdi-arrow-right" :loading="authStore.loading && !bioLoading">
               {{ t('auth.signIn') }}
             </v-btn>
           </v-form>
@@ -99,7 +102,7 @@
               required
               :rules="[rules.code]"
             />
-            <v-btn type="submit" color="primary" block size="large" :loading="authStore.loading">
+            <v-btn type="submit" color="primary" block size="large" class="auth-primary-btn" :loading="authStore.loading">
               {{ t('auth.verifyAndContinue') }}
             </v-btn>
             <v-btn variant="text" color="primary" block class="mt-3" :loading="resendLoading" @click="resendCode">
@@ -127,7 +130,8 @@
               {{ t('auth.faceIdOrFingerprint') }}
             </v-btn>
 
-            <p class="text-center text-body-2 text-medium-emphasis mt-7 mb-0">
+            <div class="auth-or" aria-hidden="true"><span>o</span></div>
+            <p class="text-center text-body-2 text-medium-emphasis mb-0">
               {{ t('auth.noAccount') }}
               <v-btn variant="text" color="primary" size="small" class="auth-register-link" to="/register">{{ t('auth.signUp') }}</v-btn>
             </p>
@@ -139,6 +143,7 @@
 </template>
 
 <script setup>
+import flowBanner from '@/assets/branding/knexura-flow-banner.webp'
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'

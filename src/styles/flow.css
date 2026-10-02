@@ -1,0 +1,388 @@
+/* Knexura Flow visual layer. Loaded after finance.css (layout/structure) and
+   design-tokens.css; every color here comes from a --kf-* token. */
+
+/* ---------- Base ---------- */
+html { background: var(--kf-bg-deep); }
+.v-application { font-family: var(--kf-font); background: var(--kf-bg-deep) !important; }
+/* Supplied Flow artwork behind every screen, darkened so cards and text keep their contrast. */
+.finance-main { position: relative; background: var(--kf-bg-deep); }
+.finance-main::before {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background:
+    linear-gradient(180deg, rgba(8, 31, 43, 0.55) 0%, rgba(8, 31, 43, 0.72) 45%, rgba(8, 31, 43, 0.6) 100%),
+    url('../assets/backgrounds/flow-bg-6.webp') center top / cover no-repeat;
+  content: '';
+  pointer-events: none;
+}
+.finance-main > .v-main__scroller, .finance-content { position: relative; z-index: 1; }
+.finance-content h1 { font-size: clamp(1.6rem, 3vw, 1.9rem) !important; letter-spacing: -0.03em !important; }
+
+/* Mobile pages leave room for the bottom navigation and one floating action. */
+.finance-main--with-nav .finance-content {
+  padding-bottom: calc(var(--kf-nav-height) + var(--safe-bottom, 0px) + 96px) !important;
+}
+
+/* ---------- Page header (eyebrow + title + subtitle) ---------- */
+.page-intro__eyebrow,
+.kf-eyebrow {
+  color: var(--kf-primary);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.page-intro h1 { color: var(--kf-text); }
+.page-intro__subtitle { color: var(--kf-text-secondary); line-height: 1.5; }
+
+/* ---------- Cards ---------- */
+.v-card {
+  border: 1px solid var(--kf-border-subtle) !important;
+  border-radius: var(--kf-radius-card) !important;
+  box-shadow: var(--kf-shadow) !important;
+}
+.v-card:not(.v-card--variant-tonal):not(.v-card--variant-outlined):not(.v-card--variant-text):not(.v-card--variant-plain) {
+  background: var(--kf-gradient-card);
+}
+.v-card--variant-outlined { background: rgba(255, 255, 255, 0.02); }
+.v-card-title { color: var(--kf-text); }
+.v-card-subtitle { color: var(--kf-text-secondary) !important; opacity: 1; }
+.v-card-title { white-space: normal; overflow-wrap: anywhere; }
+
+/* Hero card (main balance, featured goal/credit). */
+.kf-card-hero,
+.dashboard-hero {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--kf-border) !important;
+  background:
+    linear-gradient(135deg, rgba(11, 42, 58, 0.88) 0%, rgba(11, 42, 58, 0.55) 60%, rgba(11, 42, 58, 0.35) 100%),
+    url('../assets/backgrounds/flow-bg-2.webp') center 78% / cover no-repeat !important;
+  box-shadow: var(--kf-shadow-lg) !important;
+  color: var(--kf-text);
+}
+.dashboard-hero::after { display: none; }
+.dashboard-hero__label { color: var(--kf-text-secondary); font-size: 0.82rem; font-weight: 600; }
+.dashboard-hero__amount {
+  color: var(--kf-text);
+  font-size: clamp(2.1rem, 5vw, 2.9rem);
+  font-weight: 700;
+  letter-spacing: -0.035em;
+}
+.dashboard-hero__meta { border-top-color: var(--kf-divider); }
+.dashboard-hero__meta span,
+.dashboard-hero__surplus { color: var(--kf-text-secondary); }
+
+/* KPI cards. */
+.metric-card .v-card-text { align-items: center; }
+.metric-card__label { color: var(--kf-text-secondary); font-size: 0.76rem; font-weight: 600; }
+.metric-card__value { color: var(--kf-text); font-size: 1.3rem; font-weight: 700; letter-spacing: -0.02em; }
+.metric-card__hint { color: var(--kf-text-secondary); }
+.metric-card--income .metric-card__value { color: var(--kf-income); }
+.metric-card--expense .metric-card__value { color: var(--kf-expense); }
+
+/* Icon tiles: rounded squares with a tinted background. */
+.metric-card__icon,
+.section-icon,
+.quick-action__icon,
+.kf-icon-tile {
+  display: grid;
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border: 1px solid var(--kf-border-subtle);
+  border-radius: 12px;
+  background: var(--kf-tint-primary);
+  color: var(--kf-primary);
+}
+.metric-card--income .metric-card__icon, .kf-icon-tile--income { background: var(--kf-tint-success); color: var(--kf-income); }
+.metric-card--expense .metric-card__icon, .kf-icon-tile--expense { background: var(--kf-tint-danger); color: var(--kf-expense); }
+.kf-icon-tile--gold { background: var(--kf-tint-gold); color: var(--kf-gold-bright); }
+.kf-icon-tile--lg { width: 48px; height: 48px; border-radius: 14px; }
+
+.section-card .v-card-title { border-bottom-color: var(--kf-divider); }
+.financial-health-card { background: var(--kf-gradient-card) !important; }
+
+.quick-action {
+  border-color: var(--kf-border-subtle);
+  border-radius: var(--kf-radius);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--kf-text);
+}
+.quick-action:hover { border-color: var(--kf-border); box-shadow: none; }
+.quick-action span { color: var(--kf-text-secondary); }
+
+.finance-empty { color: var(--kf-text-secondary); }
+
+/* ---------- Amounts ---------- */
+.kf-amount,
+.metric-card__value,
+.dashboard-hero__amount { font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.kf-amount { font-weight: 700; letter-spacing: -0.02em; }
+.kf-income, .text-green, .text-income { color: var(--kf-income) !important; }
+.kf-expense, .text-red, .text-expense { color: var(--kf-expense) !important; }
+.text-grey { color: var(--kf-text-secondary) !important; }
+.bg-green { background-color: var(--kf-success) !important; color: var(--kf-on-primary) !important; }
+.bg-red { background-color: var(--kf-danger) !important; color: var(--kf-on-primary) !important; }
+
+/* ---------- Buttons ---------- */
+.v-btn {
+  min-height: 44px;
+  border-radius: var(--kf-radius) !important;
+  font-weight: 650 !important;
+  transition: background var(--kf-motion), box-shadow var(--kf-motion), transform var(--kf-motion);
+}
+.v-btn--size-small, .v-btn--size-x-small { min-height: 0; }
+.v-btn--icon { min-width: 44px; border-radius: 50% !important; }
+.v-btn--variant-elevated, .v-btn--variant-flat { box-shadow: none !important; }
+.v-btn.bg-primary:not(.v-btn--variant-text):not(.v-btn--variant-outlined),
+.form-actions__primary,
+.auth-primary-btn {
+  background: var(--kf-gradient-primary) !important;
+  color: var(--kf-on-primary) !important;
+  box-shadow: 0 8px 24px rgba(0, 229, 208, 0.22) !important;
+}
+.v-btn.bg-primary:not(.v-btn--variant-text):not(.v-btn--variant-outlined):active { transform: scale(0.98); }
+.v-btn--variant-outlined { border-color: var(--kf-border) !important; }
+.v-btn--variant-tonal.text-primary { background: var(--kf-tint-primary); }
+
+/* Floating "+" action: above the bottom navigation, never on top of the voice button. */
+.finance-fab {
+  right: 16px !important;
+  bottom: var(--kf-fab-bottom) !important;
+  border-radius: 18px !important;
+  box-shadow: var(--kf-glow) !important;
+}
+
+/* ---------- Form fields ---------- */
+.v-field {
+  border-radius: 14px !important;
+  background: rgba(255, 255, 255, 0.04);
+}
+.v-field--variant-outlined .v-field__outline { color: var(--kf-border); --v-field-border-opacity: 1; }
+.v-field--focused { box-shadow: 0 0 0 3px rgba(0, 229, 208, 0.14); }
+.v-field--focused .v-field__outline { color: var(--kf-primary) !important; }
+.v-label { color: var(--kf-text-secondary) !important; opacity: 1 !important; }
+.v-field__input input::placeholder, .v-field__input textarea::placeholder { color: var(--kf-text-secondary); opacity: 0.8; }
+.money-field__row:focus-within { border-color: var(--kf-primary); }
+
+/* ---------- Tabs as segmented controls ---------- */
+.v-tabs {
+  padding: 4px;
+  border: 1px solid var(--kf-border-subtle);
+  border-radius: var(--kf-radius-pill);
+  background: rgba(4, 22, 31, 0.7);
+  box-shadow: none;
+}
+.v-tabs .v-btn { min-height: 38px; border-radius: var(--kf-radius-pill) !important; color: var(--kf-text-secondary); }
+.v-tabs .v-tab--selected {
+  background: var(--kf-gradient-primary);
+  color: var(--kf-on-primary) !important;
+  box-shadow: 0 4px 16px rgba(0, 229, 208, 0.25);
+}
+.v-tabs .v-tab--selected .v-tab__slider { display: none; }
+
+.v-btn-toggle { border-radius: var(--kf-radius-pill) !important; }
+
+/* ---------- Chips & progress ---------- */
+.v-chip { border-radius: var(--kf-radius-pill) !important; font-weight: 600; }
+.v-progress-linear { border-radius: var(--kf-radius-pill) !important; }
+/* Neutral track for every progress bar (the theme color class would otherwise tint it). */
+.v-progress-linear > .v-progress-linear__background { background: rgba(255, 255, 255, 0.08) !important; opacity: 1 !important; }
+
+/* ---------- Lists & tables ---------- */
+.v-list { background: transparent !important; }
+.v-list-item { border-radius: 14px !important; }
+.finance-content .v-list-item:hover { background: rgba(255, 255, 255, 0.03); }
+.finance-content > div > .v-list {
+  border-color: var(--kf-border-subtle);
+  background: var(--kf-gradient-card) !important;
+}
+.v-data-table, .v-table { background: transparent !important; }
+.v-data-table thead th, .v-table thead th {
+  background: rgba(4, 22, 31, 0.55) !important;
+  color: var(--kf-text-secondary) !important;
+}
+.v-data-table tbody tr:not(:last-child) td, .v-table tbody tr:not(:last-child) td { border-bottom-color: var(--kf-divider) !important; }
+.v-data-table tbody tr:hover, .v-table tbody tr:hover { background: rgba(0, 229, 208, 0.04) !important; }
+
+/* Rows that replace tables on phones. */
+.kf-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 64px;
+  padding: 12px 14px;
+  border: 1px solid var(--kf-border-subtle);
+  border-radius: var(--kf-radius);
+  background: var(--kf-gradient-card);
+  color: var(--kf-text);
+}
+.kf-row + .kf-row { margin-top: 8px; }
+.kf-row__body { flex: 1 1 auto; min-width: 0; }
+.kf-row__title { overflow: hidden; font-size: 0.92rem; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+.kf-row__meta { overflow: hidden; color: var(--kf-text-secondary); font-size: 0.76rem; text-overflow: ellipsis; white-space: nowrap; }
+.kf-row__end { flex: 0 0 auto; text-align: right; }
+
+/* ---------- Overlays ---------- */
+.v-dialog > .v-overlay__content > .v-card,
+.v-bottom-sheet > .v-overlay__content > .v-card {
+  border: 1px solid var(--kf-border) !important;
+  background: linear-gradient(160deg, var(--kf-surface-elevated), var(--kf-bg)) !important;
+  box-shadow: var(--kf-shadow-lg) !important;
+}
+.v-menu > .v-overlay__content > .v-list,
+.v-menu > .v-overlay__content > .v-card {
+  border: 1px solid var(--kf-border);
+  border-radius: 14px;
+  background: var(--kf-surface-elevated) !important;
+}
+.v-overlay__scrim { background: #02121a; }
+
+/* ---------- Alerts: gold insights, coral errors ---------- */
+.v-alert { border-radius: var(--kf-radius) !important; }
+.v-alert.text-warning,
+.kf-insight {
+  border: 1px solid rgba(244, 184, 96, 0.28) !important;
+  background: linear-gradient(135deg, rgba(244, 184, 96, 0.14), rgba(212, 165, 116, 0.05)) !important;
+  color: var(--kf-gold-bright) !important;
+}
+.v-alert.text-success { border: 1px solid rgba(40, 217, 165, 0.25); }
+
+/* ---------- Top bar ---------- */
+.finance-topbar {
+  border-bottom: 1px solid var(--kf-divider) !important;
+  background: rgba(8, 31, 43, 0.92) !important;
+}
+.finance-topbar .v-toolbar__content { align-items: center; padding-top: var(--safe-top); }
+.topbar-greeting { color: var(--kf-text); }
+.topbar-date { color: var(--kf-text-secondary); }
+.topbar-date::first-letter { text-transform: uppercase; }
+.topbar-profile { border-color: var(--kf-border-subtle) !important; background: rgba(255, 255, 255, 0.04) !important; }
+.kf-avatar, .finance-avatar {
+  border: 1px solid var(--kf-border);
+  background: linear-gradient(145deg, var(--kf-surface-elevated), var(--kf-bg-deep)) !important;
+  color: var(--kf-text) !important;
+  font-weight: 800;
+}
+.kf-topbar__title {
+  position: absolute;
+  left: 50%;
+  max-width: calc(100% - 150px);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+.kf-topbar__title span {
+  display: block;
+  overflow: hidden;
+  font-size: 1.02rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Legacy sidebar classes (kept for screens that still reference them). */
+.finance-brand__name { color: var(--kf-text); }
+.finance-brand__tagline { color: var(--kf-text-secondary); }
+
+/* ---------- Brand ---------- */
+.flow-brand-banner { display: block; width: 100%; height: auto; border-radius: var(--kf-radius-card); border: 1px solid var(--kf-border-subtle); }
+.flow-brand-banner--auth { margin-top: 28px; }
+.kf-brand-word { font-weight: 800; letter-spacing: -0.03em; }
+.kf-brand-word span { color: var(--kf-primary); }
+
+/* ---------- Accessibility & motion ---------- */
+:where(button, a, input, select, textarea, [tabindex]):focus-visible { outline: 2px solid var(--kf-primary); outline-offset: 3px; }
+
+@media (max-width: 600px) {
+  .v-dialog .v-card-text { padding-inline: 16px; }
+  .tx-pagination { flex-wrap: wrap; gap: 8px; }
+  .metric-card__value { font-size: 1.12rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+
+/* Chat assistant launcher: secondary action, quieter than the voice button and the "+". */
+.v-btn.ai-fab {
+  border: 1px solid var(--kf-border) !important;
+  background: var(--kf-surface-elevated) !important;
+  color: var(--kf-primary) !important;
+}
+
+/* ---------- Authentication (login, register, recover) ---------- */
+.auth-shell { background: var(--kf-bg-deep) !important; }
+.auth-form-side {
+  position: relative;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, rgba(8, 31, 43, 0.15), rgba(8, 31, 43, 0.35)),
+    url('../assets/backgrounds/flow-bg-5.webp') center / cover no-repeat var(--kf-bg-deep);
+}
+
+.auth-story {
+  background:
+    linear-gradient(90deg, rgba(8, 31, 43, 0.2), rgba(8, 31, 43, 0.6)),
+    url('../assets/backgrounds/flow-bg-1.webp') center / cover no-repeat !important;
+}
+.auth-story p { color: var(--kf-text-secondary); }
+.auth-story::after { display: none; }
+
+.auth-mobile-hero__mark,
+.auth-card__mobile-brand .finance-brand__logo,
+.auth-story .finance-brand__logo {
+  border-radius: 24% !important;
+  box-shadow: 0 0 0 1px var(--kf-border), 0 12px 40px rgba(0, 229, 208, 0.28) !important;
+}
+.auth-mobile-hero__mark { width: 84px !important; height: 84px !important; }
+.auth-mobile-hero__title { font-size: 2rem !important; color: var(--kf-text) !important; }
+.auth-mobile-hero__subtitle { color: var(--kf-text-secondary) !important; }
+
+.auth-card h2 { color: var(--kf-text); font-size: 1.6rem; }
+.auth-card__intro { color: var(--kf-text-secondary); }
+
+.auth-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  color: var(--kf-text);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+.auth-label .v-icon { color: var(--kf-primary); }
+
+.auth-or {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 22px 0 14px;
+  color: var(--kf-text-secondary);
+  font-size: 0.78rem;
+}
+.auth-or::before, .auth-or::after { flex: 1; height: 1px; background: var(--kf-divider); content: ''; }
+
+.auth-primary-btn { min-height: 52px !important; border-radius: var(--kf-radius-pill) !important; font-size: 1rem !important; }
+.auth-forgot-link { color: var(--kf-primary) !important; }
+.auth-register-link { color: var(--kf-primary) !important; font-weight: 700 !important; }
+
+@media (max-width: 959px) {
+  .auth-card {
+    border: 1px solid var(--kf-border) !important;
+    border-radius: 24px !important;
+    background: linear-gradient(160deg, rgba(18, 63, 77, 0.9), rgba(8, 31, 43, 0.92)) !important;
+    box-shadow: var(--kf-shadow-lg), inset 0 1px 0 rgba(255, 255, 255, 0.04) !important;
+    backdrop-filter: blur(10px);
+  }
+  .auth-primary-btn { background: var(--kf-gradient-primary) !important; color: var(--kf-on-primary) !important; }
+}
+
+/* Assistant sheet and drawer use their own artwork. */
+.v-bottom-sheet .v-card.assistant-sheet {
+  background:
+    linear-gradient(180deg, rgba(11, 42, 58, 0.82), rgba(8, 31, 43, 0.9)),
+    url('../assets/backgrounds/flow-bg-3.webp') center bottom / cover no-repeat !important;
+}

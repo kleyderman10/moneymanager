@@ -17,11 +17,11 @@ export default defineConfig(({ mode }) => ({
       registerType: 'autoUpdate',
       includeAssets: ['vite.svg'],
       manifest: {
-        name: 'Knexura Finanzas',
-        short_name: 'Knexura',
+        name: 'Knexura Flow',
+        short_name: 'Knexura Flow',
         description: 'Gestión de finanzas personales',
-        theme_color: '#0C2630',
-        background_color: '#F4F7F7',
+        theme_color: '#071D29',
+        background_color: '#071D29',
         display: 'standalone',
         orientation: 'portrait',
         scope: '/',
@@ -34,7 +34,7 @@ export default defineConfig(({ mode }) => ({
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2,ttf,eot}'],
+        globPatterns: ['**/*.{js,css,html,ico,png,webp,svg,woff,woff2,ttf,eot}'],
         runtimeCaching: [
           {
             urlPattern: /^\/api\/.*/i,

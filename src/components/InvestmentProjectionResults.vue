@@ -64,7 +64,7 @@ const chartData = computed(() => ({
     {
       label: t('investment.contributedMoney'),
       data: props.result.projection.map((row) => row.contributions),
-      borderColor: '#3276b1',
+      borderColor: '#65E6DD',
       backgroundColor: 'rgba(50, 118, 177, 0.08)',
       pointRadius: 0,
       tension: 0.2,
@@ -72,7 +72,7 @@ const chartData = computed(() => ({
     {
       label: t('investment.balanceWithInterest'),
       data: props.result.projection.map((row) => row.balance),
-      borderColor: '#159a72',
+      borderColor: '#20D8A0',
       backgroundColor: 'rgba(21, 154, 114, 0.12)',
       fill: true,
       pointRadius: 0,
@@ -109,7 +109,7 @@ const chartOptions = computed(() => ({
 }
 
 .investment-summary-card--gain {
-  background: #e9f6f2 !important;
+  background: var(--knexura-surface-light) !important;
 }
 
 .investment-summary-card span {

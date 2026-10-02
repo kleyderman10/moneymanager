@@ -31,7 +31,7 @@
       >
         <template #prepend>
           <v-avatar :color="cat.color" size="40">
-            <span class="text-white">{{ cat.icon || '?' }}</span>
+            <v-icon :icon="categoryIcon(cat)" />
           </v-avatar>
         </template>
         <template #append>
@@ -68,7 +68,7 @@
             </button>
           </div>
           <v-text-field v-model="form.name" :label="t('profile.name')" variant="outlined" density="compact" required class="mb-3" />
-          <v-text-field v-model="form.icon" :label="t('categories.iconEmoji')" variant="outlined" density="compact" class="mb-3" />
+          <v-select v-model="form.icon" :items="iconOptions" :label="t('categories.iconEmoji')" variant="outlined" density="compact" class="mb-3" />
           <v-text-field v-model="form.color" :label="t('categories.color')" type="color" variant="outlined" density="compact" />
           <div class="d-flex align-center mt-1">
             <AIIconButton :name="form.name" :type="form.type" @generated="onIconGenerated" />
@@ -99,13 +99,15 @@
       icon="mdi-plus"
       color="primary"
       size="x-large"
-      class="finance-fab" data-tour="page-add"
+      class="finance-fab" :aria-label="t('categories.newCategory')" data-tour="page-add"
       @click="openCreate"
     />
   </div>
 </template>
 
 <script setup>
+import { categoryIcon } from '@/utils/categoryIcon'
+const iconOptions = ['mdi-food-outline', 'mdi-car-outline', 'mdi-home-outline', 'mdi-movie-outline', 'mdi-lightning-bolt-outline', 'mdi-shopping-outline', 'mdi-heart-outline', 'mdi-cash-plus', 'mdi-shape-outline']
 import { ref, computed, onMounted } from 'vue'
 import { useDisplay } from 'vuetify'
 import { useI18n } from 'vue-i18n'

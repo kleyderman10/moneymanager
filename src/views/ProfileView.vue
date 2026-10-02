@@ -6,6 +6,19 @@
       <p class="page-intro__subtitle">{{ t('profile.subtitle') }}</p>
     </div>
 
+    <v-card class="kf-card-hero profile-hero mb-4">
+      <v-card-text class="profile-hero__body">
+        <v-avatar size="72" class="kf-avatar profile-hero__avatar">{{ initials }}</v-avatar>
+        <div class="profile-hero__copy">
+          <div class="profile-hero__name">{{ authStore.user?.name || t('layout.myAccount') }}</div>
+          <div class="profile-hero__email">{{ authStore.user?.email }}</div>
+          <v-chip v-if="authStore.user?.emailVerified !== false" color="success" variant="tonal" size="small" prepend-icon="mdi-check-circle" class="mt-2">
+            {{ t('profile.emailVerified') }}
+          </v-chip>
+        </div>
+      </v-card-text>
+    </v-card>
+
     <v-row>
       <v-col cols="12" md="6">
         <v-card :title="t('profile.personalInfo')" data-tour="profile-personal">
@@ -13,9 +26,6 @@
             <v-form @submit.prevent="saveProfile">
               <v-text-field v-model="profileForm.name" :label="t('profile.name')" variant="outlined" density="compact" required class="mb-3" />
               <v-text-field :model-value="authStore.user?.email" label="Email" variant="outlined" density="compact" disabled class="mb-3" />
-              <v-chip color="success" variant="tonal" size="small" prepend-icon="mdi-email-check-outline" class="mb-4">
-                {{ t('profile.emailVerified') }}
-              </v-chip>
               <v-select
                 v-model="profileForm.country"
                 :items="countryOptions"
@@ -385,6 +395,23 @@ const profileForm = reactive({
 })
 const profileLoading = ref(false)
 
+// Opening Profile directly (e.g. after a reload) can render before the profile is fetched;
+// fill the form once the user arrives instead of leaving the name empty.
+let profileHydrated = Boolean(authStore.user)
+watch(() => authStore.user, (user) => {
+  if (!user || profileHydrated) return
+  profileHydrated = true
+  profileForm.name = user.name
+  profileForm.country = user.country || DEFAULT_COUNTRY_CODE
+  profileForm.language = user.language || 'es'
+})
+
+const initials = computed(() => {
+  const name = authStore.user?.name?.trim()
+  if (!name) return 'KF'
+  return name.split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase()
+})
+
 const countryOptions = computed(() => COUNTRIES.map((c) => ({
   code: c.code,
   label: `${c.flag} ${locale.value === 'en' ? c.nameEn : c.nameEs} · ${c.currency}`,
@@ -638,3 +665,36 @@ onMounted(async () => {
   }
 })
 </script>
+
+<style scoped>
+.profile-hero__body {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 20px !important;
+}
+
+.profile-hero__avatar {
+  font-size: 1.6rem;
+  box-shadow: 0 0 0 2px var(--kf-primary), 0 8px 28px rgba(0, 229, 208, 0.3);
+}
+
+.profile-hero__copy {
+  min-width: 0;
+}
+
+.profile-hero__name {
+  overflow: hidden;
+  font-size: 1.35rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-hero__email {
+  overflow: hidden;
+  color: var(--kf-text-secondary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+</style>

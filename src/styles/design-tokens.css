@@ -1,0 +1,109 @@
+/* Knexura Flow design tokens. Components use the semantic --kf-* names; the --knexura-* and
+   --finance-* names are kept as aliases for the styles written before the Flow migration. */
+:root {
+  /* Palette */
+  --kf-bg-deep: #081f2b;
+  --kf-bg: #0b2a3a;
+  --kf-surface: #0f3b47;
+  --kf-surface-elevated: #123f4d;
+  --kf-primary: #00e5d0;
+  --kf-primary-alt: #22d3c5;
+  --kf-cyan: #3fb6ff;
+  --kf-gold: #d4a574;
+  --kf-gold-bright: #f4b860;
+  --kf-text: #f5fafc;
+  --kf-text-secondary: #9fb8c3;
+  --kf-success: #28d9a5;
+  --kf-danger: #ff626d;
+  --kf-warning: #f4b860;
+  --kf-border: rgba(100, 230, 220, 0.18);
+  --kf-border-subtle: rgba(80, 230, 220, 0.12);
+  --kf-divider: rgba(255, 255, 255, 0.06);
+  --kf-on-primary: #04222b;
+
+  /* Semantic */
+  --kf-income: var(--kf-success);
+  --kf-expense: var(--kf-danger);
+  --kf-insight: var(--kf-gold-bright);
+  --kf-tint-primary: rgba(0, 229, 208, 0.12);
+  --kf-tint-success: rgba(40, 217, 165, 0.14);
+  --kf-tint-danger: rgba(255, 98, 109, 0.14);
+  --kf-tint-gold: rgba(244, 184, 96, 0.12);
+
+  /* Surfaces */
+  --kf-gradient-card: linear-gradient(145deg, rgba(16, 60, 73, 0.92), rgba(7, 34, 47, 0.96));
+  --kf-gradient-card-hero: radial-gradient(120% 140% at 100% 0%, rgba(0, 229, 208, 0.16), transparent 55%), linear-gradient(145deg, rgba(18, 66, 80, 0.95), rgba(7, 34, 47, 0.98));
+  --kf-gradient-primary: linear-gradient(135deg, #00e5d0, #22d3c5 45%, #3fb6ff);
+  --kf-gradient-app: radial-gradient(90% 60% at 100% 0%, rgba(0, 229, 208, 0.08), transparent 60%), linear-gradient(180deg, #0b2a3a 0%, #081f2b 100%);
+
+  /* Elevation */
+  --kf-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+  --kf-shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.28);
+  --kf-glow: 0 0 0 1px rgba(0, 229, 208, 0.35), 0 8px 28px rgba(0, 229, 208, 0.35);
+
+  /* Shape and spacing */
+  --kf-radius-sm: 12px;
+  --kf-radius: 16px;
+  --kf-radius-card: 20px;
+  --kf-radius-pill: 999px;
+  --kf-space-1: 4px;
+  --kf-space-2: 8px;
+  --kf-space-3: 12px;
+  --kf-space-4: 16px;
+  --kf-space-5: 20px;
+  --kf-space-6: 24px;
+  --kf-space-8: 32px;
+
+  /* Layout */
+  --kf-nav-height: 68px;
+  --kf-fab-bottom: calc(var(--kf-nav-height) + var(--safe-bottom, 0px) + 16px);
+  --kf-font: 'Inter Variable', Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --kf-motion: 180ms;
+  --kf-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  /* Aliases (pre-Flow names) */
+  --knexura-background: var(--kf-bg);
+  --knexura-surface: var(--kf-bg-deep);
+  --knexura-surface-light: var(--kf-surface);
+  --knexura-primary: var(--kf-primary);
+  --knexura-primary-light: #65f0e3;
+  --knexura-gold: var(--kf-gold-bright);
+  --knexura-text-primary: var(--kf-text);
+  --knexura-text-secondary: var(--kf-text-secondary);
+  --knexura-success: var(--kf-success);
+  --knexura-danger: var(--kf-danger);
+  --knexura-warning: var(--kf-warning);
+  --knexura-border: var(--kf-border-subtle);
+  --knexura-radius-card: var(--kf-radius-card);
+  --knexura-radius-input: 14px;
+  --knexura-radius-button: var(--kf-radius);
+  --knexura-space-1: var(--kf-space-1);
+  --knexura-space-2: var(--kf-space-2);
+  --knexura-space-3: var(--kf-space-3);
+  --knexura-space-4: var(--kf-space-4);
+  --knexura-space-6: var(--kf-space-6);
+  --knexura-space-8: var(--kf-space-8);
+  --knexura-shadow: var(--kf-shadow);
+  --knexura-gradient-card: var(--kf-gradient-card);
+  --knexura-gradient-primary: var(--kf-gradient-primary);
+  --knexura-font: var(--kf-font);
+  --knexura-motion: var(--kf-motion);
+  --finance-ink: var(--kf-text);
+  --finance-muted: var(--kf-text-secondary);
+  --finance-line: var(--kf-border-subtle);
+  --finance-soft: var(--kf-surface);
+  --finance-primary: var(--kf-primary);
+  --finance-primary-dark: var(--kf-primary-alt);
+  --finance-navy: var(--kf-bg-deep);
+  --finance-income: var(--kf-income);
+  --finance-expense: var(--kf-expense);
+  --finance-gold: var(--kf-gold-bright);
+  --finance-radius: var(--kf-radius-card);
+  --finance-shadow: var(--kf-shadow);
+}
+
+body {
+  font-family: var(--kf-font);
+  background: var(--kf-bg-deep);
+  color: var(--kf-text);
+}

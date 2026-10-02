@@ -16,32 +16,58 @@
       <v-btn v-if="!billingStore.isReadOnly" color="primary" variant="text" class="mt-2" @click="openCreate">{{ t('goals.createFirstGoal') }}</v-btn>
     </v-card>
 
-    <v-row v-else>
-      <v-col v-for="goal in store.goals" :key="goal._id" cols="12" sm="6" md="4">
-        <v-card>
-          <v-card-title :class="isMobile ? 'text-body-1' : undefined">{{ goal.name }}</v-card-title>
-          <v-card-text>
-            <div class="d-flex justify-space-between mb-1">
-              <span>{{ money(goal.currentAmount) }}</span>
-              <span class="text-grey">{{ money(goal.targetAmount) }}</span>
-            </div>
-            <v-progress-linear :model-value="goal.percentage" :color="goal.percentage >= 100 ? 'success' : 'primary'" height="20" rounded>
-              <template #default><span class="text-white text-caption">{{ Math.min(goal.percentage, 100) }}%</span></template>
-            </v-progress-linear>
-            <div class="mt-1 d-flex justify-space-between text-caption">
-              <span>{{ goal.deadline ? t('goals.until', { date: formatDate(goal.deadline) }) : t('goals.noDeadline') }}</span>
-              <span>{{ t('goals.remaining', { amount: money(goal.remaining) }) }}</span>
-            </div>
-          </v-card-text>
-          <v-card-actions>
-            <v-btn v-if="!billingStore.isReadOnly" size="small" variant="text" color="success" prepend-icon="mdi-plus" data-tour="goals-progress" @click="openProgress(goal)">{{ t('common.add') }}</v-btn>
-            <v-spacer />
-            <v-btn v-if="!billingStore.isReadOnly" size="small" variant="text" icon="mdi-pencil" @click="openEdit(goal)" />
-            <v-btn v-if="!billingStore.isReadOnly" size="small" variant="text" icon="mdi-delete" color="error" @click="confirmDelete(goal)" />
-          </v-card-actions>
-        </v-card>
-      </v-col>
-    </v-row>
+    <template v-else>
+      <button v-if="!billingStore.isReadOnly" type="button" class="goals-add mb-4" @click="openCreate">
+        <v-icon>mdi-plus</v-icon>
+        <span>{{ t('goals.addNewGoal') }}</span>
+        <v-icon class="ml-auto" size="20">mdi-chevron-right</v-icon>
+      </button>
+
+      <div class="d-flex align-center justify-space-between flex-wrap ga-3 mb-3">
+        <h2 class="text-h6 font-weight-bold">{{ t('goals.myGoals') }}</h2>
+        <KfSegmented v-model="statusFilter" :options="statusOptions" :label="t('goals.myGoals')" :block="isMobile" />
+      </div>
+
+      <v-row dense>
+        <v-col v-for="goal in visibleGoals" :key="goal._id" cols="12" sm="6" lg="4">
+          <v-card class="goal-card h-100" :class="{ 'goal-card--done': goal.percentage >= 100 }">
+            <v-card-text class="goal-card__body">
+              <div class="goal-card__head">
+                <span class="kf-icon-tile kf-icon-tile--lg" :class="{ 'kf-icon-tile--gold': goal.percentage >= 100 }">
+                  <v-icon size="24">{{ goalIcon(goal) }}</v-icon>
+                </span>
+                <div class="goal-card__title">
+                  <div class="goal-card__name">{{ goal.name }}</div>
+                  <div class="goal-card__date">{{ goal.deadline ? t('goals.until', { date: formatDate(goal.deadline) }) : t('goals.noDeadline') }}</div>
+                </div>
+                <strong class="goal-card__pct" :class="goal.percentage >= 100 ? 'kf-income' : 'text-primary'">{{ Math.min(goal.percentage, 100) }}%</strong>
+              </div>
+
+              <div class="goal-card__amounts">
+                <span class="kf-amount goal-card__current">{{ money(goal.currentAmount) }}</span>
+                <span class="goal-card__target">/ {{ money(goal.targetAmount) }}</span>
+              </div>
+              <v-progress-linear :model-value="goal.percentage" :color="goal.percentage >= 100 ? 'success' : 'primary'" height="10" rounded :aria-label="goal.name" />
+              <div class="goal-card__remaining">{{ t('goals.remaining', { amount: money(Math.max(0, goal.remaining)) }) }}</div>
+
+              <div v-if="goal.percentage >= 100" class="goal-card__celebrate" role="status">
+                <v-icon color="warning" size="26">mdi-star-four-points-outline</v-icon>
+                <div>
+                  <strong>{{ t('goals.excellent') }}</strong>
+                  <span>{{ t('goals.goalReached') }}</span>
+                </div>
+              </div>
+            </v-card-text>
+            <v-card-actions v-if="!billingStore.isReadOnly" class="goal-card__actions">
+              <v-btn variant="tonal" color="primary" prepend-icon="mdi-plus" data-tour="goals-progress" @click="openProgress(goal)">{{ t('common.add') }}</v-btn>
+              <v-spacer />
+              <v-btn variant="text" icon="mdi-pencil-outline" size="small" :aria-label="t('common.edit')" @click="openEdit(goal)" />
+              <v-btn variant="text" icon="mdi-delete-outline" size="small" :aria-label="t('common.delete')" color="error" @click="confirmDelete(goal)" />
+            </v-card-actions>
+          </v-card>
+        </v-col>
+      </v-row>
+    </template>
 
     <v-dialog v-model="dialog" :fullscreen="isMobile" max-width="400">
       <v-card :title="editing ? t('goals.editGoal') : t('goals.newGoal')" class="capture-form">
@@ -74,7 +100,7 @@
         <v-card-actions><v-spacer /><v-btn variant="text" @click="deleteDialog = false">{{ t('common.cancel') }}</v-btn><v-btn color="error" @click="doDelete">{{ t('common.delete') }}</v-btn></v-card-actions></v-card>
     </v-dialog>
 
-    <v-btn v-if="isMobile && !billingStore.isReadOnly" icon="mdi-plus" color="primary" size="x-large" class="finance-fab" data-tour="page-add" @click="openCreate" />
+    <v-btn v-if="isMobile && !billingStore.isReadOnly" icon="mdi-plus" color="primary" size="x-large" class="finance-fab" :aria-label="t('goals.newGoal')" data-tour="page-add" @click="openCreate" />
   </div>
 </template>
 
@@ -87,6 +113,8 @@ import { useSnackbar } from '@/stores/snackbar'
 import { useSubscriptionStore } from '@/stores/subscriptions'
 import { useLocale } from '@/composables/useLocale'
 import MoneyField from '@/components/MoneyField.vue'
+import KfSegmented from '@/components/ui/KfSegmented.vue'
+import { goalIcon } from '@/utils/categoryIcon'
 
 const { t } = useI18n()
 const { money, date } = useLocale()
@@ -106,6 +134,19 @@ const form = ref({ name: '', targetAmount: 0, deadline: null })
 
 const formatDate = (d) => date(d)
 
+const statusFilter = ref('all')
+const completedGoals = computed(() => store.goals.filter((g) => g.percentage >= 100))
+const statusOptions = computed(() => [
+  { value: 'all', label: t('goals.all'), count: store.goals.length },
+  { value: 'progress', label: t('goals.inProgress'), count: store.goals.length - completedGoals.value.length },
+  { value: 'done', label: t('goals.completed'), count: completedGoals.value.length },
+])
+const visibleGoals = computed(() => {
+  if (statusFilter.value === 'done') return completedGoals.value
+  if (statusFilter.value === 'progress') return store.goals.filter((g) => g.percentage < 100)
+  return store.goals
+})
+
 const openCreate = () => { editing.value = null; form.value = { name: '', targetAmount: 0, deadline: null }; dialog.value = true }
 const openEdit = (g) => { editing.value = g._id; form.value = { name: g.name, targetAmount: g.targetAmount, deadline: g.deadline ? new Date(g.deadline).toISOString().slice(0, 10) : null }; dialog.value = true }
 
@@ -124,3 +165,116 @@ const doDelete = async () => { try { await store.remove(toDelete.value); snackba
 
 onMounted(() => store.fetchAll())
 </script>
+
+<style scoped>
+.goals-add {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 56px;
+  padding: 0 18px;
+  border: 1px dashed var(--kf-border);
+  border-radius: var(--kf-radius);
+  background: rgba(0, 229, 208, 0.04);
+  color: var(--kf-primary);
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+  transition: background var(--kf-motion) var(--kf-ease);
+}
+
+.goals-add:hover {
+  background: var(--kf-tint-primary);
+}
+
+.goal-card__body {
+  padding: 18px !important;
+}
+
+.goal-card__head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.goal-card__title {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.goal-card__name {
+  overflow: hidden;
+  font-size: 1.04rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.goal-card__date {
+  color: var(--kf-text-secondary);
+  font-size: 0.78rem;
+}
+
+.goal-card__pct {
+  font-size: 1.1rem;
+}
+
+.goal-card__amounts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.goal-card__current {
+  font-size: 1.4rem;
+}
+
+.goal-card__target {
+  color: var(--kf-text-secondary);
+  font-size: 0.88rem;
+}
+
+.goal-card__remaining {
+  margin-top: 8px;
+  color: var(--kf-text-secondary);
+  font-size: 0.8rem;
+}
+
+.goal-card--done {
+  border-color: rgba(40, 217, 165, 0.35) !important;
+}
+
+/* Quiet celebration when a goal reaches 100%. */
+.goal-card__celebrate {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 14px;
+  padding: 12px 14px;
+  border: 1px solid rgba(244, 184, 96, 0.3);
+  border-radius: var(--kf-radius);
+  background: linear-gradient(135deg, rgba(244, 184, 96, 0.14), rgba(0, 229, 208, 0.06));
+}
+
+.goal-card__celebrate strong,
+.goal-card__celebrate span {
+  display: block;
+}
+
+.goal-card__celebrate strong {
+  color: var(--kf-gold-bright);
+}
+
+.goal-card__celebrate span {
+  color: var(--kf-text-secondary);
+  font-size: 0.8rem;
+}
+
+.goal-card__actions {
+  padding: 0 16px 16px !important;
+}
+</style>

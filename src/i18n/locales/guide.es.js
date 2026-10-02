@@ -8,7 +8,7 @@ export default {
     progress: '{current} de {total}',
     welcome: {
       intro: {
-        title: '¡Bienvenido a Knexura Finanzas! 👋',
+        title: '¡Bienvenido a Knexura Flow! 👋',
         body: 'Te mostramos en un minuto cómo está organizada la app para que empieces a controlar tu dinero. Puedes saltar esta guía cuando quieras.',
       },
       summary: {

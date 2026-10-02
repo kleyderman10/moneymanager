@@ -7,9 +7,12 @@ import { aliases, mdi } from 'vuetify/iconsets/mdi'
 import { Capacitor } from '@capacitor/core'
 import 'vuetify/styles'
 import '@mdi/font/css/materialdesignicons.css'
+import '@fontsource-variable/inter'
 import 'driver.js/dist/driver.css'
 import './styles/finance.css'
+import './styles/design-tokens.css'
 import './styles/tour.css'
+import './styles/flow.css'
 
 import App from './App.vue'
 import router from './router'
@@ -56,13 +59,14 @@ if (Capacitor.isNativePlatform()) {
 const vuetify = createVuetify({
   components,
   directives,
+  display: { mobileBreakpoint: 'md' },
   icons: {
     defaultSet: 'mdi',
     aliases,
     sets: { mdi },
   },
   theme: {
-    defaultTheme: 'light',
+    defaultTheme: 'dark',
     themes: {
       light: {
         dark: false,
@@ -86,16 +90,37 @@ const vuetify = createVuetify({
           'medium-emphasis-opacity': 0.68,
         },
       },
+      // Knexura Flow. Keep in sync with src/styles/design-tokens.css.
       dark: {
         dark: true,
         colors: {
-          background: '#07151B',
-          surface: '#10242B',
-          primary: '#56D8BB',
-          secondary: '#A7C8CF',
-          accent: '#EAC875',
-          income: '#45C99B',
-          expense: '#FF7C88',
+          background: '#081F2B',
+          surface: '#0F3B47',
+          'surface-bright': '#123F4D',
+          'surface-variant': '#123F4D',
+          primary: '#00E5D0',
+          'primary-darken-1': '#22D3C5',
+          secondary: '#3FB6FF',
+          accent: '#D4A574',
+          income: '#28D9A5',
+          expense: '#FF626D',
+          'on-background': '#F5FAFC',
+          'on-surface': '#F5FAFC',
+          'on-surface-variant': '#9FB8C3',
+          'on-primary': '#04222B',
+          'on-secondary': '#04222B',
+          'on-success': '#04222B',
+          'on-warning': '#04222B',
+          error: '#FF626D',
+          info: '#3FB6FF',
+          success: '#28D9A5',
+          warning: '#F4B860',
+        },
+        variables: {
+          'border-color': '#64E6DC',
+          'border-opacity': 0.18,
+          'high-emphasis-opacity': 0.96,
+          'medium-emphasis-opacity': 0.72,
         },
       },
     },

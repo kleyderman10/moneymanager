@@ -13,9 +13,19 @@
       </div>
     </div>
 
+    <!-- Quick type filter; drives the same filters.type as the "Tipo" select below. -->
+    <KfSegmented
+      :model-value="filters.type"
+      :options="typeSegments"
+      :label="t('transactions.type')"
+      :block="isMobile"
+      class="mb-4"
+      @update:model-value="setTypeFilter"
+    />
+
     <v-row class="mb-2" dense>
       <v-col cols="12" sm="4">
-        <v-card class="tx-summary-card">
+        <v-card class="tx-summary-card kf-card-hero">
           <v-card-text>
             <div class="tx-summary-card__label">{{ t('transactions.totalShown') }}</div>
             <div class="tx-summary-card__value">{{ totalShown < 0 ? '−' : '' }}{{ money(Math.abs(totalShown)) }}</div>
@@ -26,7 +36,7 @@
         <v-card class="tx-summary-card tx-summary-card--light">
           <v-card-text>
             <div class="tx-summary-card__label">{{ t('transactions.transactionsShown') }}</div>
-            <div class="tx-summary-card__value tx-summary-card__value--dark">{{ pagedRegisters.length }} <span class="tx-summary-card__of">{{ t('transactions.of', { total: store.registers.length }) }}</span></div>
+            <div class="tx-summary-card__value tx-summary-card__value--dark">{{ pagedRegisters.length }} <span class="tx-summary-card__of">{{ t('transactions.of', { total: searchedRegisters.length }) }}</span></div>
           </v-card-text>
         </v-card>
       </v-col>
@@ -84,6 +94,8 @@
       </v-expansion-panel>
     </v-expansion-panels>
 
+    <v-text-field v-model="search" :label="t('transactions.search')" prepend-inner-icon="mdi-magnify" clearable hide-details class="mb-4" />
+
     <!-- Desktop table -->
     <v-card v-if="!isMobile">
       <v-data-table
@@ -103,38 +115,43 @@
           <v-chip :color="value === 'income' ? 'income' : 'expense'" size="small" label>{{ value === 'income' ? t('transactions.income') : t('transactions.expense') }}</v-chip>
         </template>
         <template #item.amount="{ value, item }">
-          <span :class="item.type === 'income' ? 'text-green' : 'text-red'">{{ item.type === 'income' ? '+' : '-' }}{{ money(value) }}</span>
+          <span class="kf-amount" :class="item.type === 'income' ? 'kf-income' : 'kf-expense'">{{ item.type === 'income' ? '+' : '-' }}{{ money(value) }}</span>
         </template>
         <template #item.category="{ value }">
-          <v-chip size="small" :color="getCategoryColor(value).bg" :style="{ color: getCategoryColor(value).text }">{{ value?.icon }} {{ value?.name }}</v-chip>
+          <v-chip size="small" :color="getCategoryColor(value).bg" :style="{ color: getCategoryColor(value).text }"><v-icon :icon="categoryIcon(value)" size="18" class="mr-1" />{{ value?.name }}</v-chip>
         </template>
         <template #item.wallet="{ value }">{{ value?.name || '—' }}</template>
         <template #item.actions="{ item }">
-          <v-icon v-if="!billingStore.isReadOnly" size="small" class="mr-2" @click="openEdit(item)">mdi-pencil</v-icon>
-          <v-icon v-if="!billingStore.isReadOnly" size="small" color="error" @click="confirmDelete(item)">mdi-delete</v-icon>
+          <div v-if="!billingStore.isReadOnly" class="d-flex flex-nowrap justify-end ga-1">
+            <v-btn icon="mdi-pencil-outline" variant="text" size="small" :aria-label="t('common.edit')" @click="openEdit(item)" />
+            <v-btn icon="mdi-delete-outline" variant="text" size="small" color="error" :aria-label="t('common.delete')" @click="confirmDelete(item)" />
+          </div>
         </template>
       </v-data-table>
       <div class="tx-pagination">
-        <span class="text-caption text-medium-emphasis">{{ t('transactions.showing', { shown: pagedRegisters.length, total: store.registers.length }) }}</span>
+        <span class="text-caption text-medium-emphasis">{{ t('transactions.showing', { shown: pagedRegisters.length, total: searchedRegisters.length }) }}</span>
         <div class="d-flex align-center ga-1">
-          <v-btn icon="mdi-chevron-left" size="small" variant="text" :disabled="page <= 1" @click="page--" />
+          <v-btn icon="mdi-chevron-left" size="small" variant="text" :aria-label="t('common.back')" :disabled="page <= 1" @click="page--" />
           <span class="text-caption">{{ page }} / {{ pageCount }}</span>
-          <v-btn icon="mdi-chevron-right" size="small" variant="text" :disabled="page >= pageCount" @click="page++" />
+          <v-btn icon="mdi-chevron-right" size="small" variant="text" :aria-label="t('common.next')" :disabled="page >= pageCount" @click="page++" />
         </div>
       </div>
     </v-card>
 
     <!-- Mobile card list -->
     <div v-else>
-      <v-card v-if="store.registers.length === 0 && !store.loading" class="pa-8 text-center text-grey">
+      <v-card v-if="searchedRegisters.length === 0 && !store.loading" class="pa-8 text-center text-grey">
         <v-icon size="x-large" color="grey">mdi-cash-remove</v-icon>
         <div class="mt-2">{{ t('transactions.noTransactions') }}</div>
       </v-card>
       <template v-else>
-        <v-list bg-color="transparent" lines="two">
+        <template v-for="group in pagedGroups" :key="group.key">
+          <div class="tx-date-header">{{ group.label }}</div>
+          <v-list bg-color="transparent" lines="two" class="tx-mobile-list">
           <v-list-item
-            v-for="reg in pagedRegisters"
+            v-for="reg in group.items"
             :key="reg._id"
+            class="tx-mobile-row"
             @click="!billingStore.isReadOnly && openEdit(reg)"
           >
             <template #prepend>
@@ -146,31 +163,31 @@
                 @click.stop
                 @update:model-value="(v) => toggleSelected(reg._id, v)"
               />
-              <v-avatar :color="reg.type === 'income' ? 'income' : 'expense'" size="40">
-                <span class="text-white text-caption">{{ reg.category?.icon || '?' }}</span>
-              </v-avatar>
+              <span class="kf-icon-tile" :class="reg.type === 'income' ? 'kf-icon-tile--income' : 'kf-icon-tile--expense'">
+                <v-icon :icon="categoryIcon(reg.category)" size="20" />
+              </span>
             </template>
-            <v-list-item-title>{{ reg.description || reg.category?.name || t('transactions.noDescription') }}</v-list-item-title>
+            <v-list-item-title class="tx-mobile-row__title">{{ reg.description || reg.category?.name || t('transactions.noDescription') }}</v-list-item-title>
             <v-list-item-subtitle>
-              {{ formatDate(reg.date) }} · {{ reg.category?.name }}
-              <span v-if="reg.wallet" class="text-caption"> · {{ reg.wallet.name }}</span>
+              {{ reg.category?.name }}<span v-if="reg.wallet"> · {{ reg.wallet.name }}</span>
             </v-list-item-subtitle>
             <template #append>
               <div class="text-right">
-                <div :class="reg.type === 'income' ? 'text-green' : 'text-red'" class="text-body-1 font-weight-bold">
+                <div :class="reg.type === 'income' ? 'kf-income' : 'kf-expense'" class="kf-amount text-body-1">
                   {{ reg.type === 'income' ? '+' : '-' }}{{ money(reg.amount) }}
                 </div>
                 <div class="text-caption text-grey">{{ reg.type === 'income' ? t('transactions.income') : t('transactions.expense') }}</div>
               </div>
             </template>
           </v-list-item>
-        </v-list>
+          </v-list>
+        </template>
         <div class="tx-pagination">
-          <span class="text-caption text-medium-emphasis">{{ t('transactions.showing', { shown: pagedRegisters.length, total: store.registers.length }) }}</span>
+          <span class="text-caption text-medium-emphasis">{{ t('transactions.showing', { shown: pagedRegisters.length, total: searchedRegisters.length }) }}</span>
           <div class="d-flex align-center ga-1">
-            <v-btn icon="mdi-chevron-left" size="small" variant="text" :disabled="page <= 1" @click="page--" />
+            <v-btn icon="mdi-chevron-left" size="small" variant="text" :aria-label="t('common.back')" :disabled="page <= 1" @click="page--" />
             <span class="text-caption">{{ page }} / {{ pageCount }}</span>
-            <v-btn icon="mdi-chevron-right" size="small" variant="text" :disabled="page >= pageCount" @click="page++" />
+            <v-btn icon="mdi-chevron-right" size="small" variant="text" :aria-label="t('common.next')" :disabled="page >= pageCount" @click="page++" />
           </div>
         </div>
       </template>
@@ -486,14 +503,14 @@
       icon="mdi-plus"
       color="primary"
       size="x-large"
-      class="finance-fab" data-tour="page-add"
+      class="finance-fab" :aria-label="t('transactions.newTransaction')" data-tour="page-add"
       @click="openModeDialog"
     />
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useDisplay } from 'vuetify'
 import { useI18n } from 'vue-i18n'
@@ -506,10 +523,12 @@ import { categoriesAPI, walletsAPI, aiAPI, statementsAPI, recurringAPI } from '@
 import AISuggestCategory from '@/components/AISuggestCategory.vue'
 import VoiceInputButton from '@/components/VoiceInputButton.vue'
 import ReceiptScanner from '@/components/ReceiptScanner.vue'
+import KfSegmented from '@/components/ui/KfSegmented.vue'
 import NativeSelectField from '@/components/NativeSelectField.vue'
 import MoneyField from '@/components/MoneyField.vue'
 import { readAndCompressImage } from '@/utils/imageUtils'
 import { getCategoryColor } from '@/constants/categoryColors'
+import { categoryIcon } from '@/utils/categoryIcon'
 
 const { t } = useI18n()
 const { money, date } = useLocale()
@@ -581,6 +600,15 @@ const statementContext = ref({
 
 const form = ref({ type: 'expense', amount: 0, date: new Date().toISOString().slice(0, 10), category: null, description: '', wallet: null, tags: [] })
 const typeOptions = computed(() => [{ title: t('transactions.income'), value: 'income' }, { title: t('transactions.expense'), value: 'expense' }])
+const typeSegments = computed(() => [
+  { value: null, label: t('transactions.all') },
+  { value: 'income', label: t('transactions.incomePlural') },
+  { value: 'expense', label: t('transactions.expensePlural') },
+])
+const setTypeFilter = (value) => {
+  filters.value.type = value
+  load()
+}
 
 const showAllCategories = ref(false)
 const showDatePicker = ref(false)
@@ -643,7 +671,7 @@ const headers = computed(() => [
   { title: t('transactions.description'), key: 'description' },
   { title: t('transactions.account'), key: 'wallet' },
   { title: t('wallets.amount'), key: 'amount' },
-  { title: '', key: 'actions', sortable: false, width: 80 },
+  { title: '', key: 'actions', sortable: false, width: 112 },
 ])
 
 const PROCESS_THROTTLE_KEY = 'mm_last_recurring_process'
@@ -656,16 +684,37 @@ const tryProcessRecurring = () => {
 
 const formatDate = (d) => d ? date(d) : ''
 
-const pageCount = computed(() => Math.max(1, Math.ceil(store.registers.length / PAGE_SIZE)))
-const pagedRegisters = computed(() => store.registers.slice((page.value - 1) * PAGE_SIZE, page.value * PAGE_SIZE))
+const search = ref('')
+const searchedRegisters = computed(() => {
+  const query = (search.value || '').trim().toLocaleLowerCase()
+  return query ? store.registers.filter(r => [r.description, r.category?.name, r.wallet?.name].some(value => (value || '').toLocaleLowerCase().includes(query))) : store.registers
+})
+watch(search, () => { page.value = 1 })
+const pageCount = computed(() => Math.max(1, Math.ceil(searchedRegisters.value.length / PAGE_SIZE)))
+watch(pageCount, (count) => { page.value = Math.min(page.value, count) })
+const pagedRegisters = computed(() => searchedRegisters.value.slice((page.value - 1) * PAGE_SIZE, page.value * PAGE_SIZE))
+// Mobile list grouped by day, keeping the existing sort order.
+const pagedGroups = computed(() => {
+  const groups = []
+  for (const reg of pagedRegisters.value) {
+    const key = String(reg.date || '').slice(0, 10)
+    let group = groups[groups.length - 1]
+    if (!group || group.key !== key) {
+      group = { key, label: formatDate(reg.date), items: [] }
+      groups.push(group)
+    }
+    group.items.push(reg)
+  }
+  return groups
+})
 
-const totalShown = computed(() => store.registers.reduce(
+const totalShown = computed(() => searchedRegisters.value.reduce(
   (sum, r) => sum + (r.type === 'income' ? Number(r.amount) || 0 : -(Number(r.amount) || 0)), 0
 ))
 const averagePerMovement = computed(() => {
-  if (store.registers.length === 0) return 0
-  const totalAbs = store.registers.reduce((sum, r) => sum + Math.abs(Number(r.amount) || 0), 0)
-  return totalAbs / store.registers.length
+  if (searchedRegisters.value.length === 0) return 0
+  const totalAbs = searchedRegisters.value.reduce((sum, r) => sum + Math.abs(Number(r.amount) || 0), 0)
+  return totalAbs / searchedRegisters.value.length
 })
 
 const toggleSelected = (id, value) => {
@@ -1092,39 +1141,27 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.tx-summary-card {
-  border: 0 !important;
-  background: #0C2630 !important;
-}
-
-.tx-summary-card--light {
-  background: #fff !important;
-}
-
 .tx-summary-card__label {
-  color: #a8c8c4;
-  font-size: 0.72rem;
-  font-weight: 650;
-}
-
-.tx-summary-card--light .tx-summary-card__label {
-  color: var(--finance-muted);
+  color: var(--kf-text-secondary);
+  font-size: 0.76rem;
+  font-weight: 600;
 }
 
 .tx-summary-card__value {
   margin-top: 6px;
-  color: #fff;
+  color: var(--kf-text);
   font-size: 1.35rem;
-  font-weight: 760;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
 }
 
-.tx-summary-card__value--dark {
-  color: var(--finance-ink);
+.kf-card-hero .tx-summary-card__value {
+  font-size: 1.6rem;
 }
 
 .tx-summary-card__of {
-  color: var(--finance-muted);
+  color: var(--kf-text-secondary);
   font-size: 0.85rem;
   font-weight: 500;
 }
@@ -1134,16 +1171,42 @@ onMounted(async () => {
   align-items: center;
 }
 
-
 .tx-pagination {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 10px 16px;
-  border-top: 1px solid var(--finance-line);
+  border-top: 1px solid var(--kf-divider);
 }
 
 :deep(.tx-row--alt) {
-  background: #F7FAFA;
+  background: rgba(0, 229, 208, 0.025);
+}
+
+.tx-date-header {
+  margin: 14px 4px 8px;
+  color: var(--kf-text-secondary);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.tx-mobile-list {
+  padding: 0 !important;
+}
+
+.tx-mobile-list :deep(.tx-mobile-row) {
+  margin-bottom: 8px;
+  padding: 10px 12px !important;
+  border: 1px solid var(--kf-border-subtle);
+  border-radius: var(--kf-radius) !important;
+  background: var(--kf-gradient-card);
+}
+
+.tx-mobile-list :deep(.tx-mobile-row .v-list-item__prepend) {
+  gap: 4px;
+}
+
+.tx-mobile-row__title {
+  font-weight: 650;
 }
 </style>

@@ -15,9 +15,9 @@ const props = defineProps({
   // Thresholds are expressed as a percentage of `max`.
   low: { type: Number, default: 40 },
   mid: { type: Number, default: 70 },
-  lowColor: { type: String, default: '#C1443A' },
-  midColor: { type: String, default: '#E3A458' },
-  highColor: { type: String, default: '#1F8A5C' },
+  lowColor: { type: String, default: '#FF6B6B' },
+  midColor: { type: String, default: '#F4B860' },
+  highColor: { type: String, default: '#20D8A0' },
   valueClass: { type: String, default: 'circular-gauge__value' },
 })
 

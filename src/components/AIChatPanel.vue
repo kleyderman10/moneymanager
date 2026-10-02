@@ -22,7 +22,7 @@
       <template #prepend>
         <v-toolbar color="secondary" theme="dark" density="comfortable">
           <v-toolbar-title class="text-body-1">
-            <v-icon class="mr-1" color="primary">mdi-auto-awesome</v-icon> {{ t('aiChat.financialAssistant') }}
+            <v-icon class="mr-1" color="primary">mdi-star-four-points-outline</v-icon> {{ t('aiChat.financialAssistant') }}
           </v-toolbar-title>
           <v-spacer />
           <v-btn icon size="small" variant="text" @click="chatStore.clearHistory">
@@ -109,8 +109,9 @@ const isMobile = computed(() => mobile.value)
 // with a clean 16px gap between them so the two floating buttons never touch or overlap.
 const fabStyle = computed(() => ({
   position: 'fixed',
-  bottom: isMobile.value ? 'calc(160px + var(--safe-bottom))' : 'calc(24px + var(--safe-bottom))',
-  right: isMobile.value ? '16px' : '24px',
+  // On phones it stacks above the page's "+" action, which sits above the bottom navigation.
+  bottom: isMobile.value ? 'calc(var(--kf-fab-bottom) + 68px)' : 'calc(24px + var(--safe-bottom))',
+  right: isMobile.value ? '20px' : '24px',
   zIndex: '100',
 }))
 

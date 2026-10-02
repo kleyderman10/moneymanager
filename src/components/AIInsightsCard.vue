@@ -1,7 +1,7 @@
 <template>
   <v-card v-if="insights.length > 0" class="section-card mb-3">
     <v-card-title class="d-flex align-center">
-      <span class="section-icon mr-3"><v-icon size="20">mdi-auto-awesome</v-icon></span>
+      <span class="section-icon mr-3"><v-icon size="20">mdi-star-four-points-outline</v-icon></span>
       <div>
         <div class="text-body-1">{{ t('aiInsights.title') }}</div>
         <div class="text-caption text-medium-emphasis font-weight-regular">{{ t('aiInsights.subtitle') }}</div>

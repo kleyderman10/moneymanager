@@ -3,8 +3,10 @@
     <header data-tour="page-intro" class="dashboard-welcome d-flex align-start align-sm-center flex-column flex-sm-row ga-3">
       <div>
         <div class="page-intro__eyebrow">{{ t('dashboard.financialSummary') }}</div>
-        <h1 :class="isMobile ? 'text-h5' : 'text-h4'">{{ t('dashboard.title') }}</h1>
-        <p class="page-intro__subtitle">{{ t('dashboard.subtitle', { period: periodLabel }) }}</p>
+        <h1 :class="isMobile ? 'text-h5' : 'text-h4'">
+          {{ firstName ? t('dashboard.greeting', { name: firstName }) : t('dashboard.title') }}
+        </h1>
+        <p class="page-intro__subtitle">{{ t('dashboard.todayOverview', { period: periodLabel }) }}</p>
       </div>
       <v-spacer />
       <v-btn
@@ -20,10 +22,7 @@
 
     <v-row v-if="summary" class="mb-3" data-tour="dashboard-summary">
       <v-col cols="12">
-        <v-card class="dashboard-hero">
-          <v-card-text class="pa-6 pa-md-7">
-            <div class="dashboard-hero__label">{{ t('dashboard.netWorth') }}</div>
-            <div class="dashboard-hero__amount">{{ money(netWorth) }}</div>
+        <BalanceCard :label="t('dashboard.netWorth')" :amount="netWorth">
 
             <div class="dashboard-hero__meta">
               <div>
@@ -48,8 +47,7 @@
             <div v-if="cashFlow" class="dashboard-hero__surplus">
               {{ t('dashboard.monthlySurplus', { amount: money(cashFlow.averageSurplus), margin: surplusMargin }) }}
             </div>
-          </v-card-text>
-        </v-card>
+        </BalanceCard>
       </v-col>
 
       <v-col v-if="topInsight" cols="12">
@@ -66,7 +64,7 @@
         </v-alert>
       </v-col>
 
-      <v-col cols="12" sm="6" md="4">
+      <v-col cols="6" md="4">
         <v-card class="metric-card metric-card--income">
           <v-card-text>
             <div class="metric-card__icon"><v-icon>mdi-arrow-down-left</v-icon></div>
@@ -78,7 +76,7 @@
           </v-card-text>
         </v-card>
       </v-col>
-      <v-col cols="12" sm="6" md="4">
+      <v-col cols="6" md="4">
         <v-card class="metric-card metric-card--expense">
           <v-card-text>
             <div class="metric-card__icon"><v-icon>mdi-arrow-up-right</v-icon></div>
@@ -91,14 +89,28 @@
         </v-card>
       </v-col>
       <v-col cols="12" md="4">
-        <v-card class="metric-card metric-card--activity">
+        <!-- Share of this month's income already spent (real totals from the summary). -->
+        <v-card class="metric-card spend-share-card">
           <v-card-text>
-            <div class="metric-card__icon"><v-icon>mdi-swap-vertical</v-icon></div>
-            <div>
-              <div class="metric-card__label">{{ t('dashboard.monthActivity') }}</div>
-              <div class="metric-card__value">{{ t('dashboard.transactionCount', { count: summary.transactionCount }) }}</div>
-              <div class="metric-card__hint">{{ t('dashboard.allRecorded') }}</div>
+            <div class="spend-share-card__copy">
+              <div class="metric-card__label">{{ t('dashboard.spentShareTitle') }}</div>
+              <div class="spend-share-card__value">{{ spentShare === null ? '—' : `${spentShare}%` }}</div>
+              <div class="metric-card__hint">
+                {{ spentShare === null ? t('dashboard.noIncomeYet') : t('dashboard.spentShareHint') }}
+                · {{ t('dashboard.transactionCount', { count: summary.transactionCount }) }}
+              </div>
             </div>
+            <v-progress-circular
+              class="spend-share-card__ring"
+              :model-value="Math.min(100, spentShare || 0)"
+              :color="spentShareColor"
+              bg-color="rgba(255,255,255,0.08)"
+              size="76"
+              width="9"
+              :aria-label="t('dashboard.spentShareTitle')"
+            >
+              <v-icon size="22" :color="spentShareColor">mdi-chart-donut</v-icon>
+            </v-progress-circular>
           </v-card-text>
         </v-card>
       </v-col>
@@ -229,9 +241,11 @@ import { summaryAPI, recurringAPI, creditsAPI, walletsAPI, simulationsAPI } from
 import { useAiInsights } from '@/stores/aiInsights'
 import { useSubscriptionStore } from '@/stores/subscriptions'
 import { useLocale } from '@/composables/useLocale'
+import { useAuthStore } from '@/stores/auth'
 import AIInsightsCard from '@/components/AIInsightsCard.vue'
 import AIHealthScore from '@/components/AIHealthScore.vue'
 import CategoryDonutChart from '@/components/CategoryDonutChart.vue'
+import BalanceCard from '@/components/finance/BalanceCard.vue'
 
 const { t } = useI18n()
 const { money, dateLong } = useLocale()
@@ -240,6 +254,8 @@ const { mobile } = useDisplay()
 const isMobile = computed(() => mobile.value)
 const insightsStore = useAiInsights()
 const billingStore = useSubscriptionStore()
+const authStore = useAuthStore()
+const firstName = computed(() => authStore.user?.name?.trim().split(' ')[0] || '')
 
 const goToNewTransaction = () => {
   router.push({ path: '/transactions', query: { create: '1' } })
@@ -256,6 +272,16 @@ const periodLabel = computed(() => dateLong(new Date(), { month: 'long' }))
 const savingsRate = computed(() => {
   if (!summary.value?.totalIncome) return 0
   return Math.round((summary.value.balance / summary.value.totalIncome) * 100)
+})
+
+// Percentage of this month's income already spent; null when there is no income yet.
+const spentShare = computed(() => {
+  if (!summary.value?.totalIncome) return null
+  return Math.round((summary.value.totalExpenses / summary.value.totalIncome) * 1000) / 10
+})
+const spentShareColor = computed(() => {
+  if (spentShare.value === null || spentShare.value < 70) return 'primary'
+  return spentShare.value >= 100 ? 'error' : 'warning'
 })
 
 const expenseCategories = computed(() =>
@@ -376,3 +402,30 @@ onMounted(() => {
   insightsStore.fetchHealthScore()
 })
 </script>
+
+<style scoped>
+.spend-share-card .v-card-text {
+  flex-direction: row !important;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px !important;
+}
+
+.spend-share-card__copy {
+  min-width: 0;
+}
+
+.spend-share-card__value {
+  margin-top: 4px;
+  color: var(--kf-text);
+  font-size: 1.7rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.spend-share-card__ring {
+  flex: 0 0 auto;
+}
+</style>

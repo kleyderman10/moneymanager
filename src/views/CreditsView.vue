@@ -20,9 +20,9 @@
     <v-row v-else>
       <v-col v-for="credit in store.credits" :key="credit._id" cols="12" md="6" xl="4">
         <v-card class="credit-card" :class="{ 'credit-card--paid': credit.summary?.status === 'paid_off' }">
-          <v-card-title class="d-flex align-center">
-            <v-avatar v-if="credit.institutionLogo" size="38" class="mr-3"><img :src="credit.institutionLogo" :alt="credit.institutionName || credit.lender || 'Entidad financiera'" /></v-avatar>
-            <v-avatar v-else color="secondary" variant="tonal" size="38" class="mr-3"><v-icon>mdi-bank-minus</v-icon></v-avatar>
+          <v-card-title class="d-flex align-center credit-card__title">
+            <v-avatar v-if="credit.institutionLogo" size="44" class="mr-3 credit-card__logo"><img :src="credit.institutionLogo" :alt="credit.institutionName || credit.lender || 'Entidad financiera'" /></v-avatar>
+            <span v-else class="kf-icon-tile kf-icon-tile--lg mr-3"><v-icon>mdi-bank</v-icon></span>
             <div class="min-w-0">
               <div class="text-subtitle-1 text-truncate">{{ credit.name }}</div>
               <div class="text-caption text-medium-emphasis">{{ credit.institutionName || credit.lender || typeLabels[credit.type] }}</div>
@@ -35,7 +35,7 @@
 
           <v-card-text>
             <div class="credit-balance-label">{{ t('credits.capitalBalance') }}</div>
-            <div :class="isMobile ? 'text-h5' : 'text-h4'" class="font-weight-bold">{{ money(credit.summary?.capitalBalance ?? credit.capitalBalance ?? credit.outstandingBalance, credit.currency) }}</div>
+            <div class="credit-card__balance kf-amount">{{ money(credit.summary?.capitalBalance ?? credit.capitalBalance ?? credit.outstandingBalance, credit.currency) }}</div>
             <div class="text-caption text-medium-emphasis mt-1">{{ t('credits.totalBalance', { kind: credit.summary?.interestIsEstimated ? t('credits.estimated') : t('credits.current') }) }}: <strong>{{ money(credit.summary?.totalBalance, credit.currency) }}</strong> {{ t('credits.capitalPlusInterest') }}</div>
             <v-progress-linear class="mt-3" color="primary" rounded height="8" :model-value="credit.summary?.progress || 0" />
             <div class="d-flex justify-space-between text-caption text-medium-emphasis mt-1">
@@ -44,10 +44,10 @@
             </div>
 
             <div class="credit-metrics mt-4">
-              <div><span>{{ t('credits.registeredInstallment') }}</span><strong>{{ money(credit.installmentAmount, credit.currency) }}</strong></div>
-              <div><span>{{ t('credits.currentInterest') }}</span><strong>{{ money(credit.summary?.currentInterest, credit.currency) }}</strong></div>
-              <div><span>{{ t('credits.remainingInterest') }}</span><strong>{{ money(credit.summary?.totalRemainingInterest, credit.currency) }}</strong></div>
-              <div><span>{{ t('credits.installmentsPaid') }}</span><strong>{{ credit.installmentsPaid }} / {{ credit.termMonths }}</strong></div>
+              <div><v-icon size="20">mdi-calendar-text-outline</v-icon><span>{{ t('credits.registeredInstallment') }}</span><strong>{{ money(credit.installmentAmount, credit.currency) }}</strong></div>
+              <div><v-icon size="20">mdi-format-list-numbered</v-icon><span>{{ t('credits.installmentsPaid') }}</span><strong>{{ credit.installmentsPaid }} / {{ credit.termMonths }}</strong></div>
+              <div><v-icon size="20">mdi-chart-line-variant</v-icon><span>{{ t('credits.currentInterest') }}</span><strong>{{ money(credit.summary?.currentInterest, credit.currency) }}</strong></div>
+              <div><v-icon size="20">mdi-chart-bell-curve-cumulative</v-icon><span>{{ t('credits.remainingInterest') }}</span><strong>{{ money(credit.summary?.totalRemainingInterest, credit.currency) }}</strong></div>
             </div>
 
             <div v-if="credit.summary?.calculation" class="text-caption text-medium-emphasis mt-3">
@@ -59,12 +59,12 @@
               <ul class="credit-advice"><li v-for="warning in credit.summary.calculation.warnings" :key="warning">{{ warning }}</li></ul>
             </v-alert>
 
-            <v-alert v-if="credit.summary?.nextPaymentDate && credit.summary.status !== 'paid_off'" class="mt-3" :type="credit.summary.daysUntilNextPayment < 0 ? 'error' : credit.summary.daysUntilNextPayment <= 7 ? 'warning' : 'info'" variant="tonal" density="compact">
+            <v-alert v-if="credit.summary?.nextPaymentDate && credit.summary.status !== 'paid_off'" class="mt-3 credit-next" :type="credit.summary.daysUntilNextPayment < 0 ? 'error' : credit.summary.daysUntilNextPayment <= 7 ? 'warning' : undefined" :color="credit.summary.daysUntilNextPayment > 7 ? 'primary' : undefined" :icon="credit.summary.daysUntilNextPayment > 7 ? 'mdi-calendar-clock' : undefined" variant="tonal">
               <strong>{{ credit.summary.daysUntilNextPayment < 0 ? t('credits.paymentOverdue', { days: Math.abs(credit.summary.daysUntilNextPayment) }) : t('credits.nextPayment', { date: formatDate(credit.summary.nextPaymentDate) }) }}</strong>
               <span v-if="credit.summary.daysUntilNextPayment >= 0"> · {{ money(credit.installmentAmount || credit.summary.nextPaymentAmount, credit.currency) }}</span>
             </v-alert>
 
-            <v-alert v-if="credit.summary?.advice?.length" class="mt-3" type="success" variant="tonal" density="compact">
+            <v-alert v-if="credit.summary?.advice?.length" class="mt-3" color="success" icon="mdi-check-circle-outline" variant="tonal" density="compact">
               <ul class="credit-advice"><li v-for="tip in credit.summary.advice.slice(0, 2)" :key="tip">{{ tip }}</li></ul>
             </v-alert>
 
@@ -215,7 +215,7 @@
       </v-card>
     </v-dialog>
 
-    <v-btn v-if="isMobile && !billingStore.isReadOnly" icon="mdi-plus" color="primary" size="x-large" class="finance-fab" data-tour="page-add" @click="openCreate" />
+    <v-btn v-if="isMobile && !billingStore.isReadOnly" icon="mdi-plus" color="primary" size="x-large" class="finance-fab" :aria-label="t('credits.registerCredit')" data-tour="page-add" @click="openCreate" />
   </div>
 </template>
 
@@ -372,19 +372,33 @@ onMounted(async () => {
 
 <style scoped>
 .credit-card { height: 100%; }
-.credit-card--paid { border: 1px solid rgba(21, 154, 114, 0.35); }
-.credit-balance-label { color: var(--finance-muted); font-size: 0.78rem; }
-.credit-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
-.credit-metrics > div { padding: 8px; border-radius: 10px; background: var(--finance-soft); }
-.credit-metrics span { display: block; color: var(--finance-muted); font-size: 0.68rem; }
-.credit-metrics strong { display: block; margin-top: 3px; color: var(--finance-ink); font-size: 0.84rem; }
-.credit-advice { margin: 0; padding-left: 18px; font-size: 0.78rem; }
+.credit-card--paid { border-color: rgba(40, 217, 165, 0.35) !important; }
+.credit-card__title { padding: 18px 18px 8px !important; }
+.credit-card__logo { border: 1px solid var(--kf-border-subtle); }
+.credit-balance-label { color: var(--kf-text-secondary); font-size: 0.82rem; }
+.credit-card__balance { margin-top: 2px; color: var(--kf-text); font-size: clamp(1.7rem, 4vw, 2.2rem); letter-spacing: -0.02em; }
+/* Secondary figures as a 2×2 grid of small cards (mockup "Créditos"). */
+.credit-metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.credit-metrics > div {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 10px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid var(--kf-border-subtle);
+  border-radius: var(--kf-radius-sm);
+  background: rgba(4, 22, 31, 0.35);
+}
+.credit-metrics .v-icon { grid-row: span 2; color: var(--kf-text-secondary); }
+.credit-metrics span { color: var(--kf-text-secondary); font-size: 0.72rem; line-height: 1.25; }
+.credit-metrics strong { color: var(--kf-text); font-size: 0.95rem; font-variant-numeric: tabular-nums; }
+.credit-next { font-size: 0.95rem; }
+.credit-advice { margin: 0; padding-left: 18px; font-size: 0.8rem; }
 .plan-scroll { max-height: 460px; overflow: auto; }
-@media (max-width: 600px) { .credit-metrics { grid-template-columns: 1fr; } }
 
 .wizard-step-title {
   margin-bottom: 18px;
-  color: var(--finance-muted);
+  color: var(--kf-text-secondary);
   font-size: 0.78rem;
   font-weight: 650;
   text-align: center;

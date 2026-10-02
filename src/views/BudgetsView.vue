@@ -10,41 +10,15 @@
       <v-btn v-if="!isMobile && !billingStore.isReadOnly" data-tour="page-add" color="primary" prepend-icon="mdi-plus" @click="openCreate">{{ t('budgets.newBudget') }}</v-btn>
     </div>
 
-    <v-card v-if="!isMobile">
-      <v-data-table :items="store.budgets" :headers="headers" :loading="store.loading" hover>
-        <template #item.month="{ value }">{{ months[value - 1] }}</template>
-        <template #item.category="{ value }">
-          <span v-if="value">{{ value.icon }} {{ value.name }}</span>
-          <v-chip v-else size="small">{{ t('budgets.general') }}</v-chip>
-        </template>
-        <template #item.amount="{ value }">{{ money(value) }}</template>
-        <template #item.actions="{ item }">
-          <v-icon v-if="!billingStore.isReadOnly" size="small" class="mr-2" @click="openEdit(item)">mdi-pencil</v-icon>
-          <v-icon v-if="!billingStore.isReadOnly" size="small" color="error" @click="confirmDelete(item)">mdi-delete</v-icon>
-        </template>
-      </v-data-table>
+    <v-card v-if="store.budgets.length === 0 && !store.loading" class="pa-8 text-center text-medium-emphasis">
+      <v-icon size="40" color="primary">mdi-chart-pie-outline</v-icon>
+      <p class="mt-3">{{ t('budgets.noBudgets') }}</p>
     </v-card>
-
-    <div v-else>
-      <v-card v-if="store.budgets.length === 0 && !store.loading" class="pa-8 text-center text-grey">
-        <v-icon size="x-large" color="grey">mdi-chart-pie</v-icon>
-        <div class="mt-2">{{ t('budgets.noBudgets') }}</div>
-      </v-card>
-      <v-row v-else>
-        <v-col v-for="b in store.budgets" :key="b._id" cols="12" sm="6">
-          <v-card @click="!billingStore.isReadOnly && openEdit(b)">
-            <v-card-title class="text-body-1">
-              {{ b.category?.icon }} {{ b.category?.name || t('budgets.general') }}
-            </v-card-title>
-            <v-card-text>
-              <div class="text-h6">{{ money(b.amount) }}</div>
-              <div class="text-caption text-grey">{{ months[b.month - 1] }} {{ b.year }}</div>
-            </v-card-text>
-          </v-card>
-        </v-col>
-      </v-row>
-    </div>
-
+    <v-row v-else>
+      <v-col v-for="b in store.budgets" :key="b._id" cols="12" sm="6" lg="4">
+        <BudgetCard :budget="b" :status="budgetStatuses[b._id]" :period="`${months[b.month - 1]} ${b.year}`" :read-only="billingStore.isReadOnly" @edit="openEdit(b)" @delete="confirmDelete(b)" />
+      </v-col>
+    </v-row>
     <v-dialog v-model="dialog" :fullscreen="isMobile" max-width="400">
       <v-card :title="editing ? t('budgets.editBudget') : t('budgets.newBudget')" class="budget-form">
         <v-card-text>
@@ -83,21 +57,22 @@
       icon="mdi-plus"
       color="primary"
       size="x-large"
-      class="finance-fab" data-tour="page-add"
+      class="finance-fab" :aria-label="t('budgets.newBudget')" data-tour="page-add"
       @click="openCreate"
     />
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useDisplay } from 'vuetify'
 import { useI18n } from 'vue-i18n'
 import { useBudgetsStore } from '@/stores/budgets'
 import { useSnackbar } from '@/stores/snackbar'
 import { useSubscriptionStore } from '@/stores/subscriptions'
 import { useLocale } from '@/composables/useLocale'
-import { categoriesAPI } from '@/api'
+import { categoriesAPI, reportsAPI } from '@/api'
+import BudgetCard from '@/components/finance/BudgetCard.vue'
 import AIRecommendBudget from '@/components/AIRecommendBudget.vue'
 import NativeSelectField from '@/components/NativeSelectField.vue'
 import MoneyField from '@/components/MoneyField.vue'
@@ -111,6 +86,24 @@ const store = useBudgetsStore()
 const snackbar = useSnackbar()
 const billingStore = useSubscriptionStore()
 const categories = ref([])
+const budgetStatuses = ref({})
+let statusRequest = 0
+watch(() => store.budgets.map(b => [b._id, b.month, b.year, b.amount]), async () => {
+  const request = ++statusRequest
+  const periods = [...new Set(store.budgets.map(b => [b.year, b.month].join('-')))]
+  const results = await Promise.allSettled(periods.map(period => {
+    const [year, month] = period.split('-')
+    return reportsAPI.monthly(year, month)
+  }))
+  if (request !== statusRequest) return
+  const statuses = {}
+  for (const result of results) {
+    if (result.status === 'fulfilled') {
+      for (const row of result.value.data.budgetStatus || []) statuses[row.budget._id] = row
+    }
+  }
+  budgetStatuses.value = statuses
+}, { immediate: true })
 const dialog = ref(false)
 const deleteDialog = ref(false)
 const editing = ref(null)

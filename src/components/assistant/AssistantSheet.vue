@@ -8,8 +8,8 @@
   >
     <v-card class="assistant-sheet" rounded="t-xl">
       <v-card-title class="d-flex align-center pt-4">
-        <v-icon color="primary" class="mr-2">mdi-microphone-message</v-icon>
-        <span class="text-subtitle-1 font-weight-bold">{{ t('assistant.title') }}</span>
+        <span class="kf-icon-tile mr-3"><v-icon size="20">mdi-microphone</v-icon></span>
+        <span class="text-subtitle-1 font-weight-bold">{{ t('assistant.open') }}</span>
         <v-spacer />
         <v-btn icon="mdi-close" variant="text" size="small" :aria-label="t('assistant.close')" @click="onClose" />
       </v-card-title>
@@ -25,7 +25,7 @@
             :aria-label="listening ? t('assistant.listening') : t('assistant.tapToSpeak')"
             @click="toggleMic"
           >
-            <v-icon size="36" color="white">{{ listening ? 'mdi-stop' : 'mdi-microphone' }}</v-icon>
+            <v-icon size="36">{{ listening ? 'mdi-stop' : 'mdi-microphone' }}</v-icon>
           </button>
           <div class="text-body-1 mt-3 assistant-transcript">
             {{ liveTranscript || (listening ? t('assistant.listening') : (isSupported ? t('assistant.tapToSpeak') : t('assistant.notSupported'))) }}
@@ -303,15 +303,16 @@ watch(listening, (value) => {
   padding: 12px 0 4px;
 }
 .assistant-mic {
-  width: 76px;
-  height: 76px;
+  width: 84px;
+  height: 84px;
   border-radius: 50%;
   border: none;
-  background: rgb(var(--v-theme-primary));
+  background: var(--kf-gradient-primary);
+  color: var(--kf-on-primary);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 8px 24px rgba(11, 107, 93, 0.35);
+  box-shadow: var(--kf-glow);
   cursor: pointer;
   transition: transform 0.15s ease;
 }
@@ -320,12 +321,12 @@ watch(listening, (value) => {
   cursor: default;
 }
 .assistant-mic--active {
-  background: rgb(var(--v-theme-error));
+  background: var(--kf-gradient-primary);
   animation: assistant-pulse 1.4s ease-out infinite;
 }
 @keyframes assistant-pulse {
-  0% { box-shadow: 0 0 0 0 rgba(211, 47, 47, 0.45); }
-  100% { box-shadow: 0 0 0 22px rgba(211, 47, 47, 0); }
+  0% { box-shadow: 0 0 0 0 rgba(0, 229, 208, 0.5); }
+  100% { box-shadow: 0 0 0 24px rgba(0, 229, 208, 0); }
 }
 .assistant-transcript {
   min-height: 1.5em;

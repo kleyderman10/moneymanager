@@ -10,28 +10,40 @@
       <v-btn v-if="!isMobile && !billingStore.isReadOnly" data-tour="page-add" color="primary" prepend-icon="mdi-plus" @click="openCreate">{{ t('recurring.newRecurring') }}</v-btn>
     </div>
 
-    <v-card class="mb-2" data-tour="recurring-upcoming">
-      <v-card-title :class="isMobile ? 'text-body-2' : 'text-h6'">{{ t('recurring.upcomingPayments') }}</v-card-title>
-      <v-card-text v-if="store.upcoming.length === 0" class="text-center text-grey py-2">
-        <div class="text-caption">{{ t('dashboard.noUpcomingPayments') }}</div>
+    <v-card class="kf-card-hero mb-4" data-tour="recurring-upcoming">
+      <v-card-title class="d-flex align-center ga-3 upcoming__title">
+        <span class="kf-icon-tile"><v-icon size="20">mdi-calendar-clock</v-icon></span>
+        <span class="text-body-1 font-weight-bold">{{ t('recurring.upcomingPayments') }}</span>
+      </v-card-title>
+      <v-card-text v-if="store.upcoming.length === 0" class="text-center text-medium-emphasis py-3">
+        <div class="text-body-2">{{ t('dashboard.noUpcomingPayments') }}</div>
       </v-card-text>
-      <v-list v-else bg-color="transparent" density="compact">
-        <v-list-item v-for="item in store.upcoming" :key="item._id" :title="item.description || item.category?.name" :subtitle="formatDate(item.nextOccurrence)">
-          <template #append><span :class="item.type === 'income' ? 'text-green' : 'text-red'">{{ money(item.amount) }}</span></template>
-        </v-list-item>
-      </v-list>
+      <div v-else class="upcoming__list">
+        <div v-for="item in store.upcoming" :key="item._id" class="upcoming__item">
+          <span class="kf-icon-tile" :class="item.type === 'income' ? 'kf-icon-tile--income' : 'kf-icon-tile--expense'">
+            <v-icon size="18">{{ categoryIcon(item.category) }}</v-icon>
+          </span>
+          <div class="kf-row__body">
+            <div class="kf-row__title">{{ item.description || item.category?.name }}</div>
+            <div class="kf-row__meta">{{ formatDate(item.nextOccurrence) }}</div>
+          </div>
+          <span class="kf-amount" :class="item.type === 'income' ? 'kf-income' : 'kf-expense'">{{ money(item.amount) }}</span>
+        </div>
+      </div>
     </v-card>
 
     <v-card v-if="!isMobile">
       <v-data-table :items="store.transactions" :headers="headers" :loading="store.loading" hover>
         <template #item.amount="{ value, item }">
-          <span :class="item.type === 'income' ? 'text-green' : 'text-red'">{{ item.type === 'income' ? '+' : '-' }}{{ money(value) }}</span>
+          <span class="kf-amount" :class="item.type === 'income' ? 'kf-income' : 'kf-expense'">{{ item.type === 'income' ? '+' : '-' }}{{ money(value) }}</span>
         </template>
         <template #item.frequency="{ value }"><v-chip size="small">{{ freqLabels[value] }}</v-chip></template>
-        <template #item.category="{ value }"><span v-if="value">{{ value.icon }} {{ value.name }}</span></template>
+        <template #item.category="{ value }"><span v-if="value"><v-icon :icon="categoryIcon(value)" size="18" /> {{ value.name }}</span></template>
         <template #item.actions="{ item }">
-          <v-icon v-if="!billingStore.isReadOnly" size="small" class="mr-2" @click="openEdit(item)">mdi-pencil</v-icon>
-          <v-icon v-if="!billingStore.isReadOnly" size="small" color="error" @click="confirmDelete(item)">mdi-delete</v-icon>
+          <div v-if="!billingStore.isReadOnly" class="d-flex flex-nowrap justify-end ga-1">
+            <v-btn icon="mdi-pencil-outline" variant="text" size="small" :aria-label="t('common.edit')" @click="openEdit(item)" />
+            <v-btn icon="mdi-delete-outline" variant="text" size="small" color="error" :aria-label="t('common.delete')" @click="confirmDelete(item)" />
+          </div>
         </template>
       </v-data-table>
     </v-card>
@@ -41,14 +53,26 @@
         <v-icon size="x-large" color="grey">mdi-sync-off</v-icon>
         <div class="mt-2">{{ t('recurring.noRecurring') }}</div>
       </v-card>
-      <v-list v-else bg-color="transparent">
-        <v-list-item v-for="tx in store.transactions" :key="tx._id" @click="!billingStore.isReadOnly && openEdit(tx)" :title="tx.description || tx.category?.name" :subtitle="freqLabels[tx.frequency] + ' · ' + t('recurring.since') + ' ' + formatDate(tx.startDate)">
-          <template #prepend><v-avatar :color="tx.type === 'income' ? 'green' : 'red'" size="36"><v-icon color="white">{{ tx.type === 'income' ? 'mdi-arrow-down-bold' : 'mdi-arrow-up-bold' }}</v-icon></v-avatar></template>
-          <template #append>
-            <div class="text-right"><span :class="tx.type === 'income' ? 'text-green' : 'text-red'" class="font-weight-bold">{{ tx.type === 'income' ? '+' : '-' }}{{ money(tx.amount) }}</span></div>
-          </template>
-        </v-list-item>
-      </v-list>
+      <template v-else>
+        <component
+          :is="billingStore.isReadOnly ? 'div' : 'button'"
+          v-for="tx in store.transactions"
+          :key="tx._id"
+          :type="billingStore.isReadOnly ? undefined : 'button'"
+          class="kf-row recurring-row"
+          @click="!billingStore.isReadOnly && openEdit(tx)"
+        >
+          <span class="kf-icon-tile" :class="tx.type === 'income' ? 'kf-icon-tile--income' : 'kf-icon-tile--expense'">
+            <v-icon size="20">{{ categoryIcon(tx.category) }}</v-icon>
+          </span>
+          <span class="kf-row__body">
+            <span class="kf-row__title d-block">{{ tx.description || tx.category?.name }}</span>
+            <span class="kf-row__meta d-block">{{ freqLabels[tx.frequency] }} · {{ t('recurring.since') }} {{ formatDate(tx.startDate) }}</span>
+          </span>
+          <span class="kf-row__end kf-amount" :class="tx.type === 'income' ? 'kf-income' : 'kf-expense'">{{ tx.type === 'income' ? '+' : '-' }}{{ money(tx.amount) }}</span>
+          <v-icon v-if="!billingStore.isReadOnly" size="18" class="text-medium-emphasis">mdi-chevron-right</v-icon>
+        </component>
+      </template>
     </div>
 
     <v-dialog v-model="dialog" :fullscreen="isMobile" max-width="500">
@@ -98,11 +122,12 @@
         <v-card-actions><v-spacer /><v-btn variant="text" @click="deleteDialog = false">{{ t('common.cancel') }}</v-btn><v-btn color="error" @click="doDelete">{{ t('common.delete') }}</v-btn></v-card-actions></v-card>
     </v-dialog>
 
-    <v-btn v-if="isMobile && !billingStore.isReadOnly" icon="mdi-plus" color="primary" size="x-large" class="finance-fab" data-tour="page-add" @click="openCreate" />
+    <v-btn v-if="isMobile && !billingStore.isReadOnly" icon="mdi-plus" color="primary" size="x-large" class="finance-fab" :aria-label="t('recurring.newRecurring')" data-tour="page-add" @click="openCreate" />
   </div>
 </template>
 
 <script setup>
+import { categoryIcon } from '@/utils/categoryIcon'
 import { ref, computed, onMounted } from 'vue'
 import { useDisplay } from 'vuetify'
 import { useI18n } from 'vue-i18n'
@@ -146,7 +171,7 @@ const form = ref({ type: 'expense', amount: 0, category: null, description: '', 
 const headers = computed(() => [
   { title: t('transactions.description'), key: 'description' }, { title: t('transactions.category'), key: 'category' },
   { title: t('wallets.amount'), key: 'amount' }, { title: t('recurring.frequency'), key: 'frequency' },
-  { title: t('recurring.start'), key: 'startDate' }, { title: '', key: 'actions', sortable: false, width: 80 },
+  { title: t('recurring.start'), key: 'startDate' }, { title: '', key: 'actions', sortable: false, width: 112 },
 ])
 
 const formatDate = (d) => d ? date(d) : ''
@@ -191,3 +216,12 @@ const doDelete = async () => { try { await store.remove(toDelete.value); snackba
 
 onMounted(async () => { store.fetchAll(); store.fetchUpcoming(); const [catRes, walRes] = await Promise.all([categoriesAPI.getAll(), walletsAPI.getAll()]); categories.value = catRes.data; wallets.value = walRes.data })
 </script>
+
+<style scoped>
+.upcoming__title { padding: 16px 18px 8px !important; }
+.upcoming__list { padding: 4px 12px 14px; }
+.upcoming__item { display: flex; align-items: center; gap: 12px; padding: 8px 6px; }
+.upcoming__item + .upcoming__item { border-top: 1px solid var(--kf-divider); }
+.recurring-row { width: 100%; font: inherit; text-align: left; cursor: pointer; }
+div.recurring-row { cursor: default; }
+</style>
