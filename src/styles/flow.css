@@ -331,6 +331,20 @@ html { background: var(--kf-bg-deep); }
 .auth-story p { color: var(--kf-text-secondary); }
 .auth-story::after { display: none; }
 
+/* Desktop login: one canvas across both columns. Match Vuetify's md breakpoint
+   used by the story panel; single-column screens keep their existing background. */
+@media (min-width: 960px) {
+  .auth-shell--login {
+    background:
+      linear-gradient(90deg, rgba(8, 31, 43, 0.35), rgba(8, 31, 43, 0.2) 55%, rgba(8, 31, 43, 0.35)),
+      url('../assets/backgrounds/flow-bg-5.webp') center / cover no-repeat var(--kf-bg-deep) !important;
+  }
+  .auth-shell--login .auth-story,
+  .auth-shell--login .auth-form-side {
+    background: transparent !important;
+  }
+}
+
 .auth-mobile-hero__mark,
 .auth-card__mobile-brand .finance-brand__logo,
 .auth-story .finance-brand__logo {

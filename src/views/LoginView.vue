@@ -1,5 +1,5 @@
 <template>
-  <v-container fluid class="auth-shell">
+  <v-container fluid class="auth-shell auth-shell--login">
     <v-row no-gutters class="min-h-screen">
       <v-col cols="12" md="7" class="auth-story d-none d-md-flex">
         <div class="auth-story__content">
