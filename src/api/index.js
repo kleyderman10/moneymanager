@@ -114,6 +114,9 @@ export const walletsAPI = {
   create: (data) => api.post('/wallets', data),
   update: (id, data) => api.put(`/wallets/${id}`, data),
   transfer: (data) => api.post('/wallets/transfer', data),
+  getPaymentPlan: (id) => api.get(`/wallets/${id}/payment-plan`),
+  getStatement: (id) => api.get(`/wallets/${id}/statement`),
+  payCard: (id, data) => api.post(`/wallets/${id}/pay`, data),
   delete: (id) => api.delete(`/wallets/${id}`),
 }
 
@@ -148,7 +151,7 @@ export const aiAPI = {
 }
 
 export const assistantAPI = {
-  interpret: (text, route) => api.post('/assistant/interpret', { text, route }),
+  interpret: (text, route, history) => api.post('/assistant/interpret', { text, route, history }),
   confirm: (id, params) => api.post(`/assistant/actions/${id}/confirm`, params ? { params } : {}),
   cancel: (id) => api.delete(`/assistant/actions/${id}`),
   undo: () => api.post('/assistant/undo'),

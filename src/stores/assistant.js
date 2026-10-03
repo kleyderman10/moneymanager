@@ -33,12 +33,14 @@ export const useAssistantStore = defineStore('assistant', () => {
   const busy = ref(false)
   const dataVersion = ref(0)
   const lastDone = ref(null)
+  // Prior turns of the current conversation, sent so follow-up answers keep context.
+  const history = ref([])
 
   const open = () => {
     visible.value = true
-    if (state.value !== 'thinking') reset()
+    if (state.value !== 'thinking') { reset(); history.value = [] }
   }
-  const close = () => { visible.value = false }
+  const close = () => { visible.value = false; history.value = [] }
   const reset = () => {
     state.value = 'idle'
     transcript.value = ''
@@ -53,8 +55,13 @@ export const useAssistantStore = defineStore('assistant', () => {
     transcript.value = value
     state.value = 'thinking'
     try {
-      const res = await assistantAPI.interpret(value, route)
+      const res = await assistantAPI.interpret(value, route, history.value)
       result.value = res.data
+      if (['answer', 'clarify'].includes(res.data?.type) && res.data.reply) {
+        history.value = [...history.value, { role: 'user', content: value }, { role: 'assistant', content: res.data.reply }].slice(-6)
+      } else {
+        history.value = []
+      }
       state.value = 'result'
       return res.data
     } catch (e) {
@@ -96,7 +103,7 @@ export const useAssistantStore = defineStore('assistant', () => {
   }
 
   return {
-    visible, state, transcript, result, busy, dataVersion, lastDone,
+    visible, state, transcript, result, busy, dataVersion, lastDone, history,
     open, close, reset, interpret, confirm, cancel, undo,
   }
 })

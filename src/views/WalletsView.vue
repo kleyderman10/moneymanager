@@ -91,6 +91,8 @@
             </template>
           </v-card-text>
           <v-card-actions>
+            <v-btn v-if="wallet.type === 'credit'" size="small" variant="text" prepend-icon="mdi-format-list-bulleted" @click="openStatement(wallet)">{{ t('wallets.cardMovements') }}</v-btn>
+            <v-btn v-if="!billingStore.isReadOnly && wallet.type === 'credit'" size="small" variant="tonal" color="primary" prepend-icon="mdi-credit-card-check-outline" @click="openPayCard(wallet)">{{ t('wallets.payCard') }}</v-btn>
             <v-btn v-if="!billingStore.isReadOnly" size="small" variant="text" prepend-icon="mdi-swap-horizontal" data-tour="wallets-transfer" @click="openTransfer(wallet)">{{ t('wallets.transfer') }}</v-btn>
             <v-spacer />
             <v-btn v-if="!billingStore.isReadOnly" size="small" variant="text" icon="mdi-pencil-outline" :aria-label="t('common.edit')" @click="openEdit(wallet)" />
@@ -179,6 +181,103 @@
       </v-card>
     </v-dialog>
 
+    <v-dialog v-model="statementDialog" :fullscreen="isMobile" max-width="600" scrollable>
+      <v-card :title="t('wallets.cardMovementsTitle', { name: statementCard?.name || '' })">
+        <v-card-text>
+          <div v-if="statementLoading" class="text-center pa-6"><v-progress-circular indeterminate /></div>
+          <template v-else-if="statement">
+            <div class="credit-metrics mb-3">
+              <div><v-icon size="18">mdi-credit-card-outline</v-icon><span>{{ t('wallets.totalDebt') }}</span><strong>{{ money(statement.usedCredit, statementCard.currency) }}</strong></div>
+              <div><v-icon size="18">mdi-calendar-check</v-icon><span>{{ t('wallets.billedBalance') }}</span><strong>{{ money(statement.billedBalance, statementCard.currency) }}</strong></div>
+              <div><v-icon size="18">mdi-calendar-clock</v-icon><span>{{ t('wallets.unbilledBalance') }}</span><strong>{{ money(statement.unbilledBalance, statementCard.currency) }}</strong></div>
+              <div><v-icon size="18">mdi-calendar-text-outline</v-icon><span>{{ t('wallets.payMinimum') }}</span><strong>{{ money(statement.options.minimum.total, statementCard.currency) }}</strong></div>
+              <div><v-icon size="18">mdi-calendar-month-outline</v-icon><span>{{ t('wallets.payInstallments') }}</span><strong>{{ money(statement.options.installment.total, statementCard.currency) }}</strong></div>
+              <div><v-icon size="18">mdi-percent-outline</v-icon><span>{{ t('wallets.estMonthlyInterest') }}</span><strong>{{ money(statement.interest, statementCard.currency) }}</strong></div>
+              <div><v-icon size="18">mdi-credit-card-outline</v-icon><span>{{ t('wallets.managementFee') }}</span><strong>{{ money(statement.managementFee, statementCard.currency) }}</strong></div>
+            </div>
+            <div v-if="!statement.movements.length" class="text-medium-emphasis text-center pa-4">{{ t('wallets.noCardMovements') }}</div>
+            <v-list v-else density="compact" class="pa-0">
+              <v-list-item v-for="m in statement.movements" :key="m._id" class="px-0">
+                <v-list-item-title class="text-wrap">{{ m.description || m.category?.name || t('wallets.purchase') }}</v-list-item-title>
+                <v-list-item-subtitle class="text-wrap">
+                  {{ formatDate(m.date) }}
+                  <template v-if="m.kind === 'purchase'">
+                    · {{ m.installments > 1 ? t('wallets.installmentProgress', { paid: m.installmentsPaid, total: m.installments }) : t('wallets.singlePayment') }}
+                    <span v-if="m.settled"> · {{ t('wallets.settled') }}</span>
+                    <span v-else-if="!m.billed"> · {{ t('wallets.nextCycle') }}</span>
+                    <span v-if="!m.settled && m.installments > 1"> · {{ t('wallets.installmentLeft', { amount: money(m.remainingPrincipal, statementCard.currency) }) }}</span>
+                  </template>
+                  <template v-else-if="m.kind === 'payment'"> · {{ t('wallets.cardPaymentLabel') }}</template>
+                </v-list-item-subtitle>
+                <template #append>
+                  <strong class="kf-amount" :class="m.type === 'income' ? 'kf-income' : 'kf-expense'">{{ m.type === 'income' ? '+' : '-' }}{{ money(m.amount, statementCard.currency) }}</strong>
+                </template>
+              </v-list-item>
+            </v-list>
+          </template>
+        </v-card-text>
+        <v-card-actions>
+          <v-btn v-if="!billingStore.isReadOnly" color="primary" variant="tonal" prepend-icon="mdi-credit-card-check-outline" @click="statementDialog = false; openPayCard(statementCard)">{{ t('wallets.payCard') }}</v-btn>
+          <v-spacer />
+          <v-btn variant="text" @click="statementDialog = false">{{ t('common.close') }}</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <v-dialog v-model="payDialog" :fullscreen="isMobile" max-width="520">
+      <v-card :title="t('wallets.payCardTitle', { name: payCard?.name || '' })">
+        <v-card-text>
+          <div v-if="payLoading" class="text-center pa-6"><v-progress-circular indeterminate /></div>
+          <template v-else-if="payPlan">
+            <div class="text-caption text-medium-emphasis mb-2">
+              {{ t('wallets.payment') }}: <strong>{{ formatDate(payPlan.nextPaymentDate) }}</strong>
+            </div>
+
+            <v-radio-group v-model="payForm.option" hide-details class="mb-2">
+              <v-radio v-for="opt in payOptions" :key="opt.key" :value="opt.key">
+                <template #label>
+                  <div class="d-flex justify-space-between w-100 ga-3">
+                    <span>{{ opt.label }}</span>
+                    <strong class="kf-amount">{{ money(opt.total, payCard.currency) }}</strong>
+                  </div>
+                </template>
+              </v-radio>
+              <v-radio value="custom" :label="t('wallets.payCustom')" />
+            </v-radio-group>
+            <v-text-field v-if="payForm.option === 'custom'" v-model.number="payForm.amount" :label="t('wallets.amount')" type="number" variant="outlined" density="compact" class="mb-2" />
+
+            <div class="credit-metrics mb-3">
+              <div><v-icon size="18">mdi-percent-outline</v-icon><span>{{ t('wallets.estMonthlyInterest') }}</span><strong>{{ money(payPlan.interest, payCard.currency) }}</strong></div>
+              <div><v-icon size="18">mdi-credit-card-outline</v-icon><span>{{ t('wallets.managementFee') }}</span><strong>{{ money(payPlan.managementFee, payCard.currency) }}</strong></div>
+              <div v-if="payPlan.untrackedBalance > 0"><v-icon size="18">mdi-cash-multiple</v-icon><span>{{ t('wallets.otherBalance') }}</span><strong>{{ money(payPlan.untrackedBalance, payCard.currency) }}</strong></div>
+            </div>
+
+            <div v-if="payPlan.items.length" class="mb-3">
+              <div class="text-subtitle-2 mb-1">{{ t('wallets.pendingInstallments') }}</div>
+              <v-list density="compact" class="pa-0">
+                <v-list-item v-for="item in payPlan.items" :key="item.registerId" class="px-0">
+                  <v-list-item-title>{{ item.description || t('wallets.purchase') }}</v-list-item-title>
+                  <v-list-item-subtitle>
+                    {{ t('wallets.installmentProgress', { paid: item.installmentsPaid, total: item.installments }) }} · {{ t('wallets.installmentLeft', { amount: money(item.remainingPrincipal, payCard.currency) }) }}
+                    <span v-if="!item.billed"> · {{ t('wallets.nextCycle') }}</span>
+                  </v-list-item-subtitle>
+                  <template #append><strong class="kf-amount">{{ money(item.installmentAmount, payCard.currency) }}</strong></template>
+                </v-list-item>
+              </v-list>
+            </div>
+
+            <NativeSelectField v-model="payForm.fromWalletId" :items="payTargets" item-title="name" item-value="_id" :label="t('wallets.payFrom')" :placeholder="t('wallets.selectAccount')" :error="payAttempted && !payForm.fromWalletId" required />
+            <div class="text-body-2 mt-2">{{ t('wallets.payTotal') }}: <strong class="kf-amount">{{ money(payAmountPreview, payCard.currency) }}</strong></div>
+          </template>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" @click="payDialog = false">{{ t('common.cancel') }}</v-btn>
+          <v-btn color="primary" :disabled="!payPlan || !(payAmountPreview > 0)" :loading="paying" @click="doPayCard">{{ t('wallets.pay') }}</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
     <v-dialog v-model="deleteDialog" max-width="400">
       <v-card><v-card-title>{{ t('wallets.confirm') }}</v-card-title><v-card-text>{{ t('wallets.deleteAccountConfirm') }}</v-card-text>
         <v-card-actions><v-spacer /><v-btn variant="text" @click="deleteDialog = false">{{ t('common.cancel') }}</v-btn><v-btn color="error" @click="doDelete">{{ t('common.delete') }}</v-btn></v-card-actions></v-card>
@@ -198,7 +297,7 @@ import { useSubscriptionStore } from '@/stores/subscriptions'
 import { useAuthStore } from '@/stores/auth'
 import { useLocale } from '@/composables/useLocale'
 import { CURRENCIES } from '@/constants/countries'
-import { financialInstitutionsAPI } from '@/api'
+import { financialInstitutionsAPI, walletsAPI } from '@/api'
 import NativeSelectField from '@/components/NativeSelectField.vue'
 import BankConnector from '@/components/BankConnector.vue'
 import MoneyField from '@/components/MoneyField.vue'
@@ -365,6 +464,73 @@ const doTransfer = async () => {
   transferring.value = false
 }
 const confirmDelete = (w) => { toDelete.value = w._id; deleteDialog.value = true }
+const statementDialog = ref(false)
+const statementCard = ref(null)
+const statement = ref(null)
+const statementLoading = ref(false)
+const openStatement = async (w) => {
+  statementCard.value = w
+  statement.value = null
+  statementDialog.value = true
+  statementLoading.value = true
+  try {
+    statement.value = (await walletsAPI.getStatement(w._id)).data
+  } catch (err) {
+    snackbar.error(err?.response?.data?.message || t('wallets.payError'))
+    statementDialog.value = false
+  }
+  statementLoading.value = false
+}
+const payDialog = ref(false)
+const payCard = ref(null)
+const payPlan = ref(null)
+const payLoading = ref(false)
+const paying = ref(false)
+const payAttempted = ref(false)
+const payForm = ref({ option: 'installment', amount: 0, fromWalletId: '' })
+const payTargets = computed(() => store.wallets.filter(w => w.type !== 'credit'))
+const payOptions = computed(() => payPlan.value ? [
+  { key: 'minimum', label: t('wallets.payMinimum'), total: payPlan.value.options.minimum.total },
+  { key: 'installment', label: t('wallets.payInstallments'), total: payPlan.value.options.installment.total },
+  { key: 'total', label: t('wallets.payFull'), total: payPlan.value.options.total.total },
+] : [])
+const payAmountPreview = computed(() => {
+  if (!payPlan.value) return 0
+  if (payForm.value.option === 'custom') return Number(payForm.value.amount) || 0
+  return payPlan.value.options[payForm.value.option]?.total || 0
+})
+const openPayCard = async (w) => {
+  payCard.value = w
+  payPlan.value = null
+  payAttempted.value = false
+  payForm.value = { option: 'installment', amount: 0, fromWalletId: payTargets.value[0]?._id || '' }
+  payDialog.value = true
+  payLoading.value = true
+  try {
+    payPlan.value = (await walletsAPI.getPaymentPlan(w._id)).data
+    if (!payPlan.value.items.length) payForm.value.option = 'total'
+  } catch (err) {
+    snackbar.error(err?.response?.data?.message || t('wallets.payError'))
+    payDialog.value = false
+  }
+  payLoading.value = false
+}
+const doPayCard = async () => {
+  payAttempted.value = true
+  if (!payForm.value.fromWalletId) { snackbar.error(t('wallets.selectPayFrom')); return }
+  paying.value = true
+  try {
+    await walletsAPI.payCard(payCard.value._id, {
+      option: payForm.value.option,
+      fromWalletId: payForm.value.fromWalletId,
+      ...(payForm.value.option === 'custom' ? { amount: payForm.value.amount } : {}),
+    })
+    snackbar.success(t('wallets.paySuccess'))
+    payDialog.value = false
+    await store.fetchAll()
+  } catch (err) { snackbar.error(err?.response?.data?.message || t('wallets.payError')) }
+  paying.value = false
+}
 const doDelete = async () => { try { await store.remove(toDelete.value); snackbar.success(t('wallets.accountDeleted')) } catch { snackbar.error(t('common.error')) }; deleteDialog.value = false }
 
 watch(() => form.value.type, (type) => {

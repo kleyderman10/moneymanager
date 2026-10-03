@@ -109,6 +109,20 @@ const onChange = (event) => {
   cursor: pointer;
 }
 
+/* La lista nativa es del navegador: sin esto queda texto claro sobre fondo blanco en tema oscuro. */
+.native-select-field__control option {
+  background: rgb(var(--v-theme-surface));
+  color: rgb(var(--v-theme-on-surface));
+}
+
+.native-select-field__control option:disabled {
+  color: rgba(var(--v-theme-on-surface), 0.5);
+}
+
+.v-theme--dark .native-select-field__control {
+  color-scheme: dark;
+}
+
 .native-select-field:focus-within .native-select-field__control {
   border-bottom: 2px solid rgb(var(--v-theme-primary));
 }

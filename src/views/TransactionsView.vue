@@ -362,6 +362,20 @@
             :loading="referenceDataLoading"
           />
 
+          <v-text-field
+            v-if="isCardPurchase"
+            v-model.number="form.installments"
+            :label="t('transactions.installments')"
+            :hint="t('transactions.installmentsHint')"
+            persistent-hint
+            type="number"
+            min="1"
+            max="60"
+            variant="outlined"
+            density="compact"
+            class="mt-2"
+          />
+
           <v-btn v-if="!showTagsField" variant="text" size="small" color="primary" class="px-0 mt-1" prepend-icon="mdi-plus" @click="showTagsField = true">
             {{ t('transactions.tag') }}
           </v-btn>
@@ -598,7 +612,7 @@ const statementContext = ref({
   summary: { detected: 0, duplicates: 0, new: 0 },
 })
 
-const form = ref({ type: 'expense', amount: 0, date: new Date().toISOString().slice(0, 10), category: null, description: '', wallet: null, tags: [] })
+const form = ref({ type: 'expense', amount: 0, date: new Date().toISOString().slice(0, 10), category: null, description: '', wallet: null, tags: [], installments: 1 })
 const typeOptions = computed(() => [{ title: t('transactions.income'), value: 'income' }, { title: t('transactions.expense'), value: 'expense' }])
 const typeSegments = computed(() => [
   { value: null, label: t('transactions.all') },
@@ -647,6 +661,9 @@ const categoryNoDataText = computed(() => {
   return t('transactions.noCategoriesForType')
 })
 const walletOptions = computed(() => wallets.value)
+const isCardPurchase = computed(
+  () => form.value.type === 'expense' && wallets.value.find((w) => w._id === form.value.wallet)?.type === 'credit'
+)
 const expenseCategories = computed(() => categories.value.filter(c => c.type === 'expense'))
 const bankWallets = computed(() => wallets.value.filter(w => w.type === 'bank'))
 const bankWalletsHint = computed(() => {
@@ -798,6 +815,7 @@ const openManualCreate = () => {
     description: '',
     wallet: getLastWallet() || walletOptions.value[0]?._id || null,
     tags: [],
+    installments: 1,
   }
   if (modeDialog.value) {
     pendingManualCreate.value = true
@@ -972,6 +990,7 @@ const openEdit = (item) => {
     date: item.date ? new Date(item.date).toISOString().slice(0, 10) : '',
     category: item.category?._id || null, description: item.description,
     wallet: item.wallet?._id || null, tags: item.tags || [],
+    installments: item.installments || 1,
   }
   showAllCategories.value = !frequentCategories.value.some((c) => c._id === form.value.category)
   showDatePicker.value = !isToday(form.value.date) && !isYesterday(form.value.date)
@@ -986,6 +1005,10 @@ const save = async () => {
     snackbar.error(t('transactions.selectCategoryError'))
     return
   }
+
+  form.value.installments = isCardPurchase.value
+    ? Math.min(60, Math.max(1, Math.floor(Number(form.value.installments)) || 1))
+    : 1
 
   saving.value = true
   try {

@@ -394,9 +394,3 @@ html { background: var(--kf-bg-deep); }
   .auth-primary-btn { background: var(--kf-gradient-primary) !important; color: var(--kf-on-primary) !important; }
 }
 
-/* Assistant sheet and drawer use their own artwork. */
-.v-bottom-sheet .v-card.assistant-sheet {
-  background:
-    linear-gradient(180deg, rgba(11, 42, 58, 0.82), rgba(8, 31, 43, 0.9)),
-    url('../assets/backgrounds/flow-bg-3.webp') center bottom / cover no-repeat !important;
-}
