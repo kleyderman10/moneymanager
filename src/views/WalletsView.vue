@@ -199,7 +199,7 @@
             <v-list v-else density="compact" class="pa-0">
               <v-list-item v-for="m in statement.movements" :key="m._id" class="px-0">
                 <v-list-item-title class="text-wrap">{{ m.description || m.category?.name || t('wallets.purchase') }}</v-list-item-title>
-                <v-list-item-subtitle class="text-wrap">
+                <v-list-item-subtitle class="text-wrap" style="-webkit-line-clamp: unset; white-space: normal">
                   {{ formatDate(m.date) }}
                   <template v-if="m.kind === 'purchase'">
                     · {{ m.installments > 1 ? t('wallets.installmentProgress', { paid: m.installmentsPaid, total: m.installments }) : t('wallets.singlePayment') }}
@@ -210,7 +210,7 @@
                   <template v-else-if="m.kind === 'payment'"> · {{ t('wallets.cardPaymentLabel') }}</template>
                 </v-list-item-subtitle>
                 <template #append>
-                  <strong class="kf-amount" :class="m.type === 'income' ? 'kf-income' : 'kf-expense'">{{ m.type === 'income' ? '+' : '-' }}{{ money(m.amount, statementCard.currency) }}</strong>
+                  <strong class="kf-amount text-no-wrap" :class="m.type === 'income' ? 'kf-income' : 'kf-expense'">{{ m.type === 'income' ? '+' : '-' }}{{ money(m.amount, statementCard.currency) }}</strong>
                 </template>
               </v-list-item>
             </v-list>
@@ -238,7 +238,7 @@
                 <template #label>
                   <div class="d-flex justify-space-between w-100 ga-3">
                     <span>{{ opt.label }}</span>
-                    <strong class="kf-amount">{{ money(opt.total, payCard.currency) }}</strong>
+                    <strong class="kf-amount flex-shrink-0 text-no-wrap">{{ money(opt.total, payCard.currency) }}</strong>
                   </div>
                 </template>
               </v-radio>
@@ -257,11 +257,11 @@
               <v-list density="compact" class="pa-0">
                 <v-list-item v-for="item in payPlan.items" :key="item.registerId" class="px-0">
                   <v-list-item-title>{{ item.description || t('wallets.purchase') }}</v-list-item-title>
-                  <v-list-item-subtitle>
+                  <v-list-item-subtitle class="text-wrap" style="-webkit-line-clamp: unset; white-space: normal">
                     {{ t('wallets.installmentProgress', { paid: item.installmentsPaid, total: item.installments }) }} · {{ t('wallets.installmentLeft', { amount: money(item.remainingPrincipal, payCard.currency) }) }}
                     <span v-if="!item.billed"> · {{ t('wallets.nextCycle') }}</span>
                   </v-list-item-subtitle>
-                  <template #append><strong class="kf-amount">{{ money(item.installmentAmount, payCard.currency) }}</strong></template>
+                  <template #append><strong class="kf-amount text-no-wrap">{{ money(item.installmentAmount, payCard.currency) }}</strong></template>
                 </v-list-item>
               </v-list>
             </div>
