@@ -34,14 +34,32 @@ export const useAssistantStore = defineStore('assistant', () => {
   const busy = ref(false)
   const dataVersion = ref(0)
   const lastDone = ref(null)
-  // Prior turns of the current conversation, sent so follow-up answers keep context.
+  // The whole conversation as shown on screen: [{ role: 'user' | 'assistant', content }].
+  // The last turns are also sent to the server so follow-up answers keep context.
+  const thread = ref([])
   const history = ref([])
+  // Open question from the assistant (missing account/category): its options, and the draft
+  // state the server needs back together with the answer.
+  const question = ref(null)
+  const pending = ref(null)
+
+  const clearConversation = () => {
+    thread.value = []
+    history.value = []
+    question.value = null
+    pending.value = null
+  }
+  const addTurn = (role, content) => {
+    if (!content) return
+    thread.value = [...thread.value, { role, content }].slice(-20)
+    history.value = [...history.value, { role, content }].slice(-6)
+  }
 
   const open = () => {
     visible.value = true
-    if (state.value !== 'thinking') { reset(); history.value = [] }
+    if (state.value !== 'thinking') { reset(); clearConversation() }
   }
-  const close = () => { visible.value = false; history.value = [] }
+  const close = () => { visible.value = false; clearConversation() }
   const reset = () => {
     state.value = 'idle'
     transcript.value = ''
@@ -55,14 +73,20 @@ export const useAssistantStore = defineStore('assistant', () => {
     if (!value) return null
     transcript.value = value
     state.value = 'thinking'
+    const answeringQuestion = pending.value
+    const priorHistory = history.value
+    addTurn('user', value)
+    question.value = null
     try {
-      const res = await assistantAPI.interpret(value, route, history.value)
+      const res = await assistantAPI.interpret(value, route, priorHistory, answeringQuestion)
       result.value = res.data
-      if (['answer', 'clarify'].includes(res.data?.type) && res.data.reply) {
-        history.value = [...history.value, { role: 'user', content: value }, { role: 'assistant', content: res.data.reply }].slice(-6)
+      if (res.data?.type === 'clarify' && res.data.pending) {
+        pending.value = res.data.pending
+        question.value = res.data.question || null
       } else {
-        history.value = []
+        pending.value = null
       }
+      if (['answer', 'clarify'].includes(res.data?.type)) addTurn('assistant', res.data.reply)
       state.value = 'result'
       return res.data
     } catch (e) {
@@ -82,6 +106,7 @@ export const useAssistantStore = defineStore('assistant', () => {
       // The assistant can create categories server-side, so the cached list is stale.
       useCategoriesStore().loadedAt = 0
       result.value = { type: 'done', reply: res.data.reply }
+      addTurn('assistant', res.data.reply)
       return res.data
     } catch (e) {
       // Keep the preview so the user can fix it (e.g. card limit exceeded) and retry.
@@ -109,7 +134,7 @@ export const useAssistantStore = defineStore('assistant', () => {
   }
 
   return {
-    visible, state, transcript, result, busy, dataVersion, lastDone, history,
-    open, close, reset, interpret, confirm, cancel, undo,
+    visible, state, transcript, result, busy, dataVersion, lastDone, history, thread, question, pending,
+    open, close, reset, clearConversation, interpret, confirm, cancel, undo,
   }
 })

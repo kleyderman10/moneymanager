@@ -30,7 +30,7 @@ export default defineConfig(({ mode }) => ({
       // binary is updated. Only the web build should register one.
       disable: mode === 'capacitor',
       registerType: 'autoUpdate',
-      includeAssets: ['vite.svg'],
+      includeAssets: ['favicon.ico'],
       manifest: {
         name: 'Knexura Flow',
         short_name: 'Knexura Flow',

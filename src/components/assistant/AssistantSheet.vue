@@ -22,15 +22,20 @@
       </header>
 
       <div class="vf-body">
-        <!-- Transcript -->
-        <div v-if="assistant.transcript && !['idle', 'listening'].includes(assistant.state)" class="vf-transcript">
-          <v-icon size="24" color="primary">mdi-waveform</v-icon>
-          <span>“{{ assistant.transcript }}”</span>
+        <!-- Conversation so far -->
+        <div v-if="assistant.thread.length" ref="threadEl" class="vf-thread" aria-live="polite">
+          <div v-for="(message, index) in assistant.thread" :key="index" class="vf-msg" :class="`vf-msg--${message.role}`">{{ message.content }}</div>
+        </div>
+
+        <!-- Quick answers to the assistant's open question -->
+        <div v-if="assistant.question?.options?.length && assistant.state !== 'thinking'" class="vf-chips vf-chips--question">
+          <button v-for="option in assistant.question.options" :key="option.value" type="button" class="vf-chip" @click="send(option.label)">
+            {{ option.label }}
+          </button>
         </div>
 
         <!-- Listening / idle -->
         <div v-if="['idle', 'listening'].includes(assistant.state)" class="vf-listen">
-          <div v-if="pendingQuestion" class="vf-question">{{ pendingQuestion }}</div>
           <button
             type="button"
             class="assistant-mic"
@@ -106,7 +111,7 @@
             <v-alert v-if="result.error" type="error" variant="tonal" density="compact" class="mt-3">{{ result.error }}</v-alert>
           </template>
 
-          <div v-else class="vf-card assistant-reply" :class="{ 'text-error': result.type === 'error' }">
+          <div v-else-if="result.type === 'error'" class="vf-card assistant-reply text-error">
             {{ result.reply || t('assistant.error') }}
           </div>
         </div>
@@ -136,6 +141,7 @@
         </div>
         <div v-else-if="result?.type === 'done'" class="vf-actions__row">
           <button type="button" class="vf-btn vf-btn--ghost" @click="onUndo"><v-icon size="22">mdi-undo</v-icon>{{ t('assistant.undo') }}</button>
+          <button type="button" class="vf-btn vf-btn--ghost" @click="another"><v-icon size="22">mdi-microphone</v-icon>{{ t('assistant.anythingElse') }}</button>
           <button type="button" class="vf-btn vf-btn--primary" @click="onClose">{{ t('assistant.close') }}</button>
         </div>
         <button v-else-if="['result', 'error'].includes(assistant.state)" type="button" class="vf-btn vf-btn--ghost vf-btn--full" @click="restart">
@@ -148,7 +154,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter, useRoute } from 'vue-router'
 import { useDisplay } from 'vuetify'
@@ -172,6 +178,7 @@ const snackbar = useSnackbar()
 
 const typed = ref('')
 const pendingQuestion = ref('')
+const threadEl = ref(null)
 const draft = ref([])
 const viaVoice = ref(false)
 const result = computed(() => assistant.result)
@@ -216,6 +223,12 @@ const toggleMic = () => {
   start()
 }
 
+// After a saved action the conversation stays open for the next one.
+const another = () => {
+  assistant.reset()
+  toggleMic()
+}
+
 const restart = () => {
   assistant.reset()
   toggleMic()
@@ -230,6 +243,12 @@ const speak = (text) => new Promise((resolve) => {
   utterance.onerror = resolve
   window.speechSynthesis.cancel()
   window.speechSynthesis.speak(utterance)
+})
+
+// Keep the latest message in view as the conversation grows.
+watch(() => assistant.thread.length, async () => {
+  await nextTick()
+  if (threadEl.value) threadEl.value.scrollTop = threadEl.value.scrollHeight
 })
 
 // Editable copy of the proposed transactions.
@@ -415,6 +434,19 @@ watch(listening, (value) => {
 }
 .vf-chevron:focus-visible { outline: 2px solid var(--kf-primary); }
 .vf-listen { text-align: center; padding: 12px 0 4px; }
+.vf-thread {
+  display: flex; flex-direction: column; gap: 8px; width: 100%; max-height: 38vh; overflow-y: auto; margin-bottom: 16px;
+}
+.vf-msg {
+  max-width: 86%; padding: 10px 14px; border-radius: 16px; line-height: 1.45; white-space: pre-line; overflow-wrap: anywhere;
+}
+.vf-msg--user {
+  align-self: flex-end; background: rgba(34, 211, 197, 0.16); border: 1px solid rgba(34, 211, 197, 0.28); color: #dbe9ee;
+}
+.vf-msg--assistant {
+  align-self: flex-start; background: rgba(9, 53, 65, 0.72); border: 1px solid rgba(255, 255, 255, 0.08); color: var(--kf-text);
+}
+.vf-chips--question { margin-bottom: 16px; }
 .vf-question {
   margin: 0 auto 22px; max-width: 640px; padding: 16px 20px; font-size: 1.1rem; line-height: 1.5; text-align: left;
   background: rgba(9, 53, 65, 0.72); border: 1px solid rgba(34, 211, 197, 0.22); border-radius: 18px; white-space: pre-line;

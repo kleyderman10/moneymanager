@@ -92,6 +92,7 @@
           </v-card-text>
           <v-card-actions>
             <v-btn v-if="wallet.type === 'credit'" size="small" variant="text" prepend-icon="mdi-format-list-bulleted" @click="openStatement(wallet)">{{ t('wallets.cardMovements') }}</v-btn>
+            <v-btn v-else size="small" variant="text" prepend-icon="mdi-format-list-bulleted" @click="openMovements(wallet)">{{ t('wallets.movements.button') }}</v-btn>
             <v-btn v-if="!billingStore.isReadOnly && wallet.type === 'credit'" size="small" variant="tonal" color="primary" prepend-icon="mdi-credit-card-check-outline" @click="openPayCard(wallet)">{{ t('wallets.payCard') }}</v-btn>
             <v-btn v-if="!billingStore.isReadOnly" size="small" variant="text" prepend-icon="mdi-swap-horizontal" data-tour="wallets-transfer" @click="openTransfer(wallet)">{{ t('wallets.transfer') }}</v-btn>
             <v-spacer />
@@ -181,6 +182,14 @@
       </v-card>
     </v-dialog>
 
+    <WalletMovementsDialog
+      v-model="movementsDialog"
+      :wallet="movementsWallet"
+      :read-only="billingStore.isReadOnly"
+      @recalculated="store.fetchAll()"
+    />
+    <WalletReconcileDialog v-model="reconcileDialog" :wallet="statementCard" @recalculated="onCardRecalculated" />
+
     <v-dialog v-model="statementDialog" :fullscreen="isMobile" max-width="600" scrollable>
       <v-card :title="t('wallets.cardMovementsTitle', { name: statementCard?.name || '' })">
         <v-card-text>
@@ -217,6 +226,7 @@
           </template>
         </v-card-text>
         <v-card-actions>
+          <v-btn v-if="!billingStore.isReadOnly" variant="text" prepend-icon="mdi-calculator-variant-outline" @click="reconcileDialog = true">{{ t('wallets.recalc.button') }}</v-btn>
           <v-btn v-if="!billingStore.isReadOnly" color="primary" variant="tonal" prepend-icon="mdi-credit-card-check-outline" @click="statementDialog = false; openPayCard(statementCard)">{{ t('wallets.payCard') }}</v-btn>
           <v-spacer />
           <v-btn variant="text" @click="statementDialog = false">{{ t('common.close') }}</v-btn>
@@ -291,6 +301,8 @@
 <script setup>
 import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
 import { ref, computed, onMounted, watch } from 'vue'
+import WalletMovementsDialog from '@/components/wallets/WalletMovementsDialog.vue'
+import WalletReconcileDialog from '@/components/wallets/WalletReconcileDialog.vue'
 import { useDisplay } from 'vuetify'
 import { useI18n } from 'vue-i18n'
 import { useWalletsStore } from '@/stores/wallets'
@@ -466,6 +478,12 @@ const doTransfer = async () => {
   transferring.value = false
 }
 const confirmDelete = (w) => { toDelete.value = w._id; deleteDialog.value = true }
+const movementsDialog = ref(false)
+const movementsWallet = ref(null)
+const openMovements = (w) => { movementsWallet.value = w; movementsDialog.value = true }
+const reconcileDialog = ref(false)
+const onCardRecalculated = () => { store.fetchAll(); if (statementCard.value) openStatement(statementCard.value) }
+
 const statementDialog = ref(false)
 const statementCard = ref(null)
 const statement = ref(null)

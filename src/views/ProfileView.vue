@@ -227,6 +227,7 @@
         </v-card>
       </v-col>
       <v-col cols="12" md="6"><SessionsCard /></v-col>
+      <v-col v-if="authStore.hasAcceptedAIConsent" cols="12" md="6"><AssistantMemoryCard /></v-col>
       <WhatsAppLinkCard />
       <v-col v-if="biometricSupported" cols="12" md="6">
         <v-card :title="t('profile.biometricAuth')">
@@ -369,6 +370,7 @@ import { useI18n } from 'vue-i18n'
 import AIConsentDialog from '@/components/AIConsentDialog.vue'
 import WhatsAppLinkCard from '@/components/WhatsAppLinkCard.vue'
 import SessionsCard from '@/components/SessionsCard.vue'
+import AssistantMemoryCard from '@/components/AssistantMemoryCard.vue'
 import { useDisplay } from 'vuetify'
 import { useAuthStore } from '@/stores/auth'
 import { authAPI } from '@/api'

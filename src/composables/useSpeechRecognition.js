@@ -11,7 +11,11 @@ import { Capacitor } from '@capacitor/core'
 //
 // onResult(text) fires once per session with the final transcript; onError(i18nKey)
 // with a key under `voiceInput.*` (or a raw message from the plugin).
-export function useSpeechRecognition({ onResult, onError } = {}) {
+//
+// Listening always ends on its own: after `silenceMs` without new words once the user has said
+// something, after `noSpeechMs` if nothing is heard at all, and after `maxMs` in any case.
+// (iOS/Android never stop a session on silence, and the browser sometimes keeps it open.)
+export function useSpeechRecognition({ onResult, onError, silenceMs = 2500, noSpeechMs = 8000, maxMs = 30000 } = {}) {
   const { locale } = useI18n()
   const speechLang = computed(() => locale.value === 'en' ? 'en-US' : 'es-ES')
 
@@ -20,6 +24,33 @@ export function useSpeechRecognition({ onResult, onError } = {}) {
   const transcript = ref('')
   const isSupported = ref(!isNative && typeof window !== 'undefined'
     && ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window))
+
+  // --- Auto-stop timers ---
+  let silenceTimer = null
+  let noSpeechTimer = null
+  let maxTimer = null
+  const clearTimers = () => {
+    clearTimeout(silenceTimer)
+    clearTimeout(noSpeechTimer)
+    clearTimeout(maxTimer)
+    silenceTimer = noSpeechTimer = maxTimer = null
+  }
+  // Called every time the transcript changes: the user is still talking.
+  const heardSomething = () => {
+    clearTimeout(noSpeechTimer)
+    noSpeechTimer = null
+    clearTimeout(silenceTimer)
+    silenceTimer = setTimeout(() => { if (listening.value) stop() }, silenceMs)
+  }
+  const armTimers = () => {
+    clearTimers()
+    noSpeechTimer = setTimeout(() => {
+      if (!listening.value || transcript.value) return
+      cancel()
+      onError?.('voiceInput.noSpeech')
+    }, noSpeechMs)
+    maxTimer = setTimeout(() => { if (listening.value) stop() }, maxMs)
+  }
 
   const finish = (text) => {
     const value = (text || '').trim()
@@ -50,15 +81,20 @@ export function useSpeechRecognition({ onResult, onError } = {}) {
 
       transcript.value = ''
       partialListener = await SpeechRecognition.addListener('partialResults', (event) => {
-        if (event.matches?.[0]) transcript.value = event.matches[0]
+        if (event.matches?.[0]) {
+          transcript.value = event.matches[0]
+          heardSomething()
+        }
       })
 
       listening.value = true
+      armTimers()
       // Resolves right away when partialResults is true; it doesn't wait for the user to
       // finish speaking, so it's only used here to surface a startup error (e.g. mic busy).
       await SpeechRecognition.start({ language: speechLang.value, partialResults: true, popup: false })
     } catch (e) {
       listening.value = false
+      clearTimers()
       await partialListener?.remove()
       partialListener = null
       onError?.(e?.message || 'voiceInput.couldNotStart')
@@ -66,6 +102,7 @@ export function useSpeechRecognition({ onResult, onError } = {}) {
   }
 
   const stopNative = async ({ discard = false } = {}) => {
+    clearTimers()
     const { SpeechRecognition } = await import('@capgo/capacitor-speech-recognition')
     // forceStop (rather than stop) flushes the cached transcript through the partialResults
     // listener one last time before tearing the session down, so the tail end of what was
@@ -90,9 +127,10 @@ export function useSpeechRecognition({ onResult, onError } = {}) {
     transcript.value = ''
     discardWeb = false
 
-    recognition.onstart = () => { listening.value = true }
+    recognition.onstart = () => { listening.value = true; armTimers() }
     recognition.onresult = (event) => {
       transcript.value = Array.from(event.results).map((r) => r[0].transcript).join(' ')
+      heardSomething()
     }
     recognition.onerror = (event) => {
       if (event.error === 'aborted' || event.error === 'no-speech') return
@@ -100,6 +138,7 @@ export function useSpeechRecognition({ onResult, onError } = {}) {
       onError?.(event.error === 'not-allowed' ? 'voiceInput.enableMicPermission' : 'voiceInput.couldNotRecognize')
     }
     recognition.onend = () => {
+      clearTimers()
       listening.value = false
       recognition = null
       if (!discardWeb) finish(transcript.value)
@@ -108,6 +147,7 @@ export function useSpeechRecognition({ onResult, onError } = {}) {
   }
 
   const stopWeb = ({ discard = false } = {}) => {
+    clearTimers()
     discardWeb = discard
     if (recognition) recognition.stop()
     else listening.value = false
@@ -131,6 +171,7 @@ export function useSpeechRecognition({ onResult, onError } = {}) {
   })
 
   onBeforeUnmount(() => {
+    clearTimers()
     if (listening.value) cancel()
   })
 

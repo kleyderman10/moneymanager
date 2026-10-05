@@ -84,6 +84,19 @@
               />
             </v-col>
             <v-col cols="6" sm="3">
+              <v-select
+                v-model="filters.wallet"
+                :items="walletOptions"
+                item-title="name"
+                item-value="_id"
+                :label="t('transactions.account')"
+                clearable
+                density="compact"
+                hide-details
+                @update:model-value="load"
+              />
+            </v-col>
+            <v-col cols="6" sm="3">
               <v-text-field v-model="filters.startDate" type="date" :label="t('transactions.from')" density="compact" hide-details @update:model-value="load" />
             </v-col>
             <v-col cols="6" sm="3">
@@ -561,7 +574,7 @@ const requireAIConsent = () => {
 const now = new Date()
 const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10)
 const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10)
-const filters = ref({ type: null, category: null, startDate: monthStart, endDate: monthEnd })
+const filters = ref({ type: null, category: null, wallet: null, startDate: monthStart, endDate: monthEnd })
 const filtersOpen = ref([])
 const dialog = ref(false)
 const deleteDialog = ref(false)
@@ -776,6 +789,7 @@ const filterParams = () => {
   const params = {}
   if (filters.value.type) params.type = filters.value.type
   if (filters.value.category) params.category = filters.value.category
+  if (filters.value.wallet) params.wallet = filters.value.wallet
   if (filters.value.startDate) params.startDate = filters.value.startDate
   if (filters.value.endDate) params.endDate = filters.value.endDate
   return params
@@ -1205,6 +1219,13 @@ const loadReferenceData = async () => {
 }
 
 onMounted(async () => {
+  // Coming from an account's "view in Transactions": that account, for the month it was showing
+  // (or all dates when no range was given).
+  if (typeof route.query.wallet === 'string' && route.query.wallet) {
+    const asDate = (value) => (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : null)
+    filters.value = { ...filters.value, wallet: route.query.wallet, startDate: asDate(route.query.from), endDate: asDate(route.query.to) }
+    filtersOpen.value = [0]
+  }
   await load()
   await loadReferenceData()
   if (route.query.create === '1') {
