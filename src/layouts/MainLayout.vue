@@ -159,6 +159,8 @@ import QuickNav from '@/components/navigation/QuickNav.vue'
 import MobileBottomNavigation from '@/components/navigation/MobileBottomNavigation.vue'
 import VoiceActionButton from '@/components/navigation/VoiceActionButton.vue'
 import { useAssistantStore } from '@/stores/assistant'
+import { usePushStore } from '@/stores/push'
+import { useWakeWordStore } from '@/stores/wakeword'
 import { useTour } from '@/composables/useTour'
 import { TOUR_BY_ROUTE } from '@/tours/definitions'
 
@@ -206,6 +208,18 @@ const dismissAIConsent = () => authStore.dismissAIConsent()
 // Global assistant: available to every user once they accept the AI consent. Without it,
 // the button opens the consent dialog first and the assistant right after accepting.
 const assistantStore = useAssistantStore()
+const pushStore = usePushStore()
+
+// Wake word ("Oye Flow"): listens only while the app is visible and the assistant is closed, so it
+// never competes with the assistant for the microphone nor drains the battery in the background.
+const wakeWord = useWakeWordStore()
+const pageVisible = ref(typeof document === 'undefined' ? true : !document.hidden)
+const onVisibility = () => { pageVisible.value = !document.hidden }
+watch(
+  [() => wakeWord.enabled, () => assistantStore.visible, pageVisible, () => authStore.hasAcceptedAIConsent],
+  () => wakeWord.sync(!assistantStore.visible && pageVisible.value && authStore.hasAcceptedAIConsent),
+  { immediate: true }
+)
 const assistantConsentRequested = ref(false)
 const openAssistant = () => {
   if (!authStore.hasAcceptedAIConsent) {
@@ -343,14 +357,20 @@ onMounted(async () => {
   window.addEventListener('resize', readSafeAreaTop)
   window.addEventListener('billing:read-only', handleReadOnlyStatus)
   window.addEventListener('keydown', handleAssistantShortcut)
+  document.addEventListener('visibilitychange', onVisibility)
+  wakeWord.setHandler(() => openAssistant())
   if (!authStore.user && localStorage.getItem('accessToken')) authStore.fetchProfile()
   await billingStore.fetchStatus(true)
   assistantStore.fetchInsights()
+  pushStore.init(authStore.user?._id)
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('resize', readSafeAreaTop)
   window.removeEventListener('billing:read-only', handleReadOnlyStatus)
   window.removeEventListener('keydown', handleAssistantShortcut)
+  document.removeEventListener('visibilitychange', onVisibility)
+  wakeWord.setHandler(null)
+  wakeWord.stop()
 })
 </script>

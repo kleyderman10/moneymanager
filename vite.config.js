@@ -49,7 +49,11 @@ export default defineConfig(({ mode }) => ({
         ],
       },
       workbox: {
+        // Web Push handlers (public/push-sw.js) run inside the generated service worker.
+        importScripts: ['push-sw.js'],
         globPatterns: ['**/*.{js,css,html,ico,png,webp,svg,woff,woff2,ttf,eot}'],
+        // Not precached: ~1 MB that only users who turn the wake word on ever need.
+        globIgnores: ['**/wakeword-*.js'],
         runtimeCaching: [
           {
             urlPattern: /^\/api\/.*/i,
@@ -71,6 +75,8 @@ export default defineConfig(({ mode }) => ({
         manualChunks(id) {
           if (id.includes('node_modules/chart.js') || id.includes('node_modules/vue-chartjs')) return 'charts'
           if (id.includes('node_modules/vuetify')) return 'vuetify'
+          // Wake-word engine (WebAssembly inlined): its own chunk, loaded only when the feature is on.
+          if (id.includes('node_modules/@picovoice')) return 'wakeword'
           if (id.includes('node_modules/vue-i18n') || id.includes('node_modules/@intlify')) return 'i18n'
         },
       },

@@ -167,6 +167,13 @@ export const assistantAPI = {
   undo: () => api.post('/assistant/undo'),
 }
 
+export const pushAPI = {
+  config: () => api.get('/push/config'),
+  register: (data) => api.post('/push/register', data),
+  unregister: (data) => api.delete('/push/register', { data }),
+  test: () => api.post('/push/test'),
+}
+
 export const whatsappAPI = {
   status: () => api.get('/whatsapp/status'),
   createLinkCode: () => api.post('/whatsapp/link-code'),

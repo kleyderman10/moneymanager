@@ -189,6 +189,20 @@
         <div class="text-caption mt-4">{{ t('assistant.voiceSpeed') }}: {{ voicePrefs.rate.toFixed(2) }}x</div>
         <v-slider :model-value="voicePrefs.rate" min="0.8" max="1.3" step="0.05" hide-details @update:model-value="(value) => updateVoicePrefs({ rate: value })" />
         <v-switch :model-value="sounds" :label="t('assistant.sounds')" density="compact" hide-details color="primary" class="mt-1" @update:model-value="toggleSounds" />
+        <v-switch
+          :model-value="wakeWord.enabled"
+          :disabled="!wakeWord.supported"
+          :loading="wakeWord.starting"
+          :label="t('assistant.wakeWord.label', { phrase: wakeWord.phrase })"
+          density="compact"
+          hide-details
+          color="primary"
+          @update:model-value="wakeWord.setEnabled"
+        />
+        <div class="text-caption text-medium-emphasis mt-1">
+          {{ wakeWord.supported ? t('assistant.wakeWord.hint') : t('assistant.wakeWord.unavailable') }}
+        </div>
+        <v-alert v-if="wakeWord.error" type="warning" variant="tonal" density="compact" class="mt-2" :text="t(`assistant.wakeWord.${wakeWord.error}`)" />
       </v-card-text>
       <v-card-actions>
         <v-btn variant="tonal" prepend-icon="mdi-play" @click="testVoice">{{ t('assistant.voiceTest') }}</v-btn>
@@ -206,6 +220,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useDisplay } from 'vuetify'
 import { Capacitor } from '@capacitor/core'
 import { useAssistantStore, ROUTE_PATHS } from '@/stores/assistant'
+import { useWakeWordStore } from '@/stores/wakeword'
 import { useCategoriesStore } from '@/stores/categories'
 import { useWalletsStore } from '@/stores/wallets'
 import { useSnackbar } from '@/stores/snackbar'
@@ -223,6 +238,7 @@ const route = useRoute()
 const { mobile } = useDisplay()
 const isMobile = computed(() => mobile.value)
 const assistant = useAssistantStore()
+const wakeWord = useWakeWordStore()
 const categoriesStore = useCategoriesStore()
 const walletsStore = useWalletsStore()
 const snackbar = useSnackbar()

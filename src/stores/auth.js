@@ -1,3 +1,4 @@
+import { usePushStore } from '@/stores/push'
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { Capacitor } from '@capacitor/core'
@@ -320,6 +321,8 @@ export const useAuthStore = defineStore('auth', () => {
     const legacyBiometric = isNative() && hasLegacyBiometric()
       && localStorage.getItem('biometricEmail') === user.value?.email
     try {
+      // This device stops receiving the account's notifications (needs the session, so first).
+      if (localStorage.getItem('accessToken')) await usePushStore().forget().catch(() => {})
       if (notifyServer && !legacyBiometric && localStorage.getItem('accessToken')) await authAPI.logout(localStorage.getItem('refreshToken'))
     } catch {
       // Local logout must always succeed, even when the token or network has expired.
