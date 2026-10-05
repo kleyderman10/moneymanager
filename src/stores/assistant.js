@@ -49,9 +49,11 @@ export const useAssistantStore = defineStore('assistant', () => {
     question.value = null
     pending.value = null
   }
-  const addTurn = (role, content) => {
+  // `card` is an optional structured answer (totals, balances, budgets...) shown under the text.
+  // Only the text is sent back to the server as history.
+  const addTurn = (role, content, card = null) => {
     if (!content) return
-    thread.value = [...thread.value, { role, content }].slice(-20)
+    thread.value = [...thread.value, { role, content, ...(card ? { card } : {}) }].slice(-20)
     history.value = [...history.value, { role, content }].slice(-6)
   }
 
@@ -86,7 +88,7 @@ export const useAssistantStore = defineStore('assistant', () => {
       } else {
         pending.value = null
       }
-      if (['answer', 'clarify'].includes(res.data?.type)) addTurn('assistant', res.data.reply)
+      if (['answer', 'clarify'].includes(res.data?.type)) addTurn('assistant', res.data.reply, res.data.card)
       state.value = 'result'
       return res.data
     } catch (e) {

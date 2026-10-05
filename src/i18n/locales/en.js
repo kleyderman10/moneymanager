@@ -1133,6 +1133,7 @@ export default {
     unlinked: 'WhatsApp disconnected',
   },
   assistant: {
+    card: { expenses: 'Expenses', income: 'Income', balance: 'Balance', total: 'Total' },
     sounds: 'Interface sounds',
     voiceSettings: 'Assistant voice',
     voiceChoose: 'Choose voice',

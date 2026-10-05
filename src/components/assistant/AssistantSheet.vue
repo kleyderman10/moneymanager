@@ -51,7 +51,10 @@
 
         <!-- Conversation so far -->
         <div v-if="assistant.thread.length" ref="threadEl" class="vf-thread" aria-live="polite">
-          <div v-for="(message, index) in assistant.thread" :key="index" class="vf-msg" :class="`vf-msg--${message.role}`">{{ message.content }}</div>
+          <template v-for="(message, index) in assistant.thread" :key="index">
+            <div class="vf-msg" :class="`vf-msg--${message.role}`">{{ message.content }}</div>
+            <AssistantCard v-if="message.card" :card="message.card" />
+          </template>
         </div>
 
         <!-- Quick answers to the assistant's open question -->
@@ -170,8 +173,11 @@
   </v-dialog>
 
   <!-- Voice settings: its own dialog (a menu inside this dialog lost clicks and mispositioned the list) -->
-  <v-dialog v-model="voiceSettingsOpen" max-width="380">
+  <v-dialog v-model="voiceSettingsOpen" max-width="380" :z-index="3000" scrollable>
     <v-card :title="t('assistant.voiceSettings')">
+      <template #append>
+        <v-btn icon="mdi-close" variant="text" :aria-label="t('common.close')" @click="voiceSettingsOpen = false" />
+      </template>
       <v-card-text>
         <NativeSelectField
           :model-value="activeVoiceURI"
@@ -205,6 +211,7 @@ import { useWalletsStore } from '@/stores/wallets'
 import { useSnackbar } from '@/stores/snackbar'
 import VoiceSelect from '@/components/assistant/VoiceSelect.vue'
 import VoiceOrb from '@/components/assistant/VoiceOrb.vue'
+import AssistantCard from '@/components/assistant/AssistantCard.vue'
 import NativeSelectField from '@/components/NativeSelectField.vue'
 import { playCue, soundsEnabled, setSoundsEnabled } from '@/utils/sounds'
 import { readPrefs, savePrefs, pickVoice, voicesFor, whenVoicesReady, humanizeForSpeech, splitSentences } from '@/utils/voice'
@@ -289,7 +296,8 @@ const interpret = async (text) => {
     return
   }
   if (!viaVoice.value) return
-  if (['answer', 'clarify'].includes(data.type)) await speak(data.reply)
+  // With a card on screen the voice gives the headline only; the details are in the card.
+  if (['answer', 'clarify'].includes(data.type)) await speak(data.card ? String(data.reply).split('\n')[0] : data.reply)
   // A proposed action is read aloud so it can be confirmed by voice.
   if (data.type === 'confirm') await speak(`${spokenSummary(data)} ${data.reply}`)
   listenAgain()
@@ -655,7 +663,7 @@ watch(listening, (value) => {
 .vf-chevron:focus-visible { outline: 2px solid var(--kf-primary); }
 .vf-listen { text-align: center; padding: 12px 0 4px; }
 .vf-thread {
-  display: flex; flex-direction: column; gap: 8px; width: 100%; max-height: 38vh; overflow-y: auto; margin-bottom: 16px;
+  display: flex; flex-direction: column; gap: 8px; width: 100%; max-height: 46vh; overflow-y: auto; margin-bottom: 16px;
 }
 .vf-msg {
   max-width: 86%; padding: 10px 14px; border-radius: 16px; line-height: 1.45; white-space: pre-line; overflow-wrap: anywhere;
