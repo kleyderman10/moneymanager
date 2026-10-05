@@ -124,6 +124,21 @@ export const useAssistantStore = defineStore('assistant', () => {
     if (pending) await assistantAPI.cancel(pending).catch(() => {})
   }
 
+  // Discards the preview waiting for confirmation but keeps the conversation going (voice "no").
+  const discardPending = async () => {
+    if (result.value?.type !== 'confirm') return null
+    const id = result.value.actionId
+    result.value = null
+    state.value = 'idle'
+    try {
+      const res = await assistantAPI.cancel(id)
+      addTurn('assistant', res.data?.reply)
+      return res.data?.reply || null
+    } catch {
+      return null
+    }
+  }
+
   const undo = async () => {
     const res = await assistantAPI.undo()
     if (res.data?.type === 'undone') {
@@ -135,6 +150,6 @@ export const useAssistantStore = defineStore('assistant', () => {
 
   return {
     visible, state, transcript, result, busy, dataVersion, lastDone, history, thread, question, pending,
-    open, close, reset, clearConversation, interpret, confirm, cancel, undo,
+    open, close, reset, clearConversation, interpret, confirm, cancel, discardPending, undo,
   }
 })

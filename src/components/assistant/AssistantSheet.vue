@@ -16,12 +16,36 @@
           <h2>{{ t('assistant.open') }}</h2>
           <p>{{ listening ? t('assistant.listening') : t('assistant.subtitle') }}</p>
         </div>
+        <button
+          v-if="isSupported"
+          type="button"
+          class="vf-close vf-toggle"
+          :class="{ 'vf-toggle--on': continuous }"
+          :aria-pressed="continuous"
+          :aria-label="t('assistant.continuous')"
+          :title="continuous ? t('assistant.continuousOn') : t('assistant.continuousOff')"
+          @click="toggleContinuous"
+        >
+          <v-icon size="24">{{ continuous ? 'mdi-microphone-message' : 'mdi-microphone-message-off' }}</v-icon>
+        </button>
         <button type="button" class="vf-close" :aria-label="t('assistant.close')" @click="onClose">
           <v-icon size="24">mdi-close</v-icon>
         </button>
       </header>
 
       <div class="vf-body">
+        <!-- Voice orb: shows whether the assistant is listening, thinking or speaking -->
+        <div class="vf-orb">
+          <VoiceOrb
+            :state="orbState"
+            :pulse="pulse"
+            :label="orbLabel"
+            :disabled="!isSupported || assistant.state === 'thinking'"
+            @activate="onOrb"
+          />
+          <div class="vf-orb__caption" aria-live="polite">{{ orbCaption }}</div>
+        </div>
+
         <!-- Conversation so far -->
         <div v-if="assistant.thread.length" ref="threadEl" class="vf-thread" aria-live="polite">
           <div v-for="(message, index) in assistant.thread" :key="index" class="vf-msg" :class="`vf-msg--${message.role}`">{{ message.content }}</div>
@@ -36,16 +60,6 @@
 
         <!-- Listening / idle -->
         <div v-if="['idle', 'listening'].includes(assistant.state)" class="vf-listen">
-          <button
-            type="button"
-            class="assistant-mic"
-            :class="{ 'assistant-mic--active': listening }"
-            :disabled="!isSupported"
-            :aria-label="listening ? t('assistant.listening') : t('assistant.tapToSpeak')"
-            @click="toggleMic"
-          >
-            <v-icon size="36">{{ listening ? 'mdi-stop' : 'mdi-microphone' }}</v-icon>
-          </button>
           <div class="vf-listen__text">
             {{ liveTranscript || (listening ? t('assistant.listening') : (isSupported ? t('assistant.tapToSpeak') : t('assistant.notSupported'))) }}
           </div>
@@ -61,7 +75,6 @@
 
         <!-- Thinking -->
         <div v-else-if="assistant.state === 'thinking'" class="vf-thinking" role="status">
-          <v-progress-circular indeterminate size="22" width="3" color="primary" />
           <span>{{ t('assistant.analyzing') }}</span>
         </div>
 
@@ -109,6 +122,7 @@
             <div v-else class="vf-card assistant-reply">{{ result.summary }}</div>
 
             <v-alert v-if="result.error" type="error" variant="tonal" density="compact" class="mt-3">{{ result.error }}</v-alert>
+            <div v-if="listening && viaVoice" class="vf-voice-hint">{{ t('assistant.voiceConfirmHint') }}</div>
           </template>
 
           <div v-else-if="result.type === 'error'" class="vf-card assistant-reply text-error">
@@ -164,6 +178,7 @@ import { useCategoriesStore } from '@/stores/categories'
 import { useWalletsStore } from '@/stores/wallets'
 import { useSnackbar } from '@/stores/snackbar'
 import VoiceSelect from '@/components/assistant/VoiceSelect.vue'
+import VoiceOrb from '@/components/assistant/VoiceOrb.vue'
 import { useSpeechRecognition } from '@/composables/useSpeechRecognition'
 
 const { t, locale } = useI18n()
@@ -183,13 +198,58 @@ const draft = ref([])
 const viaVoice = ref(false)
 const result = computed(() => assistant.result)
 
+// Continuous conversation: once the assistant has finished speaking, the mic opens again so the
+// user can keep going without tapping it. Remembered per device; on by default.
+const CONTINUOUS_KEY = 'assistantContinuous'
+const readContinuous = () => {
+  try { return localStorage.getItem(CONTINUOUS_KEY) !== '0' } catch { return true }
+}
+const continuous = ref(readContinuous())
+const toggleContinuous = () => {
+  continuous.value = !continuous.value
+  try { localStorage.setItem(CONTINUOUS_KEY, continuous.value ? '1' : '0') } catch { /* storage unavailable */ }
+}
+
 const { isSupported, listening, transcript: liveTranscript, start, stop, cancel: cancelMic } = useSpeechRecognition({
-  onResult: (text) => { viaVoice.value = true; pendingQuestion.value = ''; interpret(text) },
+  onResult: (text) => { viaVoice.value = true; pendingQuestion.value = ''; handleSpoken(text) },
   onError: (key) => {
     assistant.state = 'idle'
+    // Silence in the middle of a conversation just ends the turn; no error needed.
+    if (key === 'voiceInput.noSpeech' && assistant.thread.length) return
     snackbar.error(key.startsWith('voiceInput.') ? t(key) : key)
   },
 })
+
+const YES = /^(si|sí|claro|dale|confirmo|confirma|confirmar|ok|okay|listo|correcto|de una|hazlo|registralo|regístralo|registra|guardalo|guárdalo|guarda|yes|yeah|yep|sure|confirm)(?=$|[\s,.!¡?¿])/i
+const NO = /^(no|nop|cancela|cancelar|cancelalo|cancélalo|olvidalo|olvídalo|nada|deja|stop|cancel)(?=$|[\s,.!¡?¿])/i
+const isShort = (text) => text.trim().split(/\s+/).length <= 2
+
+// While a preview is waiting, "sí" confirms and "no" discards it; anything else is a new message
+// ("no, fueron 30 mil" is a correction, not a refusal).
+const handleSpoken = async (text) => {
+  if (result.value?.type === 'confirm') {
+    if (YES.test(text.trim())) { await onConfirm(); return }
+    if (NO.test(text.trim()) && isShort(text)) { await discardPreview(); return }
+  }
+  interpret(text)
+}
+
+const discardPreview = async () => {
+  const reply = await assistant.discardPending()
+  if (viaVoice.value && reply) await speak(reply)
+  listenAgain()
+}
+
+// Opens the mic again after the assistant spoke, when the user is in a voice conversation.
+const listenAgain = async () => {
+  if (!continuous.value || !viaVoice.value || !assistant.visible || !isSupported.value) return
+  if (listening.value || assistant.state === 'thinking' || result.value?.type === 'error') return
+  // Without speech synthesis (native app) give the user a moment to read the reply first.
+  if (Capacitor.isNativePlatform()) await new Promise((resolve) => setTimeout(resolve, 700))
+  if (!assistant.visible || listening.value) return
+  assistant.state = 'listening'
+  start()
+}
 
 const interpret = async (text) => {
   const data = await assistant.interpret(text, route.name ? String(route.name).toLowerCase() : null)
@@ -199,14 +259,14 @@ const interpret = async (text) => {
     assistant.close()
     return
   }
-  if (viaVoice.value && ['answer', 'clarify'].includes(data.type)) await speak(data.reply)
-  // The assistant asked a question: keep it on screen and open the mic for the answer.
-  if (viaVoice.value && data.type === 'clarify' && assistant.visible && isSupported.value) {
-    pendingQuestion.value = data.reply
-    assistant.state = 'listening'
-    start()
-  }
+  if (!viaVoice.value) return
+  if (['answer', 'clarify'].includes(data.type)) await speak(data.reply)
+  // A proposed action is read aloud so it can be confirmed by voice.
+  if (data.type === 'confirm') await speak(`${spokenSummary(data)} ${data.reply}`)
+  listenAgain()
 }
+
+const spokenSummary = (data) => String(data.summary || '').replace(/[•·]/g, ',').replace(/\n/g, '. ')
 
 const send = (text) => {
   if (!text?.trim() || assistant.state === 'thinking') return
@@ -235,14 +295,54 @@ const restart = () => {
 }
 
 // Spoken replies only on the web build (speechSynthesis); the native app shows text.
+const speaking = ref(false)
 const speak = (text) => new Promise((resolve) => {
   if (!text || Capacitor.isNativePlatform() || !('speechSynthesis' in window)) return resolve()
   const utterance = new SpeechSynthesisUtterance(text.replace(/•/g, ''))
   utterance.lang = locale.value === 'en' ? 'en-US' : 'es-ES'
-  utterance.onend = resolve
-  utterance.onerror = resolve
+  const finish = () => { speaking.value = false; resolve() }
+  utterance.onstart = () => { speaking.value = true }
+  // The browser reports each word as it is spoken: the orb beats with the voice.
+  utterance.onboundary = () => { pulse.value += 1 }
+  utterance.onend = finish
+  utterance.onerror = finish
   window.speechSynthesis.cancel()
   window.speechSynthesis.speak(utterance)
+})
+
+// --- Orb ---
+const pulse = ref(0)
+const orbState = computed(() => {
+  if (speaking.value) return 'speaking'
+  if (assistant.state === 'thinking') return 'thinking'
+  if (listening.value) return 'listening'
+  if (['confirm', 'done'].includes(result.value?.type)) return 'confirm'
+  return 'idle'
+})
+const orbCaption = computed(() => ({
+  speaking: t('assistant.orbSpeaking'),
+  thinking: t('assistant.analyzing'),
+  listening: t('assistant.listening'),
+  confirm: result.value?.type === 'confirm' ? t('assistant.orbConfirm') : t('assistant.orbDone'),
+  idle: isSupported.value ? t('assistant.tapToSpeak') : t('assistant.notSupported'),
+}[orbState.value]))
+const orbLabel = computed(() => (listening.value ? t('assistant.stopListening') : t('assistant.tapToSpeak')))
+
+// Tapping the orb: interrupt the assistant if it is talking, otherwise start or stop listening.
+const onOrb = () => {
+  if (speaking.value) {
+    window.speechSynthesis.cancel()
+    // With continuous mode the pending flow reopens the mic by itself.
+    if (!continuous.value || !viaVoice.value) toggleMic()
+    return
+  }
+  toggleMic()
+}
+
+// New recognised words kick the orb; a short buzz marks the start and end of listening where supported.
+watch(liveTranscript, () => { pulse.value += 1 })
+watch(listening, (value) => {
+  if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') navigator.vibrate(value ? 18 : 10)
 })
 
 // Keep the latest message in view as the conversation grows.
@@ -308,6 +408,10 @@ const onConfirm = async () => {
   if (done) {
     snackbar.success(done.reply)
     if (done.result?.categoryIds?.length) categoriesStore.fetchAll().catch(() => {})
+    if (viaVoice.value) {
+      await speak(`${done.reply} ${t('assistant.anythingElse')}`)
+      listenAgain()
+    }
   }
 }
 
@@ -323,6 +427,7 @@ const onUndo = async () => {
 
 const onClose = () => {
   pendingQuestion.value = ''
+  speaking.value = false
   if (listening.value) cancelMic()
   if ('speechSynthesis' in window) window.speechSynthesis.cancel()
   // Closing with a pending preview discards it, same as pressing Cancel.
@@ -446,6 +551,10 @@ watch(listening, (value) => {
 .vf-msg--assistant {
   align-self: flex-start; background: rgba(9, 53, 65, 0.72); border: 1px solid rgba(255, 255, 255, 0.08); color: var(--kf-text);
 }
+.vf-orb { display: flex; flex-direction: column; align-items: center; gap: 6px; margin: 4px 0 18px; }
+.vf-orb__caption { font-size: 0.9rem; color: var(--kf-text-muted, #9bb4bd); min-height: 1.4em; text-align: center; }
+.vf-toggle--on { color: var(--kf-primary); border-color: var(--kf-primary); }
+.vf-voice-hint { margin-top: 12px; text-align: center; font-size: 0.9rem; opacity: 0.8; }
 .vf-chips--question { margin-bottom: 16px; }
 .vf-question {
   margin: 0 auto 22px; max-width: 640px; padding: 16px 20px; font-size: 1.1rem; line-height: 1.5; text-align: left;
