@@ -16,36 +16,9 @@
           <h2>{{ t('assistant.open') }}</h2>
           <p>{{ listening ? t('assistant.listening') : t('assistant.subtitle') }}</p>
         </div>
-        <v-menu v-if="!isNativeApp" :close-on-content-click="false" location="bottom end" @update:model-value="(open) => open && loadVoices()">
-          <template #activator="{ props: menuProps }">
-            <button v-bind="menuProps" type="button" class="vf-close" :aria-label="t('assistant.voiceSettings')">
-              <v-icon size="24">mdi-tune-variant</v-icon>
-            </button>
-          </template>
-          <v-card min-width="280" class="pa-3">
-            <div class="text-subtitle-2 mb-2">{{ t('assistant.voiceSettings') }}</div>
-            <v-select
-              :model-value="activeVoiceURI"
-              :items="voiceOptions"
-              :label="t('assistant.voiceChoose')"
-              density="compact"
-              variant="outlined"
-              hide-details
-              @update:model-value="(value) => updateVoicePrefs({ voiceURI: value })"
-            />
-            <div class="text-caption mt-3">{{ t('assistant.voiceSpeed') }}: {{ voicePrefs.rate.toFixed(2) }}x</div>
-            <v-slider
-              :model-value="voicePrefs.rate"
-              min="0.8"
-              max="1.3"
-              step="0.05"
-              hide-details
-              @update:model-value="(value) => updateVoicePrefs({ rate: value })"
-            />
-            <v-btn variant="tonal" size="small" class="mt-2" prepend-icon="mdi-play" @click="testVoice">{{ t('assistant.voiceTest') }}</v-btn>
-            <v-switch :model-value="sounds" :label="t('assistant.sounds')" density="compact" hide-details color="primary" class="mt-1" @update:model-value="toggleSounds" />
-          </v-card>
-        </v-menu>
+        <button v-if="!isNativeApp" type="button" class="vf-close" :aria-label="t('assistant.voiceSettings')" @click="openVoiceSettings">
+          <v-icon size="24">mdi-tune-variant</v-icon>
+        </button>
         <button
           v-if="isSupported"
           type="button"
@@ -195,6 +168,29 @@
       </footer>
     </section>
   </v-dialog>
+
+  <!-- Voice settings: its own dialog (a menu inside this dialog lost clicks and mispositioned the list) -->
+  <v-dialog v-model="voiceSettingsOpen" max-width="380">
+    <v-card :title="t('assistant.voiceSettings')">
+      <v-card-text>
+        <NativeSelectField
+          :model-value="activeVoiceURI"
+          :items="voiceOptions"
+          :label="t('assistant.voiceChoose')"
+          :no-data-text="t('assistant.noResults')"
+          @update:model-value="(value) => updateVoicePrefs({ voiceURI: value })"
+        />
+        <div class="text-caption mt-4">{{ t('assistant.voiceSpeed') }}: {{ voicePrefs.rate.toFixed(2) }}x</div>
+        <v-slider :model-value="voicePrefs.rate" min="0.8" max="1.3" step="0.05" hide-details @update:model-value="(value) => updateVoicePrefs({ rate: value })" />
+        <v-switch :model-value="sounds" :label="t('assistant.sounds')" density="compact" hide-details color="primary" class="mt-1" @update:model-value="toggleSounds" />
+      </v-card-text>
+      <v-card-actions>
+        <v-btn variant="tonal" prepend-icon="mdi-play" @click="testVoice">{{ t('assistant.voiceTest') }}</v-btn>
+        <v-spacer />
+        <v-btn variant="text" @click="voiceSettingsOpen = false">{{ t('common.close') }}</v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
 </template>
 
 <script setup>
@@ -209,6 +205,7 @@ import { useWalletsStore } from '@/stores/wallets'
 import { useSnackbar } from '@/stores/snackbar'
 import VoiceSelect from '@/components/assistant/VoiceSelect.vue'
 import VoiceOrb from '@/components/assistant/VoiceOrb.vue'
+import NativeSelectField from '@/components/NativeSelectField.vue'
 import { playCue, soundsEnabled, setSoundsEnabled } from '@/utils/sounds'
 import { readPrefs, savePrefs, pickVoice, voicesFor, whenVoicesReady, humanizeForSpeech, splitSentences } from '@/utils/voice'
 import { useSpeechRecognition } from '@/composables/useSpeechRecognition'
@@ -380,6 +377,11 @@ const updateVoicePrefs = (changes) => {
   savePrefs(voicePrefs.value)
 }
 const testVoice = () => speak(t('assistant.voiceTestPhrase'))
+const voiceSettingsOpen = ref(false)
+const openVoiceSettings = async () => {
+  await loadVoices()
+  voiceSettingsOpen.value = true
+}
 
 // --- Orb ---
 const pulse = ref(0)
