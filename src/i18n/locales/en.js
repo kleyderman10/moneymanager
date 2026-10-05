@@ -1133,6 +1133,7 @@ export default {
     unlinked: 'WhatsApp disconnected',
   },
   assistant: {
+    sounds: 'Interface sounds',
     voiceSettings: 'Assistant voice',
     voiceChoose: 'Choose voice',
     voiceSpeed: 'Speed',

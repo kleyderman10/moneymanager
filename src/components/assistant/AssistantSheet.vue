@@ -43,6 +43,7 @@
               @update:model-value="(value) => updateVoicePrefs({ rate: value })"
             />
             <v-btn variant="tonal" size="small" class="mt-2" prepend-icon="mdi-play" @click="testVoice">{{ t('assistant.voiceTest') }}</v-btn>
+            <v-switch :model-value="sounds" :label="t('assistant.sounds')" density="compact" hide-details color="primary" class="mt-1" @update:model-value="toggleSounds" />
           </v-card>
         </v-menu>
         <button
@@ -208,6 +209,7 @@ import { useWalletsStore } from '@/stores/wallets'
 import { useSnackbar } from '@/stores/snackbar'
 import VoiceSelect from '@/components/assistant/VoiceSelect.vue'
 import VoiceOrb from '@/components/assistant/VoiceOrb.vue'
+import { playCue, soundsEnabled, setSoundsEnabled } from '@/utils/sounds'
 import { readPrefs, savePrefs, pickVoice, voicesFor, whenVoicesReady, humanizeForSpeech, splitSentences } from '@/utils/voice'
 import { useSpeechRecognition } from '@/composables/useSpeechRecognition'
 
@@ -412,7 +414,21 @@ const onOrb = () => {
 watch(liveTranscript, () => { pulse.value += 1 })
 watch(listening, (value) => {
   if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') navigator.vibrate(value ? 18 : 10)
+  if (assistant.visible && !speaking.value) playCue(value ? 'listen' : 'stop')
 })
+watch(() => result.value?.type, (type) => {
+  if (type === 'confirm') playCue('confirm')
+  else if (type === 'done') playCue('done')
+  else if (type === 'error') playCue('error')
+})
+
+// Sound cues on/off (menu in the header).
+const sounds = ref(soundsEnabled())
+const toggleSounds = (value) => {
+  sounds.value = value
+  setSoundsEnabled(value)
+  if (value) playCue('listen')
+}
 
 // Keep the latest message in view as the conversation grows.
 watch(() => assistant.thread.length, async () => {
@@ -504,9 +520,38 @@ const onClose = () => {
 }
 
 // Opening the sheet starts listening right away when dictation is available.
+const GREETED_KEY = 'assistantGreetedOn'
+const today = () => new Date().toISOString().slice(0, 10)
+const greetedToday = () => {
+  try { return localStorage.getItem(GREETED_KEY) === today() } catch { return true }
+}
+const markGreeted = () => {
+  try { localStorage.setItem(GREETED_KEY, today()) } catch { /* storage unavailable */ }
+}
+
+// The first time each day the assistant says hello out loud and then listens; later openings
+// show the greeting as text and the mic opens straight away.
+const onOpen = async () => {
+  ensureLists()
+  const speakGreeting = !isNativeApp && 'speechSynthesis' in window && isSupported.value && !greetedToday()
+  if (!speakGreeting) {
+    assistant.greet()
+    if (isSupported.value && assistant.state === 'idle') toggleMic()
+    return
+  }
+  markGreeted()
+  const text = await assistant.greet()
+  if (!assistant.visible) return
+  if (text) {
+    viaVoice.value = true
+    playCue('open')
+    await speak(text)
+  }
+  if (assistant.visible && isSupported.value && assistant.state === 'idle' && !listening.value) toggleMic()
+}
+
 watch(() => assistant.visible, (visible) => {
-  if (visible) ensureLists()
-  if (visible && isSupported.value && assistant.state === 'idle') toggleMic()
+  if (visible) onOpen()
   if (!visible && listening.value) cancelMic()
 })
 

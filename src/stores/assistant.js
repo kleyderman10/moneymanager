@@ -124,6 +124,20 @@ export const useAssistantStore = defineStore('assistant', () => {
     if (pending) await assistantAPI.cancel(pending).catch(() => {})
   }
 
+  // Opening line from the assistant (time of day, name, one useful notice). Skipped when the
+  // conversation already started or the sheet was closed while it loaded.
+  const greet = async () => {
+    if (thread.value.length) return null
+    try {
+      const { data } = await assistantAPI.greeting()
+      if (!thread.value.length && visible.value && data?.text) {
+        addTurn('assistant', data.text)
+        return data.text
+      }
+    } catch { /* the greeting is optional */ }
+    return null
+  }
+
   // Discards the preview waiting for confirmation but keeps the conversation going (voice "no").
   const discardPending = async () => {
     if (result.value?.type !== 'confirm') return null
@@ -150,6 +164,6 @@ export const useAssistantStore = defineStore('assistant', () => {
 
   return {
     visible, state, transcript, result, busy, dataVersion, lastDone, history, thread, question, pending,
-    open, close, reset, clearConversation, interpret, confirm, cancel, discardPending, undo,
+    open, close, reset, clearConversation, interpret, confirm, cancel, discardPending, greet, undo,
   }
 })
