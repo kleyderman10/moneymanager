@@ -197,17 +197,37 @@
           density="compact"
           hide-details
           color="primary"
-          @update:model-value="wakeWord.setEnabled"
+          @update:model-value="toggleWakeWord"
         />
         <div class="text-caption text-medium-emphasis mt-1">
           {{ wakeWord.supported ? t('assistant.wakeWord.hint') : t('assistant.wakeWord.unavailable') }}
         </div>
-        <v-alert v-if="wakeWord.error" type="warning" variant="tonal" density="compact" class="mt-2" :text="t(`assistant.wakeWord.${wakeWord.error}`)" />
+        <NativeSelectField
+          v-if="wakeWord.supported && wakeWord.enabled"
+          :model-value="wakeWord.sensitivity"
+          :items="sensitivityOptions"
+          :label="t('assistant.wakeWord.sensitivity')"
+          class="mt-3"
+          @update:model-value="wakeWord.setSensitivity"
+        />
+        <v-alert v-if="wakeWord.error" type="warning" variant="tonal" density="compact" class="mt-2" :text="t(`assistant.wakeWord.errors.${wakeWord.error}`)" />
       </v-card-text>
       <v-card-actions>
         <v-btn variant="tonal" prepend-icon="mdi-play" @click="testVoice">{{ t('assistant.voiceTest') }}</v-btn>
         <v-spacer />
         <v-btn variant="text" @click="voiceSettingsOpen = false">{{ t('common.close') }}</v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
+
+  <v-dialog v-model="wakeConsentOpen" max-width="420" :z-index="3100">
+    <v-card>
+      <v-card-title>{{ t('assistant.wakeWord.consentTitle', { phrase: wakeWord.phrase }) }}</v-card-title>
+      <v-card-text>{{ t('assistant.wakeWord.consentBody', { phrase: wakeWord.phrase }) }}</v-card-text>
+      <v-card-actions>
+        <v-spacer />
+        <v-btn variant="text" @click="wakeConsentOpen = false">{{ t('common.cancel') }}</v-btn>
+        <v-btn color="primary" variant="flat" @click="confirmWakeWord">{{ t('assistant.wakeWord.consentAccept') }}</v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>
@@ -239,6 +259,21 @@ const { mobile } = useDisplay()
 const isMobile = computed(() => mobile.value)
 const assistant = useAssistantStore()
 const wakeWord = useWakeWordStore()
+const wakeConsentOpen = ref(false)
+const sensitivityOptions = computed(() => ['low', 'normal', 'high'].map((value) => ({ title: t(`assistant.wakeWord.levels.${value}`), value })))
+
+// Turning it on asks first: the microphone listens locally for the phrase.
+const toggleWakeWord = (value) => {
+  if (!value) { wakeWord.setEnabled(false); return }
+  wakeConsentOpen.value = true
+}
+const confirmWakeWord = async () => {
+  wakeConsentOpen.value = false
+  wakeWord.setEnabled(true)
+  // Ask for the microphone now; the assistant is open, so release it right away.
+  await wakeWord.start()
+  await wakeWord.pause()
+}
 const categoriesStore = useCategoriesStore()
 const walletsStore = useWalletsStore()
 const snackbar = useSnackbar()

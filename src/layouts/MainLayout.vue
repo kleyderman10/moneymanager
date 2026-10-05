@@ -160,7 +160,7 @@ import MobileBottomNavigation from '@/components/navigation/MobileBottomNavigati
 import VoiceActionButton from '@/components/navigation/VoiceActionButton.vue'
 import { useAssistantStore } from '@/stores/assistant'
 import { usePushStore } from '@/stores/push'
-import { useWakeWordStore } from '@/stores/wakeword'
+import { useVoiceActivation } from '@/composables/useVoiceActivation'
 import { useTour } from '@/composables/useTour'
 import { TOUR_BY_ROUTE } from '@/tours/definitions'
 
@@ -210,16 +210,13 @@ const dismissAIConsent = () => authStore.dismissAIConsent()
 const assistantStore = useAssistantStore()
 const pushStore = usePushStore()
 
-// Wake word ("Oye Flow"): listens only while the app is visible and the assistant is closed, so it
-// never competes with the assistant for the microphone nor drains the battery in the background.
-const wakeWord = useWakeWordStore()
-const pageVisible = ref(typeof document === 'undefined' ? true : !document.hidden)
-const onVisibility = () => { pageVisible.value = !document.hidden }
-watch(
-  [() => wakeWord.enabled, () => assistantStore.visible, pageVisible, () => authStore.hasAcceptedAIConsent],
-  () => wakeWord.sync(!assistantStore.visible && pageVisible.value && authStore.hasAcceptedAIConsent),
-  { immediate: true }
-)
+// Wake word ("Oye Flow"): see useVoiceActivation for how it hands the microphone to the assistant.
+// openAssistant is declared below: the closure runs only after setup finishes.
+useVoiceActivation({
+  assistant: assistantStore,
+  open: () => openAssistant(),
+  canListen: () => authStore.hasAcceptedAIConsent,
+})
 const assistantConsentRequested = ref(false)
 const openAssistant = () => {
   if (!authStore.hasAcceptedAIConsent) {
@@ -357,8 +354,6 @@ onMounted(async () => {
   window.addEventListener('resize', readSafeAreaTop)
   window.addEventListener('billing:read-only', handleReadOnlyStatus)
   window.addEventListener('keydown', handleAssistantShortcut)
-  document.addEventListener('visibilitychange', onVisibility)
-  wakeWord.setHandler(() => openAssistant())
   if (!authStore.user && localStorage.getItem('accessToken')) authStore.fetchProfile()
   await billingStore.fetchStatus(true)
   assistantStore.fetchInsights()
@@ -369,8 +364,5 @@ onBeforeUnmount(() => {
   window.removeEventListener('resize', readSafeAreaTop)
   window.removeEventListener('billing:read-only', handleReadOnlyStatus)
   window.removeEventListener('keydown', handleAssistantShortcut)
-  document.removeEventListener('visibilitychange', onVisibility)
-  wakeWord.setHandler(null)
-  wakeWord.stop()
 })
 </script>

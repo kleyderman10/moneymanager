@@ -2,36 +2,9 @@
 
 Todo está programado y probado con pruebas automáticas, pero **ninguno de los dos funciona hasta que se configuren las credenciales de abajo**. Sin ellas la app se comporta como antes: en Perfil y en los ajustes de voz aparece un aviso de que falta configurar.
 
-## 1. Activación por voz con Picovoice
+## 1. Activación por voz "Oye Flow"
 
-Detecta una frase ("Oye Flow") en el dispositivo; el audio no sale de él. Solo escucha con la app abierta y visible, y se pausa mientras el asistente usa el micrófono.
-
-1. Crear una cuenta en <https://console.picovoice.ai> y copiar la **AccessKey**.
-2. En el archivo `.env.local` del frontend (no se sube a git; también en `.env.capacitor` para la app nativa):
-
-   ```
-   VITE_PICOVOICE_ACCESS_KEY=tu_clave
-   ```
-
-   Con solo eso funciona con la frase **"Jarvis"** (palabra incluida en Porcupine, modelo en inglés).
-3. **Para "Oye Flow"** (frase propia en español):
-   - En la consola, Porcupine → idioma **Spanish** → escribir `oye flow` → plataforma **Web (WASM)** → descargar el `.ppn`.
-   - Copiarlo a `public/wakeword/oye-flow_es.ppn` y agregar:
-
-     ```
-     VITE_WAKEWORD_PPN=/wakeword/oye-flow_es.ppn
-     VITE_WAKEWORD_LANG=es
-     VITE_WAKEWORD_LABEL=Oye Flow
-     ```
-   - Los modelos de idioma (`porcupine_params.pv`, `porcupine_params_es.pv`) ya están en `public/wakeword/`.
-4. Reconstruir: `npm run build` (web) o `npm run cap:sync` (nativa).
-5. En la app: abrir el asistente → ajustes de voz (icono de controles) → **Activar diciendo «Oye Flow»**.
-
-Notas:
-- La AccessKey queda dentro del código de la app: es lo normal en Picovoice y está limitada a tus dispositivos activos. El plan gratuito es para uso personal/no comercial: para una app de pago hay que contratar un plan comercial.
-- El motor pesa ~1 MB y solo se descarga cuando alguien activa la función.
-- El API ya permite el motor en su política de seguridad (`wasm-unsafe-eval`, workers `blob:` y `*.picovoice.ai`).
-- En Android e iOS la función usa el micrófono del WebView: Android pide el permiso al activarla (ya declarado en el manifiesto) e iOS usa el texto de `NSMicrophoneUsageDescription`.
+Ahora usa openWakeWord en el dispositivo (Android). No requiere cuentas ni claves. Ver [docs/wakeword/README.md](docs/wakeword/README.md): arquitectura, modelo `oye_flow.onnx`, entrenamiento y pruebas.
 
 ## 2. Notificaciones push
 

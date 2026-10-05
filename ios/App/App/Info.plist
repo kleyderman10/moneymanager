@@ -29,7 +29,7 @@
 	<key>NSCameraUsageDescription</key>
 	<string>Knexura Flow usa la cámara para escanear tus recibos y facturas y registrar tus gastos automáticamente.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Knexura Flow usa el micrófono para registrar movimientos por voz.</string>
+	<string>Knexura Flow usa el micrófono para registrar movimientos por voz y para detectar localmente la frase «Oye Flow» y permitirte activar el asistente.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>Knexura Flow convierte tu voz en texto para registrar movimientos automáticamente.</string>
 	<key>NSPhotoLibraryUsageDescription</key>

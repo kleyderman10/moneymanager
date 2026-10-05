@@ -25,8 +25,6 @@
     "@capgo/capacitor-speech-recognition": "^8.3.2",
     "@fontsource-variable/inter": "^5.3.0",
     "@mdi/font": "^7.4.47",
-    "@picovoice/porcupine-web": "^3.0.3",
-    "@picovoice/web-voice-processor": "^4.0.10",
     "@simplewebauthn/browser": "^13.3.0",
     "axios": "^1.7.0",
     "chart.js": "^4.4.0",

@@ -26,6 +26,8 @@ const routes = [
     component: () => import('@/layouts/MainLayout.vue'),
     meta: { requiresAuth: true },
     children: [
+      // Development only: calibrate the wake word on a real device.
+      ...(import.meta.env.DEV ? [{ path: 'dev/wakeword', name: 'WakeWordDebug', component: () => import('@/components/dev/WakeWordDebug.vue') }] : []),
       {
         path: '',
         name: 'Dashboard',
