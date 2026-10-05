@@ -101,8 +101,8 @@
               </div>
             </div>
             <div class="d-flex flex-wrap align-center ga-2 mt-2">
-              <v-chip size="small" :color="user.role === 'admin' ? 'primary' : 'default'" variant="tonal">
-                {{ user.role === 'admin' ? t('admin.administrator') : t('admin.user') }}
+              <v-chip size="small" :color="user.role === 'user' ? 'default' : 'primary'" variant="tonal">
+                {{ roleLabel(user.role) }}
               </v-chip>
               <v-chip v-if="user.subscription" size="small" :color="statusColor(user.subscription.status)" variant="tonal">
                 {{ statusLabel(user.subscription.status) }}
@@ -115,12 +115,31 @@
                 color="success"
                 density="compact"
                 hide-details
+                :disabled="!canAdminister"
                 :label="user.isActive ? t('admin.active') : t('admin.inactive')"
                 @update:model-value="(value) => toggleUserStatus(user, value)"
               />
-              <v-btn size="small" variant="text" color="primary" @click="toggleUserRole(user)">
+              <v-btn v-if="canAdminister" size="small" variant="text" color="primary" @click="toggleUserRole(user)">
                 {{ user.role === 'admin' ? t('admin.removeAdmin') : t('admin.makeAdmin') }}
               </v-btn>
+              <v-menu>
+                <template #activator="{ props: menuProps }">
+                  <v-btn v-bind="menuProps" icon="mdi-dots-vertical" size="small" variant="text" :aria-label="t('admin.actions')" />
+                </template>
+                <v-list density="compact">
+                  <v-list-item prepend-icon="mdi-logout" :title="t('admin.support.revokeSessions')" @click="askSupport(user, 'sessions')" />
+                  <v-list-item prepend-icon="mdi-email-check-outline" :title="t('admin.support.resendVerification')" @click="askSupport(user, 'verification')" />
+                  <template v-if="canAdminister">
+                    <v-list-item prepend-icon="mdi-shield-off-outline" :title="t('admin.support.resetTwoFactor')" @click="askSupport(user, 'twoFactor')" />
+                    <v-list-item
+                      v-if="user.role !== 'admin'"
+                      prepend-icon="mdi-lifebuoy"
+                      :title="user.role === 'support' ? t('admin.support.removeSupport') : t('admin.support.makeSupport')"
+                      @click="toggleSupportRole(user)"
+                    />
+                  </template>
+                </v-list>
+              </v-menu>
             </div>
           </div>
           <div v-if="!admin.loading && admin.users.length === 0" class="text-center text-medium-emphasis py-6">{{ t('admin.noUsersFound') }}</div>
@@ -144,8 +163,8 @@
                   <div class="text-caption text-medium-emphasis">{{ user.email }}</div>
                 </td>
                 <td>
-                  <v-chip size="small" :color="user.role === 'admin' ? 'primary' : 'default'" variant="tonal">
-                    {{ user.role === 'admin' ? t('admin.administrator') : t('admin.user') }}
+                  <v-chip size="small" :color="user.role === 'user' ? 'default' : 'primary'" variant="tonal">
+                    {{ roleLabel(user.role) }}
                   </v-chip>
                 </td>
                 <td>
@@ -160,18 +179,38 @@
                     color="success"
                     density="compact"
                     hide-details
+                    :disabled="!canAdminister"
                     :label="user.isActive ? t('admin.active') : t('admin.inactive')"
                     @update:model-value="(value) => toggleUserStatus(user, value)"
                   />
                 </td>
                 <td class="text-right">
                   <v-btn
+                    v-if="canAdminister"
                     size="small"
                     variant="text"
                     @click="toggleUserRole(user)"
                   >
                     {{ user.role === 'admin' ? t('admin.removeAdmin') : t('admin.makeAdmin') }}
                   </v-btn>
+                  <v-menu>
+                    <template #activator="{ props: menuProps }">
+                      <v-btn v-bind="menuProps" icon="mdi-dots-vertical" size="small" variant="text" :aria-label="t('admin.actions')" />
+                    </template>
+                    <v-list density="compact">
+                      <v-list-item prepend-icon="mdi-logout" :title="t('admin.support.revokeSessions')" @click="askSupport(user, 'sessions')" />
+                      <v-list-item prepend-icon="mdi-email-check-outline" :title="t('admin.support.resendVerification')" @click="askSupport(user, 'verification')" />
+                      <template v-if="canAdminister">
+                        <v-list-item prepend-icon="mdi-shield-off-outline" :title="t('admin.support.resetTwoFactor')" @click="askSupport(user, 'twoFactor')" />
+                        <v-list-item
+                          v-if="user.role !== 'admin'"
+                          prepend-icon="mdi-lifebuoy"
+                          :title="user.role === 'support' ? t('admin.support.removeSupport') : t('admin.support.makeSupport')"
+                          @click="toggleSupportRole(user)"
+                        />
+                      </template>
+                    </v-list>
+                  </v-menu>
                 </td>
               </tr>
               <tr v-if="!admin.loading && admin.users.length === 0">
@@ -189,6 +228,10 @@
             @update:model-value="loadUsers"
           />
         </div>
+      </v-window-item>
+
+      <v-window-item value="audit">
+        <AdminAuditLog />
       </v-window-item>
 
       <v-window-item value="subscriptions">
@@ -225,7 +268,7 @@
                 <span v-if="sub.trialEndsAt" class="text-caption text-medium-emphasis">{{ t('admin.trialEnds') }}: {{ formatDate(sub.trialEndsAt) }}</span>
               </div>
             </div>
-            <v-btn size="small" variant="text" icon="mdi-pencil" :aria-label="t('common.edit')" @click="openEdit(sub)" />
+            <v-btn v-if="canAdminister" size="small" variant="text" icon="mdi-pencil" :aria-label="t('common.edit')" @click="openEdit(sub)" />
           </div>
           <div v-if="!admin.loading && admin.subscriptions.length === 0" class="text-center text-medium-emphasis py-6">{{ t('admin.noSubscriptionsFound') }}</div>
         </div>
@@ -255,7 +298,7 @@
                 <td>{{ formatDate(sub.currentPeriodEnd) }}</td>
                 <td class="text-capitalize">{{ sub.provider || '—' }}</td>
                 <td class="text-right">
-                  <v-btn size="small" variant="text" icon="mdi-pencil" :aria-label="t('common.edit')" @click="openEdit(sub)" />
+                  <v-btn v-if="canAdminister" size="small" variant="text" icon="mdi-pencil" :aria-label="t('common.edit')" @click="openEdit(sub)" />
                 </td>
               </tr>
               <tr v-if="!admin.loading && admin.subscriptions.length === 0">
@@ -275,6 +318,15 @@
         </div>
       </v-window-item>
     </v-window>
+
+    <ConfirmDialog
+      v-model="supportDialog"
+      :title="supportCopy.title"
+      :message="supportCopy.message"
+      :confirm-label="t('admin.support.confirm')"
+      :loading="supportBusy"
+      @confirm="runSupport"
+    />
 
     <v-dialog v-model="editDialog" max-width="480">
       <v-card :title="t('admin.adjustSubscription')" class="capture-form">
@@ -301,6 +353,9 @@
 import { ref, onMounted, computed } from 'vue'
 import { useDisplay } from 'vuetify'
 import KfSegmented from '@/components/ui/KfSegmented.vue'
+import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
+import AdminAuditLog from '@/components/AdminAuditLog.vue'
+import { adminAPI } from '@/api'
 import KpiCard from '@/components/finance/KpiCard.vue'
 import { useI18n } from 'vue-i18n'
 import { useAdminStore } from '@/stores/admin'
@@ -317,6 +372,7 @@ const tabOptions = computed(() => [
   { value: 'overview', label: t('admin.overview') },
   { value: 'users', label: t('admin.users') },
   { value: 'subscriptions', label: t('admin.subscriptions') },
+  ...(authStore.isAdmin ? [{ value: 'audit', label: t('admin.audit.tab') }] : []),
 ])
 const statusShare = (status) => {
   const total = Object.values(admin.overview?.subscriptions?.byStatus || {}).reduce((sum, n) => sum + (Number(n) || 0), 0)
@@ -390,6 +446,49 @@ const toggleUserRole = async (user) => {
   const result = await admin.setUserRole(user._id, nextRole)
   if (result.success) snackbar.success(nextRole === 'admin' ? t('admin.nowAdmin') : t('admin.adminRoleRemoved'))
   else snackbar.error(result.message)
+}
+
+const canAdminister = computed(() => authStore.isAdmin)
+const roleLabel = (role) => ({ admin: t('admin.administrator'), support: t('admin.support.role') }[role] || t('admin.user'))
+
+const supportDialog = ref(false)
+const supportBusy = ref(false)
+const supportUser = ref(null)
+const supportAction = ref('sessions')
+
+const supportCopy = computed(() => {
+  const email = supportUser.value?.email
+  if (supportAction.value === 'sessions') return { title: t('admin.support.revokeSessions'), message: t('admin.support.revokeSessionsConfirm', { email }) }
+  if (supportAction.value === 'verification') return { title: t('admin.support.resendVerification'), message: t('admin.support.resendVerificationConfirm', { email }) }
+  return { title: t('admin.support.resetTwoFactor'), message: t('admin.support.resetTwoFactorConfirm', { email }) }
+})
+
+const toggleSupportRole = async (user) => {
+  const nextRole = user.role === 'support' ? 'user' : 'support'
+  const result = await admin.setUserRole(user._id, nextRole)
+  if (result.success) snackbar.success(t('admin.support.roleUpdated'))
+  else snackbar.error(result.message)
+}
+
+const askSupport = (user, action) => {
+  supportUser.value = user
+  supportAction.value = action
+  supportDialog.value = true
+}
+
+const runSupport = async () => {
+  supportBusy.value = true
+  try {
+    const id = supportUser.value._id
+    if (supportAction.value === 'sessions') await adminAPI.revokeUserSessions(id)
+    else if (supportAction.value === 'verification') await adminAPI.resendUserVerification(id)
+    else await adminAPI.resetUserTwoFactor(id)
+    snackbar.success(t('admin.support.done'))
+    supportDialog.value = false
+  } catch (e) {
+    snackbar.error(e.response?.data?.message || t('common.error'))
+  }
+  supportBusy.value = false
 }
 
 const editDialog = ref(false)

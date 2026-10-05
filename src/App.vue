@@ -11,6 +11,7 @@
     >
       {{ snackbar.message }}
       <template #actions>
+        <v-btn v-if="snackbar.action" variant="text" @click="runAction">{{ snackbar.action.label }}</v-btn>
         <v-btn variant="text" @click="snackbar.show = false">OK</v-btn>
       </template>
     </v-snackbar>
@@ -20,4 +21,9 @@
 <script setup>
 import { useSnackbar } from '@/stores/snackbar'
 const snackbar = useSnackbar()
+const runAction = () => {
+  const { handler } = snackbar.action
+  snackbar.show = false
+  handler()
+}
 </script>

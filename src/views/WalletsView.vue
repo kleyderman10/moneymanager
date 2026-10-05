@@ -278,16 +278,18 @@
       </v-card>
     </v-dialog>
 
-    <v-dialog v-model="deleteDialog" max-width="400">
-      <v-card><v-card-title>{{ t('wallets.confirm') }}</v-card-title><v-card-text>{{ t('wallets.deleteAccountConfirm') }}</v-card-text>
-        <v-card-actions><v-spacer /><v-btn variant="text" @click="deleteDialog = false">{{ t('common.cancel') }}</v-btn><v-btn color="error" @click="doDelete">{{ t('common.delete') }}</v-btn></v-card-actions></v-card>
-    </v-dialog>
+    <ConfirmDialog
+      v-model="deleteDialog"
+      :message="t('wallets.deleteAccountConfirm')"
+      @confirm="doDelete"
+    />
 
     <v-btn v-if="isMobile && !billingStore.isReadOnly" icon="mdi-plus" color="primary" size="x-large" class="finance-fab" :aria-label="t('wallets.newAccount')" data-tour="page-add" @click="openCreate" />
   </div>
 </template>
 
 <script setup>
+import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
 import { ref, computed, onMounted, watch } from 'vue'
 import { useDisplay } from 'vuetify'
 import { useI18n } from 'vue-i18n'

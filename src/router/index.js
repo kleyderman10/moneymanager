@@ -104,7 +104,7 @@ const routes = [
         path: 'admin',
         name: 'Admin',
         component: () => import('@/views/AdminView.vue'),
-        meta: { billingExempt: true, requiresAdmin: true },
+        meta: { billingExempt: true, requiresStaff: true },
       },
     ],
   },
@@ -127,10 +127,10 @@ router.beforeEach(async (to) => {
     await subscriptionStore.fetchStatus()
   }
 
-  if (to.meta.requiresAdmin) {
+  if (to.meta.requiresStaff) {
     const authStore = useAuthStore()
     if (!authStore.user) await authStore.fetchProfile()
-    if (!authStore.isAdmin) return '/'
+    if (!authStore.isStaff) return '/'
   }
 
   return true

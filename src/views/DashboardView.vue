@@ -20,6 +20,38 @@
       </v-btn>
     </header>
 
+    <v-alert
+      v-if="loadFailed"
+      type="warning"
+      variant="tonal"
+      class="mb-3"
+      :text="t('common.loadError')"
+    >
+      <template #append>
+        <v-btn variant="text" @click="load">{{ t('common.retry') }}</v-btn>
+      </template>
+    </v-alert>
+
+    <v-card v-if="showOnboarding" class="kf-card-hero mb-3" data-tour="dashboard-onboarding">
+      <v-card-title>{{ t('dashboard.onboarding.title') }}</v-card-title>
+      <v-card-subtitle class="text-wrap">{{ t('dashboard.onboarding.subtitle') }}</v-card-subtitle>
+      <v-list bg-color="transparent">
+        <v-list-item
+          v-for="step in onboardingSteps"
+          :key="step.key"
+          :prepend-icon="step.done ? 'mdi-check-circle' : 'mdi-circle-outline'"
+          :base-color="step.done ? 'success' : undefined"
+          :title="step.title"
+          :disabled="step.done || billingStore.isReadOnly"
+          @click="step.go"
+        >
+          <template v-if="!step.done" #append>
+            <v-icon>mdi-chevron-right</v-icon>
+          </template>
+        </v-list-item>
+      </v-list>
+    </v-card>
+
     <v-row v-if="summary" class="mb-3" data-tour="dashboard-summary">
       <v-col cols="12">
         <BalanceCard :label="t('dashboard.netWorth')" :amount="netWorth">
@@ -374,7 +406,19 @@ const tryProcessRecurring = () => {
 
 const formatDate = (date) => date ? dateLong(date, { weekday: 'short', day: 'numeric', month: 'short' }) : ''
 
+const hasWallets = computed(() => wallets.value.length > 0)
+const hasMovements = computed(() => (summary.value?.incomeCount || 0) + (summary.value?.expenseCount || 0) > 0)
+// Shown only once the first load worked, so a failed request is not mistaken for a new user.
+const showOnboarding = computed(() => Boolean(summary.value) && !loadFailed.value && (!hasWallets.value || !hasMovements.value))
+const onboardingSteps = computed(() => [
+  { key: 'wallet', title: t('dashboard.onboarding.wallet'), done: hasWallets.value, go: () => router.push({ path: '/wallets' }) },
+  { key: 'movement', title: t('dashboard.onboarding.movement'), done: hasMovements.value, go: goToNewTransaction },
+])
+
+const loadFailed = ref(false)
+
 const load = async () => {
+  loadFailed.value = false
   const now = new Date()
   const startDate = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
   const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString()
@@ -393,7 +437,10 @@ const load = async () => {
     creditCards.value = walletsResponse.data.filter((wallet) => wallet.type === 'credit')
     cashFlow.value = cashFlowResponse?.data?.capacity || null
     tryProcessRecurring()
-  } catch { /* El estado vacío mantiene la pantalla utilizable si no hay conexión. */ }
+  } catch {
+    // La pantalla sigue usable con el estado vacío; el aviso permite reintentar.
+    loadFailed.value = true
+  }
 }
 
 onMounted(() => {

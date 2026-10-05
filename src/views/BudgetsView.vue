@@ -40,17 +40,11 @@
       </v-card>
     </v-dialog>
 
-    <v-dialog v-model="deleteDialog" max-width="400">
-      <v-card>
-        <v-card-title>{{ t('wallets.confirm') }}</v-card-title>
-        <v-card-text>{{ t('budgets.deleteConfirm') }}</v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn variant="text" @click="deleteDialog = false">{{ t('common.cancel') }}</v-btn>
-          <v-btn color="error" @click="doDelete">{{ t('common.delete') }}</v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
+    <ConfirmDialog
+      v-model="deleteDialog"
+      :message="t('budgets.deleteConfirm')"
+      @confirm="doDelete"
+    />
 
     <v-btn
       v-if="isMobile && !billingStore.isReadOnly"
@@ -64,6 +58,7 @@
 </template>
 
 <script setup>
+import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
 import { ref, computed, onMounted, watch } from 'vue'
 import { useDisplay } from 'vuetify'
 import { useI18n } from 'vue-i18n'
@@ -71,7 +66,8 @@ import { useBudgetsStore } from '@/stores/budgets'
 import { useSnackbar } from '@/stores/snackbar'
 import { useSubscriptionStore } from '@/stores/subscriptions'
 import { useLocale } from '@/composables/useLocale'
-import { categoriesAPI, reportsAPI } from '@/api'
+import { reportsAPI } from '@/api'
+import { useCategoriesStore } from '@/stores/categories'
 import BudgetCard from '@/components/finance/BudgetCard.vue'
 import AIRecommendBudget from '@/components/AIRecommendBudget.vue'
 import NativeSelectField from '@/components/NativeSelectField.vue'
@@ -83,6 +79,7 @@ const { mobile } = useDisplay()
 const isMobile = computed(() => mobile.value)
 
 const store = useBudgetsStore()
+const categoriesStore = useCategoriesStore()
 const snackbar = useSnackbar()
 const billingStore = useSubscriptionStore()
 const categories = ref([])
@@ -139,5 +136,5 @@ const onBudgetPredicted = (data) => {
 }
 const doDelete = async () => { try { await store.remove(toDelete.value); snackbar.success(t('budgets.deleted')) } catch { snackbar.error(t('common.error')) }; deleteDialog.value = false }
 
-onMounted(async () => { store.fetchAll(); const res = await categoriesAPI.getAll(); categories.value = res.data })
+onMounted(async () => { store.fetchAll(); categories.value = await categoriesStore.fetchCached() })
 </script>

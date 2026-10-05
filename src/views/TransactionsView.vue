@@ -36,7 +36,7 @@
         <v-card class="tx-summary-card tx-summary-card--light">
           <v-card-text>
             <div class="tx-summary-card__label">{{ t('transactions.transactionsShown') }}</div>
-            <div class="tx-summary-card__value tx-summary-card__value--dark">{{ pagedRegisters.length }} <span class="tx-summary-card__of">{{ t('transactions.of', { total: searchedRegisters.length }) }}</span></div>
+            <div class="tx-summary-card__value tx-summary-card__value--dark">{{ pagedRegisters.length }} <span class="tx-summary-card__of">{{ t('transactions.of', { total: store.total }) }}</span></div>
           </v-card-text>
         </v-card>
       </v-col>
@@ -129,7 +129,7 @@
         </template>
       </v-data-table>
       <div class="tx-pagination">
-        <span class="text-caption text-medium-emphasis">{{ t('transactions.showing', { shown: pagedRegisters.length, total: searchedRegisters.length }) }}</span>
+        <span class="text-caption text-medium-emphasis">{{ t('transactions.showing', { shown: pagedRegisters.length, total: store.total }) }}</span>
         <div class="d-flex align-center ga-1">
           <v-btn icon="mdi-chevron-left" size="small" variant="text" :aria-label="t('common.back')" :disabled="page <= 1" @click="page--" />
           <span class="text-caption">{{ page }} / {{ pageCount }}</span>
@@ -140,7 +140,7 @@
 
     <!-- Mobile card list -->
     <div v-else>
-      <v-card v-if="searchedRegisters.length === 0 && !store.loading" class="pa-8 text-center text-grey">
+      <v-card v-if="store.total === 0 && !store.loading" class="pa-8 text-center text-grey">
         <v-icon size="x-large" color="grey">mdi-cash-remove</v-icon>
         <div class="mt-2">{{ t('transactions.noTransactions') }}</div>
       </v-card>
@@ -183,7 +183,7 @@
           </v-list>
         </template>
         <div class="tx-pagination">
-          <span class="text-caption text-medium-emphasis">{{ t('transactions.showing', { shown: pagedRegisters.length, total: searchedRegisters.length }) }}</span>
+          <span class="text-caption text-medium-emphasis">{{ t('transactions.showing', { shown: pagedRegisters.length, total: store.total }) }}</span>
           <div class="d-flex align-center ga-1">
             <v-btn icon="mdi-chevron-left" size="small" variant="text" :aria-label="t('common.back')" :disabled="page <= 1" @click="page--" />
             <span class="text-caption">{{ page }} / {{ pageCount }}</span>
@@ -488,29 +488,19 @@
       </v-card>
     </v-dialog>
 
-    <v-dialog v-model="deleteDialog" max-width="400">
-      <v-card>
-        <v-card-title>{{ t('wallets.confirm') }}</v-card-title>
-        <v-card-text>{{ t('transactions.deleteTransactionConfirm') }}</v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn variant="text" @click="deleteDialog = false">{{ t('common.cancel') }}</v-btn>
-          <v-btn color="error" @click="doDelete" :loading="deleting">{{ t('common.delete') }}</v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
+    <ConfirmDialog
+      v-model="deleteDialog"
+      :message="t('transactions.deleteTransactionConfirm')"
+      :loading="deleting"
+      @confirm="doDelete"
+    />
 
-    <v-dialog v-model="bulkDeleteDialog" max-width="400">
-      <v-card>
-        <v-card-title>{{ t('wallets.confirm') }}</v-card-title>
-        <v-card-text>{{ t('transactions.deleteBulkConfirm', { count: selected.length }, selected.length) }}</v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn variant="text" @click="bulkDeleteDialog = false">{{ t('common.cancel') }}</v-btn>
-          <v-btn color="error" @click="doBulkDelete" :loading="deleting">{{ t('common.delete') }}</v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
+    <ConfirmDialog
+      v-model="bulkDeleteDialog"
+      :message="t('transactions.deleteBulkConfirm', { count: selected.length }, selected.length)"
+      :loading="deleting"
+      @confirm="doBulkDelete"
+    />
 
     <v-btn
       v-if="isMobile && !billingStore.isReadOnly"
@@ -524,16 +514,18 @@
 </template>
 
 <script setup>
+import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useDisplay } from 'vuetify'
 import { useI18n } from 'vue-i18n'
 import { useRegistersStore } from '@/stores/registers'
+import { useCategoriesStore } from '@/stores/categories'
 import { useSnackbar } from '@/stores/snackbar'
 import { useSubscriptionStore } from '@/stores/subscriptions'
 import { useAuthStore } from '@/stores/auth'
 import { useLocale } from '@/composables/useLocale'
-import { categoriesAPI, walletsAPI, aiAPI, statementsAPI, recurringAPI } from '@/api'
+import { walletsAPI, aiAPI, statementsAPI, recurringAPI } from '@/api'
 import AISuggestCategory from '@/components/AISuggestCategory.vue'
 import VoiceInputButton from '@/components/VoiceInputButton.vue'
 import ReceiptScanner from '@/components/ReceiptScanner.vue'
@@ -551,6 +543,7 @@ const { mobile } = useDisplay()
 const isMobile = computed(() => mobile.value)
 
 const store = useRegistersStore()
+const categoriesStore = useCategoriesStore()
 const snackbar = useSnackbar()
 const billingStore = useSubscriptionStore()
 const authStore = useAuthStore()
@@ -579,7 +572,7 @@ const deleting = ref(false)
 const toDelete = ref(null)
 const selected = ref([])
 const page = ref(1)
-const PAGE_SIZE = 15
+const PAGE_SIZE = 25
 const attemptedSave = ref(false)
 const categories = ref([])
 const wallets = ref([])
@@ -702,14 +695,16 @@ const tryProcessRecurring = () => {
 const formatDate = (d) => d ? date(d) : ''
 
 const search = ref('')
-const searchedRegisters = computed(() => {
-  const query = (search.value || '').trim().toLocaleLowerCase()
-  return query ? store.registers.filter(r => [r.description, r.category?.name, r.wallet?.name].some(value => (value || '').toLocaleLowerCase().includes(query))) : store.registers
+// Paging, search and totals run on the server: `description` is encrypted at rest, so the API
+// filters it in memory only when a search term is present.
+const pagedRegisters = computed(() => store.registers)
+const pageCount = computed(() => store.pages)
+let searchTimer = null
+watch(search, () => {
+  clearTimeout(searchTimer)
+  searchTimer = setTimeout(() => { if (page.value !== 1) page.value = 1; else fetchPage() }, 300)
 })
-watch(search, () => { page.value = 1 })
-const pageCount = computed(() => Math.max(1, Math.ceil(searchedRegisters.value.length / PAGE_SIZE)))
-watch(pageCount, (count) => { page.value = Math.min(page.value, count) })
-const pagedRegisters = computed(() => searchedRegisters.value.slice((page.value - 1) * PAGE_SIZE, page.value * PAGE_SIZE))
+watch(page, () => { selected.value = []; fetchPage() })
 // Mobile list grouped by day, keeping the existing sort order.
 const pagedGroups = computed(() => {
   const groups = []
@@ -725,14 +720,8 @@ const pagedGroups = computed(() => {
   return groups
 })
 
-const totalShown = computed(() => searchedRegisters.value.reduce(
-  (sum, r) => sum + (r.type === 'income' ? Number(r.amount) || 0 : -(Number(r.amount) || 0)), 0
-))
-const averagePerMovement = computed(() => {
-  if (searchedRegisters.value.length === 0) return 0
-  const totalAbs = searchedRegisters.value.reduce((sum, r) => sum + Math.abs(Number(r.amount) || 0), 0)
-  return totalAbs / searchedRegisters.value.length
-})
+const totalShown = computed(() => store.totals.income - store.totals.expense)
+const averagePerMovement = computed(() => (store.total ? (store.totals.income + store.totals.expense) / store.total : 0))
 
 const toggleSelected = (id, value) => {
   selected.value = value ? [...selected.value, id] : selected.value.filter((s) => s !== id)
@@ -772,9 +761,10 @@ const confirmBulkDelete = () => { bulkDeleteDialog.value = true }
 const doBulkDelete = async () => {
   deleting.value = true
   try {
-    for (const id of selected.value) await store.remove(id)
+    await store.removeMany(selected.value)
     snackbar.success(t('transactions.bulkDeleted', { count: selected.value.length }, selected.value.length))
     selected.value = []
+    await fetchPage()
   } catch {
     snackbar.error(t('transactions.bulkDeleteError'))
   }
@@ -782,17 +772,31 @@ const doBulkDelete = async () => {
   bulkDeleteDialog.value = false
 }
 
-const load = () => {
+const filterParams = () => {
   const params = {}
   if (filters.value.type) params.type = filters.value.type
   if (filters.value.category) params.category = filters.value.category
   if (filters.value.startDate) params.startDate = filters.value.startDate
   if (filters.value.endDate) params.endDate = filters.value.endDate
-  page.value = 1
+  return params
+}
+
+const fetchPage = async () => {
+  const params = { ...filterParams(), page: page.value, limit: PAGE_SIZE }
+  const query = (search.value || '').trim()
+  if (query) params.q = query
+  await store.fetchAll(params)
+  // The API clamps the page when filtered results shrink (e.g. after a deletion).
+  if (store.page !== page.value) page.value = store.page
+}
+
+const load = async () => {
   selected.value = []
-  store.fetchAll(params)
   store.fetchTags()
   tryProcessRecurring()
+  // Changing `page` triggers the watcher, which fetches; otherwise fetch directly.
+  if (page.value !== 1) { page.value = 1; return }
+  await fetchPage()
 }
 
 const doExport = () => store.exportCSV({})
@@ -800,6 +804,23 @@ const doExport = () => store.exportCSV({})
 const openModeDialog = () => {
   modeDialog.value = true
 }
+
+// A half-filled new transaction survives the session ending (the user is sent to login and
+// comes back): it is kept in sessionStorage while the dialog is open and dropped once the
+// dialog is closed on purpose or the transaction is saved.
+const DRAFT_KEY = 'mm_tx_draft'
+const DRAFT_MAX_AGE_MS = 30 * 60 * 1000
+const readDraft = () => {
+  try {
+    const draft = JSON.parse(sessionStorage.getItem(DRAFT_KEY) || 'null')
+    if (!draft || Date.now() - draft.at > DRAFT_MAX_AGE_MS) return null
+    return draft.form
+  } catch { return null }
+}
+const writeDraft = (value) => { try { sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ at: Date.now(), form: value })) } catch { /* storage unavailable */ } }
+const clearDraft = () => { try { sessionStorage.removeItem(DRAFT_KEY) } catch { /* storage unavailable */ } }
+watch(form, (value) => { if (dialog.value && !editing.value && (Number(value.amount) > 0 || value.description)) writeDraft(value) }, { deep: true })
+watch(dialog, (open) => { if (!open) clearDraft() })
 
 const openManualCreate = () => {
   editing.value = null
@@ -816,6 +837,11 @@ const openManualCreate = () => {
     wallet: getLastWallet() || walletOptions.value[0]?._id || null,
     tags: [],
     installments: 1,
+  }
+  const draft = readDraft()
+  if (draft) {
+    form.value = { ...form.value, ...draft }
+    snackbar.info(t('transactions.draftRestored'))
   }
   if (modeDialog.value) {
     pendingManualCreate.value = true
@@ -1112,11 +1138,38 @@ const saveReviewedItems = async () => {
 const removeReviewItem = (i) => { reviewItems.value.splice(i, 1) }
 const addReviewItem = () => { reviewItems.value.push({ description: '', amount: 0, category: null, category_hint: '' }) }
 
+// Card payments and instalment purchases touch several records, so only plain movements can
+// be recreated safely.
+const isRestorable = (r) => !r.paymentGroup && !r.cardPayment && !(r.installments > 1)
+const restoreRegister = async (r) => {
+  try {
+    await store.create({
+      amount: r.amount,
+      type: r.type,
+      category: r.category?._id,
+      wallet: r.wallet?._id || undefined,
+      date: String(r.date).slice(0, 10),
+      description: r.description || '',
+      tags: r.tags || [],
+    })
+    snackbar.success(t('transactions.restored'))
+    await fetchPage()
+  } catch {
+    snackbar.error(t('common.error'))
+  }
+}
+
 const doDelete = async () => {
   deleting.value = true
   try {
+    const removed = store.registers.find((r) => r._id === toDelete.value)
     await store.remove(toDelete.value)
-    snackbar.success(t('transactions.transactionDeleted'))
+    if (removed && isRestorable(removed)) {
+      snackbar.withAction(t('transactions.transactionDeleted'), t('common.undo'), () => restoreRegister(removed))
+    } else {
+      snackbar.success(t('transactions.transactionDeleted'))
+    }
+    await fetchPage()
   } catch { snackbar.error(t('transactions.deleteError')) }
   deleting.value = false
   deleteDialog.value = false
@@ -1129,7 +1182,7 @@ const loadReferenceData = async () => {
   categoriesError.value = ''
 
   const [categoriesResult, walletsResult] = await Promise.allSettled([
-    categoriesAPI.getAll(),
+    categoriesStore.fetchCached().then((data) => ({ data })),
     walletsAPI.getAll(),
   ])
 

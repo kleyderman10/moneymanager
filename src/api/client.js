@@ -1,4 +1,6 @@
 import axios from 'axios'
+import { i18n } from '@/i18n'
+import { useSnackbar } from '@/stores/snackbar'
 
 const apiBaseURL = import.meta.env.VITE_API_BASE_URL || '/api'
 
@@ -19,6 +21,34 @@ const refreshSession = () => {
       .finally(() => { refreshPromise = null })
   }
   return refreshPromise
+}
+
+// The router is loaded lazily: it imports stores that import this client.
+const endSession = async () => {
+  localStorage.removeItem('accessToken')
+  localStorage.removeItem('refreshToken')
+  try {
+    const { default: router } = await import('@/router')
+    const current = router.currentRoute.value
+    if (current.name === 'Login') return
+    useSnackbar().info(i18n.global.t('common.sessionExpired'))
+    await router.push({ name: 'Login', query: { redirect: current.fullPath } })
+  } catch {
+    window.location.href = '/login'
+  }
+}
+
+// Views that load data without their own error state would otherwise show an empty screen when
+// a request fails. One shared notice (at most every 6 s) tells the user it was a loading error.
+let lastLoadErrorAt = 0
+const notifyLoadFailure = (error) => {
+  const { config, response } = error
+  if (config?.method !== 'get' || config?.silent || axios.isCancel(error)) return
+  if (response && [401, 402, 403, 404].includes(response.status)) return
+  if (config.url?.startsWith('/ai/')) return
+  if (Date.now() - lastLoadErrorAt < 6000) return
+  lastLoadErrorAt = Date.now()
+  useSnackbar().error(i18n.global.t('common.loadError'))
 }
 
 const api = axios.create({
@@ -67,15 +97,13 @@ api.interceptors.response.use(
           originalRequest.headers.Authorization = `Bearer ${accessToken}`
           return api(originalRequest)
         } catch {
-          localStorage.removeItem('accessToken')
-          localStorage.removeItem('refreshToken')
-          window.location.href = '/login'
+          await endSession()
         }
       } else {
-        localStorage.removeItem('accessToken')
-        window.location.href = '/login'
+        await endSession()
       }
     }
+    notifyLoadFailure(error)
     return Promise.reject(error)
   }
 )

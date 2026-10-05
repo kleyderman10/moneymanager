@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { assistantAPI } from '@/api'
+import { useCategoriesStore } from '@/stores/categories'
 
 // Global voice/text assistant. The backend interprets what the user said and returns one of:
 //   answer / clarify → a reply to show
@@ -78,6 +79,8 @@ export const useAssistantStore = defineStore('assistant', () => {
       const res = await assistantAPI.confirm(result.value.actionId, params)
       lastDone.value = res.data
       dataVersion.value += 1
+      // The assistant can create categories server-side, so the cached list is stale.
+      useCategoriesStore().loadedAt = 0
       result.value = { type: 'done', reply: res.data.reply }
       return res.data
     } catch (e) {
@@ -98,7 +101,10 @@ export const useAssistantStore = defineStore('assistant', () => {
 
   const undo = async () => {
     const res = await assistantAPI.undo()
-    if (res.data?.type === 'undone') dataVersion.value += 1
+    if (res.data?.type === 'undone') {
+      dataVersion.value += 1
+      useCategoriesStore().loadedAt = 0
+    }
     return res.data
   }
 

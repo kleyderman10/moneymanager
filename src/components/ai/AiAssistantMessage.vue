@@ -12,7 +12,7 @@
 
 <script setup>
 import { computed } from 'vue'
-import symbol from '@/assets/branding/knexura-flow-symbol.png'
+import symbol from '@/assets/branding/knexura-flow-symbol.webp'
 import { renderAiMarkdown } from '@/utils/aiMarkdown'
 
 const props = defineProps({

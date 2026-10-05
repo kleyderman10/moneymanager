@@ -2,13 +2,14 @@
   <AIChatPanel v-if="!billingStore.requiresSubscription && authStore.hasAcceptedAIConsent" />
   <AIConsentDialog :visible="showAIConsent || assistantConsentRequested" @decline="onConsentDecline" @accept="onConsentAccept" />
   <AssistantSheet />
+  <QuickNav v-model="quickNavOpen" :is-admin="authStore.isStaff" />
 
   <AppDrawer
     v-model="drawer"
     :mobile="isMobile"
     :rail="sidebarCollapsed"
     :user="authStore.user"
-    :is-admin="authStore.isAdmin"
+    :is-admin="authStore.isStaff"
     @logout="handleLogout"
   />
 
@@ -21,6 +22,7 @@
         <div class="topbar-date">{{ currentDate }}</div>
       </div>
       <v-spacer />
+      <v-btn icon="mdi-magnify" variant="text" class="mr-1" :aria-label="t('layout.quickNav')" :title="t('layout.quickNav') + ' (Ctrl+K)'" @click="quickNavOpen = true" />
       <VoiceActionButton variant="compact" class="mr-3" @voice-click="openAssistant" />
     </template>
 
@@ -153,6 +155,7 @@ import AIChatPanel from '@/components/AIChatPanel.vue'
 import AIConsentDialog from '@/components/AIConsentDialog.vue'
 import AssistantSheet from '@/components/assistant/AssistantSheet.vue'
 import AppDrawer from '@/components/navigation/AppDrawer.vue'
+import QuickNav from '@/components/navigation/QuickNav.vue'
 import MobileBottomNavigation from '@/components/navigation/MobileBottomNavigation.vue'
 import VoiceActionButton from '@/components/navigation/VoiceActionButton.vue'
 import { useAssistantStore } from '@/stores/assistant'
@@ -222,7 +225,13 @@ const onConsentDecline = () => {
   dismissAIConsent()
   assistantConsentRequested.value = false
 }
+const quickNavOpen = ref(false)
 const handleAssistantShortcut = (event) => {
+  if ((event.ctrlKey || event.metaKey) && !event.shiftKey && event.key.toLowerCase() === 'k') {
+    event.preventDefault()
+    quickNavOpen.value = !quickNavOpen.value
+    return
+  }
   if (event.ctrlKey && event.shiftKey && event.code === 'Space') {
     event.preventDefault()
     openAssistant()

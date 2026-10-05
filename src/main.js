@@ -36,6 +36,10 @@ if (Capacitor.isNativePlatform()) {
       .then((keys) => Promise.all(keys.map((key) => caches.delete(key))))
       .catch(() => {})
   }
+  // The header is dark in every theme: light status-bar text keeps the clock readable on iOS.
+  import('@capacitor/status-bar')
+    .then(({ StatusBar, Style }) => StatusBar.setStyle({ style: Style.Dark }))
+    .catch(() => {})
 } else {
   import('virtual:pwa-register').then(({ registerSW }) => {
     registerSW({

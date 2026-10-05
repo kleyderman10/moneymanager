@@ -117,16 +117,18 @@
       </v-card>
     </v-dialog>
 
-    <v-dialog v-model="deleteDialog" max-width="400">
-      <v-card><v-card-title>{{ t('wallets.confirm') }}</v-card-title><v-card-text>{{ t('recurring.deleteConfirm') }}</v-card-text>
-        <v-card-actions><v-spacer /><v-btn variant="text" @click="deleteDialog = false">{{ t('common.cancel') }}</v-btn><v-btn color="error" @click="doDelete">{{ t('common.delete') }}</v-btn></v-card-actions></v-card>
-    </v-dialog>
+    <ConfirmDialog
+      v-model="deleteDialog"
+      :message="t('recurring.deleteConfirm')"
+      @confirm="doDelete"
+    />
 
     <v-btn v-if="isMobile && !billingStore.isReadOnly" icon="mdi-plus" color="primary" size="x-large" class="finance-fab" :aria-label="t('recurring.newRecurring')" data-tour="page-add" @click="openCreate" />
   </div>
 </template>
 
 <script setup>
+import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
 import { categoryIcon } from '@/utils/categoryIcon'
 import { ref, computed, onMounted } from 'vue'
 import { useDisplay } from 'vuetify'
@@ -135,7 +137,8 @@ import { useRecurringStore } from '@/stores/recurring'
 import { useSnackbar } from '@/stores/snackbar'
 import { useSubscriptionStore } from '@/stores/subscriptions'
 import { useLocale } from '@/composables/useLocale'
-import { categoriesAPI, walletsAPI } from '@/api'
+import { walletsAPI } from '@/api'
+import { useCategoriesStore } from '@/stores/categories'
 import NativeSelectField from '@/components/NativeSelectField.vue'
 import MoneyField from '@/components/MoneyField.vue'
 
@@ -144,6 +147,7 @@ const { money, date } = useLocale()
 const { mobile } = useDisplay()
 const isMobile = computed(() => mobile.value)
 const store = useRecurringStore()
+const categoriesStore = useCategoriesStore()
 const snackbar = useSnackbar()
 const billingStore = useSubscriptionStore()
 const categories = ref([])
@@ -214,7 +218,7 @@ const save = async () => {
 const confirmDelete = (item) => { toDelete.value = item._id; deleteDialog.value = true }
 const doDelete = async () => { try { await store.remove(toDelete.value); snackbar.success(t('budgets.deleted')); store.fetchUpcoming() } catch (err) { snackbar.error(err?.response?.data?.message || t('transactions.deleteError')) }; deleteDialog.value = false }
 
-onMounted(async () => { store.fetchAll(); store.fetchUpcoming(); const [catRes, walRes] = await Promise.all([categoriesAPI.getAll(), walletsAPI.getAll()]); categories.value = catRes.data; wallets.value = walRes.data })
+onMounted(async () => { store.fetchAll(); store.fetchUpcoming(); const [cats, walRes] = await Promise.all([categoriesStore.fetchCached(), walletsAPI.getAll()]); categories.value = cats; wallets.value = walRes.data })
 </script>
 
 <style scoped>

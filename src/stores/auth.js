@@ -63,6 +63,8 @@ export const useAuthStore = defineStore('auth', () => {
 
   const isAuthenticated = computed(() => !!user.value)
   const isAdmin = computed(() => user.value?.role === 'admin')
+  // Admin and support both reach the admin area; support only gets the read/help actions.
+  const isStaff = computed(() => ['admin', 'support'].includes(user.value?.role))
 
   const setTokens = (accessToken, refreshToken) => {
     localStorage.setItem('accessToken', accessToken)
@@ -582,6 +584,7 @@ export const useAuthStore = defineStore('auth', () => {
     biometricSupported,
     isAuthenticated,
     isAdmin,
+    isStaff,
     hasAcceptedAIConsent,
     acceptAIConsent,
     revokeAIConsent,

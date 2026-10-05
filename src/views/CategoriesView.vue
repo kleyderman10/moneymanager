@@ -78,17 +78,11 @@
       </v-card>
     </v-dialog>
 
-    <v-dialog v-model="deleteDialog" max-width="400">
-      <v-card>
-        <v-card-title>{{ t('wallets.confirm') }}</v-card-title>
-        <v-card-text>{{ t('categories.deleteConfirm') }}</v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn variant="text" @click="deleteDialog = false">{{ t('common.cancel') }}</v-btn>
-          <v-btn color="error" @click="doDelete">{{ t('common.delete') }}</v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
+    <ConfirmDialog
+      v-model="deleteDialog"
+      :message="t('categories.deleteConfirm')"
+      @confirm="doDelete"
+    />
 
     <v-btn
       v-if="isMobile && !billingStore.isReadOnly"
@@ -102,6 +96,7 @@
 </template>
 
 <script setup>
+import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
 import { categoryIcon } from '@/utils/categoryIcon'
 const iconOptions = ['mdi-food-outline', 'mdi-car-outline', 'mdi-home-outline', 'mdi-movie-outline', 'mdi-lightning-bolt-outline', 'mdi-shopping-outline', 'mdi-heart-outline', 'mdi-cash-plus', 'mdi-shape-outline']
 import { ref, computed, onMounted } from 'vue'

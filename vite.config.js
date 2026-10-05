@@ -4,8 +4,23 @@ import vuetify from 'vite-plugin-vuetify'
 import { VitePWA } from 'vite-plugin-pwa'
 import { fileURLToPath, URL } from 'node:url'
 
+// Every browser and WebView this app targets (Chrome/Android WebView, Safari/WKWebView) reads
+// woff2, so shipping the .eot/.ttf/.woff copies of the icon font only adds ~3 MB to the build.
+const mdiWoff2Only = () => ({
+  name: 'mdi-woff2-only',
+  enforce: 'pre',
+  transform(code, id) {
+    if (!id.endsWith('materialdesignicons.css')) return null
+    return code.replace(
+      /src: url\("\.\.\/fonts\/materialdesignicons-webfont\.eot[^;]*;\s*src:[^;]*;/,
+      'src: url("../fonts/materialdesignicons-webfont.woff2?v=7.4.47") format("woff2");'
+    )
+  },
+})
+
 export default defineConfig(({ mode }) => ({
   plugins: [
+    mdiWoff2Only(),
     vue(),
     vuetify({ autoImport: true }),
     VitePWA({
@@ -48,6 +63,17 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
+    },
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules/chart.js') || id.includes('node_modules/vue-chartjs')) return 'charts'
+          if (id.includes('node_modules/vuetify')) return 'vuetify'
+          if (id.includes('node_modules/vue-i18n') || id.includes('node_modules/@intlify')) return 'i18n'
+        },
+      },
     },
   },
   server: {

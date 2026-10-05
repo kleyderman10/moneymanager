@@ -145,13 +145,14 @@
 <script setup>
 import flowBanner from '@/assets/branding/knexura-flow-banner.webp'
 import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useDisplay } from 'vuetify'
 import { useAuthStore } from '@/stores/auth'
 
 const { t } = useI18n()
 const router = useRouter()
+const route = useRoute()
 const authStore = useAuthStore()
 const { mdAndUp } = useDisplay()
 const mobile = computed(() => !mdAndUp.value)
@@ -173,6 +174,12 @@ const rules = {
   code: (value) => /^\d{6}$/.test(value) || t('profile.codeRuleError'),
 }
 
+// Only same-origin paths are honoured, so a crafted ?redirect= cannot send users elsewhere.
+const redirectTarget = () => {
+  const target = route.query.redirect
+  return typeof target === 'string' && target.startsWith('/') && !target.startsWith('//') ? target : '/'
+}
+
 const handleLogin = async () => {
   const result = await authStore.login({ email: email.value, password: password.value })
   if (result.success && result.requiresTwoFactor) {
@@ -181,7 +188,7 @@ const handleLogin = async () => {
     authStore.error = null
     notice.value = result.message
   } else if (result.success) {
-    router.push('/')
+    router.push(redirectTarget())
   } else if (result.requiresEmailVerification) {
     step.value = 'emailVerification'
     authStore.error = null
@@ -193,7 +200,7 @@ const handleCodeVerification = async () => {
   const result = step.value === 'twoFactor'
     ? await authStore.verifyTwoFactor(challengeToken.value, code.value)
     : await authStore.verifyEmail({ email: email.value, code: code.value })
-  if (result.success) router.push('/')
+  if (result.success) router.push(redirectTarget())
 }
 
 const resendCode = async () => {
@@ -227,7 +234,7 @@ const handleBiometricLogin = async () => {
     const result = await authStore.loginWithBiometric()
     if (result.success) {
       // Older Face ID/huella setups are migrated once: re-enable it with the password.
-      router.push(result.needsBiometricUpgrade ? '/profile?upgradeBiometric=1' : '/')
+      router.push(result.needsBiometricUpgrade ? '/profile?upgradeBiometric=1' : redirectTarget())
     } else if (result.prefillEmail) {
       email.value = result.prefillEmail
     }

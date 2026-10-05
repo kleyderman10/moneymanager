@@ -5,15 +5,25 @@ import { categoriesAPI } from '@/api'
 export const useCategoriesStore = defineStore('categories', () => {
   const categories = ref([])
   const loading = ref(false)
+  // Categories change rarely and every mutation below keeps the list in sync, so screens that
+  // only need to read them reuse the loaded list for a few minutes instead of re-requesting it.
+  const loadedAt = ref(0)
+  const CACHE_MS = 5 * 60 * 1000
 
   const fetchAll = async (params) => {
     loading.value = true
     try {
       const res = await categoriesAPI.getAll(params)
       categories.value = res.data
+      if (!params) loadedAt.value = Date.now()
     } finally {
       loading.value = false
     }
+  }
+
+  const fetchCached = async () => {
+    if (!loadedAt.value || Date.now() - loadedAt.value > CACHE_MS) await fetchAll()
+    return categories.value
   }
 
   const create = async (data) => {
@@ -34,5 +44,5 @@ export const useCategoriesStore = defineStore('categories', () => {
     categories.value = categories.value.filter((c) => c._id !== id)
   }
 
-  return { categories, loading, fetchAll, create, update, remove }
+  return { categories, loading, loadedAt, fetchAll, fetchCached, create, update, remove }
 })

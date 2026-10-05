@@ -121,7 +121,7 @@ import { useDisplay } from 'vuetify'
 import { useAiChatStore } from '@/stores/aiChat'
 import AiAssistantMessage from '@/components/ai/AiAssistantMessage.vue'
 import AiChatComposer from '@/components/ai/AiChatComposer.vue'
-import symbol from '@/assets/branding/knexura-flow-symbol.png'
+import symbol from '@/assets/branding/knexura-flow-symbol.webp'
 
 const { t, locale } = useI18n()
 const { mobile } = useDisplay()
