@@ -1133,6 +1133,11 @@ export default {
     unlinked: 'WhatsApp disconnected',
   },
   assistant: {
+    voiceSettings: 'Assistant voice',
+    voiceChoose: 'Choose voice',
+    voiceSpeed: 'Speed',
+    voiceTest: 'Test voice',
+    voiceTestPhrase: 'Hi, I am your assistant. Tell me what you want to record.',
     orbSpeaking: 'Speaking…',
     orbConfirm: 'Say yes or no',
     orbDone: 'Done',

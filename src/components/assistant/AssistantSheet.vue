@@ -16,6 +16,35 @@
           <h2>{{ t('assistant.open') }}</h2>
           <p>{{ listening ? t('assistant.listening') : t('assistant.subtitle') }}</p>
         </div>
+        <v-menu v-if="!isNativeApp" :close-on-content-click="false" location="bottom end" @update:model-value="(open) => open && loadVoices()">
+          <template #activator="{ props: menuProps }">
+            <button v-bind="menuProps" type="button" class="vf-close" :aria-label="t('assistant.voiceSettings')">
+              <v-icon size="24">mdi-tune-variant</v-icon>
+            </button>
+          </template>
+          <v-card min-width="280" class="pa-3">
+            <div class="text-subtitle-2 mb-2">{{ t('assistant.voiceSettings') }}</div>
+            <v-select
+              :model-value="activeVoiceURI"
+              :items="voiceOptions"
+              :label="t('assistant.voiceChoose')"
+              density="compact"
+              variant="outlined"
+              hide-details
+              @update:model-value="(value) => updateVoicePrefs({ voiceURI: value })"
+            />
+            <div class="text-caption mt-3">{{ t('assistant.voiceSpeed') }}: {{ voicePrefs.rate.toFixed(2) }}x</div>
+            <v-slider
+              :model-value="voicePrefs.rate"
+              min="0.8"
+              max="1.3"
+              step="0.05"
+              hide-details
+              @update:model-value="(value) => updateVoicePrefs({ rate: value })"
+            />
+            <v-btn variant="tonal" size="small" class="mt-2" prepend-icon="mdi-play" @click="testVoice">{{ t('assistant.voiceTest') }}</v-btn>
+          </v-card>
+        </v-menu>
         <button
           v-if="isSupported"
           type="button"
@@ -179,6 +208,7 @@ import { useWalletsStore } from '@/stores/wallets'
 import { useSnackbar } from '@/stores/snackbar'
 import VoiceSelect from '@/components/assistant/VoiceSelect.vue'
 import VoiceOrb from '@/components/assistant/VoiceOrb.vue'
+import { readPrefs, savePrefs, pickVoice, voicesFor, whenVoicesReady, humanizeForSpeech, splitSentences } from '@/utils/voice'
 import { useSpeechRecognition } from '@/composables/useSpeechRecognition'
 
 const { t, locale } = useI18n()
@@ -295,20 +325,59 @@ const restart = () => {
 }
 
 // Spoken replies only on the web build (speechSynthesis); the native app shows text.
+const isNativeApp = Capacitor.isNativePlatform()
 const speaking = ref(false)
-const speak = (text) => new Promise((resolve) => {
-  if (!text || Capacitor.isNativePlatform() || !('speechSynthesis' in window)) return resolve()
-  const utterance = new SpeechSynthesisUtterance(text.replace(/•/g, ''))
-  utterance.lang = locale.value === 'en' ? 'en-US' : 'es-ES'
-  const finish = () => { speaking.value = false; resolve() }
-  utterance.onstart = () => { speaking.value = true }
-  // The browser reports each word as it is spoken: the orb beats with the voice.
-  utterance.onboundary = () => { pulse.value += 1 }
-  utterance.onend = finish
-  utterance.onerror = finish
+const voicePrefs = ref(readPrefs())
+const speechLanguage = computed(() => (locale.value === 'en' ? 'en' : 'es'))
+let speechToken = 0
+
+const cancelSpeech = () => {
+  speechToken += 1
+  if ('speechSynthesis' in window) window.speechSynthesis.cancel()
+  speaking.value = false
+}
+
+// Speaks sentence by sentence with the best voice the device has; resolves when finished or cancelled.
+const speak = async (text) => {
+  if (!text || Capacitor.isNativePlatform() || !('speechSynthesis' in window)) return
+  await whenVoicesReady()
+  const sentences = splitSentences(humanizeForSpeech(text, speechLanguage.value))
+  if (!sentences.length) return
+  const token = ++speechToken
   window.speechSynthesis.cancel()
-  window.speechSynthesis.speak(utterance)
-})
+  const voice = pickVoice(speechLanguage.value, voicePrefs.value.voiceURI)
+
+  for (const sentence of sentences) {
+    if (token !== speechToken) return
+    await new Promise((resolve) => {
+      const utterance = new SpeechSynthesisUtterance(sentence)
+      if (voice) utterance.voice = voice
+      utterance.lang = voice?.lang || (speechLanguage.value === 'en' ? 'en-US' : 'es-CO')
+      utterance.rate = voicePrefs.value.rate
+      utterance.onstart = () => { speaking.value = true }
+      // The browser reports each word as it is spoken: the orb beats with the voice.
+      utterance.onboundary = () => { pulse.value += 1 }
+      utterance.onend = resolve
+      utterance.onerror = resolve
+      window.speechSynthesis.speak(utterance)
+    })
+  }
+  if (token === speechToken) speaking.value = false
+}
+
+// Voice settings (menu in the header).
+const availableVoices = ref([])
+const voiceOptions = computed(() => availableVoices.value.map((voice) => ({ title: `${voice.name} (${voice.lang})`, value: voice.voiceURI })))
+const activeVoiceURI = computed(() => voicePrefs.value.voiceURI || pickVoice(speechLanguage.value)?.voiceURI || null)
+const loadVoices = async () => {
+  await whenVoicesReady()
+  availableVoices.value = voicesFor(speechLanguage.value)
+}
+const updateVoicePrefs = (changes) => {
+  voicePrefs.value = { ...voicePrefs.value, ...changes }
+  savePrefs(voicePrefs.value)
+}
+const testVoice = () => speak(t('assistant.voiceTestPhrase'))
 
 // --- Orb ---
 const pulse = ref(0)
@@ -331,7 +400,7 @@ const orbLabel = computed(() => (listening.value ? t('assistant.stopListening') 
 // Tapping the orb: interrupt the assistant if it is talking, otherwise start or stop listening.
 const onOrb = () => {
   if (speaking.value) {
-    window.speechSynthesis.cancel()
+    cancelSpeech()
     // With continuous mode the pending flow reopens the mic by itself.
     if (!continuous.value || !viaVoice.value) toggleMic()
     return
@@ -427,9 +496,8 @@ const onUndo = async () => {
 
 const onClose = () => {
   pendingQuestion.value = ''
-  speaking.value = false
+  cancelSpeech()
   if (listening.value) cancelMic()
-  if ('speechSynthesis' in window) window.speechSynthesis.cancel()
   // Closing with a pending preview discards it, same as pressing Cancel.
   if (result.value?.type === 'confirm') assistant.cancel()
   else assistant.close()
