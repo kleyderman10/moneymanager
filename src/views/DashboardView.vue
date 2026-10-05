@@ -32,6 +32,8 @@
       </template>
     </v-alert>
 
+    <FlowNotices />
+
     <v-card v-if="showOnboarding" class="kf-card-hero mb-3" data-tour="dashboard-onboarding">
       <v-card-title>{{ t('dashboard.onboarding.title') }}</v-card-title>
       <v-card-subtitle class="text-wrap">{{ t('dashboard.onboarding.subtitle') }}</v-card-subtitle>
@@ -278,6 +280,7 @@ import AIInsightsCard from '@/components/AIInsightsCard.vue'
 import AIHealthScore from '@/components/AIHealthScore.vue'
 import CategoryDonutChart from '@/components/CategoryDonutChart.vue'
 import BalanceCard from '@/components/finance/BalanceCard.vue'
+import FlowNotices from '@/components/assistant/FlowNotices.vue'
 
 const { t } = useI18n()
 const { money, dateLong } = useLocale()

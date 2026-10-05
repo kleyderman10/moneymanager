@@ -11,6 +11,7 @@
     @click="$emit('voice-click')"
   >
     <span class="kf-voice-btn__orb">
+      <span v-if="hasNotices" class="kf-voice-btn__dot" aria-hidden="true"></span>
       <v-progress-circular v-if="status === 'processing'" indeterminate size="22" width="2" color="on-primary" />
       <v-icon v-else :size="variant === 'nav' ? 28 : 20">{{ status === 'error' ? 'mdi-alert-circle-outline' : status === 'success' ? 'mdi-check' : 'mdi-microphone' }}</v-icon>
     </span>
@@ -34,6 +35,9 @@ defineEmits(['voice-click'])
 const { t } = useI18n()
 const assistant = useAssistantStore()
 
+// A dot on the button when Flow has something to tell the user.
+const hasNotices = computed(() => assistant.visibleInsights.length > 0 && !assistant.visible)
+
 const status = computed(() => {
   if (!assistant.visible) return 'idle'
   if (assistant.state === 'listening') return 'listening'
@@ -46,6 +50,11 @@ const statusLabel = computed(() => status.value === 'idle' ? '' : t(`assistant.v
 </script>
 
 <style scoped>
+.kf-voice-btn__orb { position: relative; }
+.kf-voice-btn__dot {
+  position: absolute; top: -2px; right: -2px; width: 12px; height: 12px; border-radius: 50%;
+  background: #f4b860; border: 2px solid #071d29; box-shadow: 0 0 8px rgba(244, 184, 96, 0.8);
+}
 .kf-voice-btn {
   min-width: 44px;
   min-height: 44px;

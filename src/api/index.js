@@ -159,6 +159,7 @@ export const aiAPI = {
 export const assistantAPI = {
   interpret: (text, route, history, pending) => api.post('/assistant/interpret', { text, route, history, ...(pending ? { pending } : {}) }),
   greeting: () => api.get('/assistant/greeting'),
+  insights: () => api.get('/assistant/insights'),
   getMemory: () => api.get('/assistant/memory'),
   clearMemory: () => api.delete('/assistant/memory'),
   confirm: (id, params) => api.post(`/assistant/actions/${id}/confirm`, params ? { params } : {}),

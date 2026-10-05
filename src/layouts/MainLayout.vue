@@ -345,6 +345,7 @@ onMounted(async () => {
   window.addEventListener('keydown', handleAssistantShortcut)
   if (!authStore.user && localStorage.getItem('accessToken')) authStore.fetchProfile()
   await billingStore.fetchStatus(true)
+  assistantStore.fetchInsights()
 })
 
 onBeforeUnmount(() => {

@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { assistantAPI } from '@/api'
 import { useCategoriesStore } from '@/stores/categories'
 
@@ -42,6 +42,35 @@ export const useAssistantStore = defineStore('assistant', () => {
   // state the server needs back together with the answer.
   const question = ref(null)
   const pending = ref(null)
+
+  // --- Proactive notices ---
+  const INSIGHTS_TTL_MS = 5 * 60 * 1000
+  const DISMISS_KEY = 'assistantDismissedInsights'
+  const DISMISS_KEEP_MS = 30 * 24 * 60 * 60 * 1000
+  const insights = ref([])
+  const insightsLoadedAt = ref(0)
+  const readDismissed = () => {
+    try { return JSON.parse(localStorage.getItem(DISMISS_KEY) || '{}') } catch { return {} }
+  }
+  const dismissed = ref(readDismissed())
+
+  const fetchInsights = async (force = false) => {
+    if (!force && Date.now() - insightsLoadedAt.value < INSIGHTS_TTL_MS) return
+    insightsLoadedAt.value = Date.now()
+    try {
+      insights.value = (await assistantAPI.insights()).data.items || []
+    } catch {
+      insightsLoadedAt.value = 0 // try again next time; notices are optional
+    }
+  }
+  const visibleInsights = computed(() => insights.value.filter((item) => !dismissed.value[item.id]))
+  const dismissInsight = (id) => {
+    const now = Date.now()
+    const next = { ...dismissed.value, [id]: now }
+    for (const key of Object.keys(next)) if (now - next[key] > DISMISS_KEEP_MS) delete next[key]
+    dismissed.value = next
+    try { localStorage.setItem(DISMISS_KEY, JSON.stringify(next)) } catch { /* storage unavailable */ }
+  }
 
   const clearConversation = () => {
     thread.value = []
@@ -107,6 +136,7 @@ export const useAssistantStore = defineStore('assistant', () => {
       dataVersion.value += 1
       // The assistant can create categories server-side, so the cached list is stale.
       useCategoriesStore().loadedAt = 0
+      insightsLoadedAt.value = 0 // balances and budgets changed: refresh the notices next time
       result.value = { type: 'done', reply: res.data.reply }
       addTurn('assistant', res.data.reply)
       return res.data
@@ -167,5 +197,6 @@ export const useAssistantStore = defineStore('assistant', () => {
   return {
     visible, state, transcript, result, busy, dataVersion, lastDone, history, thread, question, pending,
     open, close, reset, clearConversation, interpret, confirm, cancel, discardPending, greet, undo,
+    insights, visibleInsights, fetchInsights, dismissInsight,
   }
 })
