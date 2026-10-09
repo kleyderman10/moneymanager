@@ -32,6 +32,7 @@ export const usePushStore = defineStore('push', () => {
   const error = ref(null)
   let listenersReady = false
   let resumeWired = false
+  let registration = null
 
   const available = computed(() => {
     if (isNative) return true // remote push when configured, local reminders otherwise
@@ -74,9 +75,10 @@ export const usePushStore = defineStore('push', () => {
         try {
           localStorage.setItem(TOKEN_KEY, value)
           await pushAPI.register({ platform, token: value, label: platform === 'ios' ? 'iPhone' : 'Android' })
-        } catch { error.value = 'failed' }
+          registration?.resolve(true)
+        } catch { error.value = 'failed'; registration?.resolve(false) }
       })
-      await PushNotifications.addListener('registrationError', () => { error.value = 'failed' })
+      await PushNotifications.addListener('registrationError', () => { error.value = 'failed'; registration?.resolve(false) })
       await PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
         goTo(action.notification?.data?.route)
       })
@@ -86,8 +88,16 @@ export const usePushStore = defineStore('push', () => {
     if (platform === 'android') {
       await PushNotifications.createChannel({ id: 'knexura_notices', name: 'Avisos de Flow', importance: 4, visibility: 1 })
     }
+    // The device counts as enabled only once the server has its token.
+    const registered = new Promise((resolve) => {
+      registration = { resolve }
+      setTimeout(() => resolve(false), 15000)
+    })
     await PushNotifications.register()
-    return true
+    const ok = await registered
+    registration = null
+    if (!ok && !error.value) error.value = 'failed'
+    return ok
   }
 
   // --- Web ---

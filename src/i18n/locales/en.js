@@ -125,6 +125,8 @@ export default {
       test: 'Send a test notification',
       testSent: 'Sent. It should arrive in a few seconds.',
       testNone: 'There are no active devices to send the test to.',
+      testNoDevice: 'This device is not registered on the server. Turn the switch off and on again.',
+      testFailed: 'The server could not send the test: {reason}',
       denied: 'Notification permission is blocked. Enable it in the browser or phone settings.',
       failed: 'Could not turn it on. Try again in a moment.',
       unsupported: 'This device or browser does not support notifications, or the server has not set them up yet.',

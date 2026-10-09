@@ -48,7 +48,8 @@ const sendTest = async () => {
   try {
     const result = await push.sendTest()
     if (result.sent > 0) snackbar.success(t('profile.pushNotifications.testSent'))
-    else snackbar.info(t('profile.pushNotifications.testNone'))
+    else if (result.devices === 0) snackbar.info(t('profile.pushNotifications.testNoDevice'))
+    else snackbar.error(t('profile.pushNotifications.testFailed', { reason: (result.reasons || []).join(' · ') || '?' }))
   } catch {
     snackbar.error(t('common.error'))
   }

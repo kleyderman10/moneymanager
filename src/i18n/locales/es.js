@@ -125,6 +125,8 @@ export default {
       test: 'Enviar una notificación de prueba',
       testSent: 'Enviada. Debería llegar en unos segundos.',
       testNone: 'No hay dispositivos activos para enviar la prueba.',
+      testNoDevice: 'Este dispositivo no está registrado en el servidor. Desactiva y vuelve a activar el interruptor.',
+      testFailed: 'El servidor no pudo enviar la prueba: {reason}',
       denied: 'El permiso de notificaciones está bloqueado. Actívalo en los ajustes del navegador o del teléfono.',
       failed: 'No se pudo activar. Intenta de nuevo en un momento.',
       unsupported: 'Este dispositivo o navegador no admite notificaciones, o el servidor aún no las tiene configuradas.',
