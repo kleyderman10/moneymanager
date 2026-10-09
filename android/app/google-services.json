@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "315807957197",
+    "project_id": "knexura-flow",
+    "storage_bucket": "knexura-flow.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:315807957197:android:53316d0019ff16701a2984",
+        "android_client_info": {
+          "package_name": "online.knexura.moneymanager"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDLLSOLddiTFRx8xp3scLn0Pg9c3DVQE10"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

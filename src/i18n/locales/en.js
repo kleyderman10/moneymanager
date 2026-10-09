@@ -129,6 +129,7 @@ export default {
       failed: 'Could not turn it on. Try again in a moment.',
       unsupported: 'This device or browser does not support notifications, or the server has not set them up yet.',
       iosHint: 'On iPhone, web notifications only work if you add the app to the Home Screen.',
+      localHint: 'Reminders are scheduled on this phone when you open the app. To get them while the app is closed, the server needs push notifications configured.',
     },
     assistantMemory: {
       title: 'Assistant memory',
@@ -1165,6 +1166,7 @@ export default {
     notices: { title: 'Flow heads-up', view: 'View', dismiss: 'Dismiss' },
     card: { expenses: 'Expenses', income: 'Income', balance: 'Balance', total: 'Total' },
     sounds: 'Interface sounds',
+    voiceUnavailable: 'This device has no voices for the assistant to speak; replies are shown as text.',
     voiceSettings: 'Assistant voice',
     voiceChoose: 'Choose voice',
     voiceSpeed: 'Speed',

@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { Capacitor } from '@capacitor/core'
-import { pushAPI } from '@/api'
+import { pushAPI, assistantAPI } from '@/api'
 import { ROUTE_PATHS } from '@/stores/assistant'
 
 // Push notifications: Web Push on the web/PWA, FCM (Android) and APNs (iOS) in the native app.
@@ -31,10 +31,11 @@ export const usePushStore = defineStore('push', () => {
   // denied | unsupported | failed | null
   const error = ref(null)
   let listenersReady = false
+  let resumeWired = false
 
   const available = computed(() => {
+    if (isNative) return true // remote push when configured, local reminders otherwise
     if (!channels.value[platform]) return false
-    if (isNative) return true
     return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window
   })
 
@@ -100,12 +101,86 @@ export const usePushStore = defineStore('push', () => {
     return true
   }
 
+  // --- Native, no remote push configured: reminders scheduled on the device ---
+  // The same notices the server would push (cards due, budgets, recurring), fetched while the app
+  // is open and shown as local notifications. Quiet hours and the daily cap match the server's.
+  const LOCAL_SEEN_KEY = 'localNoticesSeen'
+  const LOCAL_MAX_PER_DAY = 3
+  const QUIET_START = 21
+  const QUIET_END = 8
+  const useLocal = () => isNative && !channels.value[platform]
+
+  const readSeen = () => {
+    try {
+      const data = JSON.parse(localStorage.getItem(`${LOCAL_SEEN_KEY}:${accountId}`) || '{}')
+      return { day: data.day || '', ids: data.ids || [] }
+    } catch { return { day: '', ids: [] } }
+  }
+  const writeSeen = (seen) => {
+    try { localStorage.setItem(`${LOCAL_SEEN_KEY}:${accountId}`, JSON.stringify(seen)) } catch { /* storage unavailable */ }
+  }
+
+  // Next moment outside quiet hours (now when it is already allowed).
+  const nextAllowedTime = () => {
+    const at = new Date(Date.now() + 3000)
+    const hour = at.getHours()
+    if (hour >= QUIET_START) at.setDate(at.getDate() + 1)
+    if (hour >= QUIET_START || hour < QUIET_END) at.setHours(QUIET_END, 5, 0, 0)
+    return at
+  }
+
+  const registerLocal = async () => {
+    const { LocalNotifications } = await import('@capacitor/local-notifications')
+    if (!listenersReady) {
+      listenersReady = true
+      await LocalNotifications.addListener('localNotificationActionPerformed', (action) => {
+        goTo(action.notification?.extra?.route)
+      })
+    }
+    const permission = await LocalNotifications.requestPermissions()
+    if (permission.display !== 'granted') { error.value = 'denied'; return false }
+    if (platform === 'android') {
+      await LocalNotifications.createChannel({ id: 'knexura_notices', name: 'Avisos de Flow', importance: 4, visibility: 1 })
+    }
+    enabled.value = true
+    await refreshLocal()
+    return true
+  }
+
+  const refreshLocal = async () => {
+    if (!enabled.value || !useLocal()) return
+    try {
+      const { LocalNotifications } = await import('@capacitor/local-notifications')
+      const { data } = await assistantAPI.insights()
+      const today = new Date().toISOString().slice(0, 10)
+      const seen = readSeen()
+      if (seen.day !== today) { seen.day = today; seen.countToday = 0 }
+      const sentToday = seen.countToday || 0
+      const fresh = (data.items || [])
+        .filter((item) => ['high', 'medium'].includes(item.severity) && !seen.ids.includes(item.id))
+        .slice(0, Math.max(0, LOCAL_MAX_PER_DAY - sentToday))
+      if (!fresh.length) return
+      const at = nextAllowedTime()
+      await LocalNotifications.schedule({
+        notifications: fresh.map((item, index) => ({
+          id: Math.floor(Date.now() / 1000) % 1000000 + index,
+          title: 'Flow',
+          body: item.text,
+          channelId: 'knexura_notices',
+          schedule: { at: new Date(at.getTime() + index * 1000), allowWhileIdle: true },
+          extra: { route: item.action?.route || 'dashboard', insightId: item.id },
+        })),
+      })
+      writeSeen({ day: today, countToday: sentToday + fresh.length, ids: [...seen.ids, ...fresh.map((item) => item.id)].slice(-100) })
+    } catch { /* notices are optional */ }
+  }
+
   const enable = async () => {
     busy.value = true
     error.value = null
     try {
       if (!available.value) { error.value = 'unsupported'; return false }
-      const ok = isNative ? await registerNative() : await registerWeb()
+      const ok = isNative ? (useLocal() ? await registerLocal() : await registerNative()) : await registerWeb()
       enabled.value = ok
       writePref(ok)
       return ok
@@ -121,7 +196,11 @@ export const usePushStore = defineStore('push', () => {
   // false so the next account starts clean).
   const forget = async () => {
     try {
-      if (isNative) {
+      if (isNative && useLocal()) {
+        const { LocalNotifications } = await import('@capacitor/local-notifications')
+        const { notifications } = await LocalNotifications.getPending()
+        if (notifications.length) await LocalNotifications.cancel({ notifications })
+      } else if (isNative) {
         const token = localStorage.getItem(TOKEN_KEY)
         if (token) await pushAPI.unregister({ token })
         localStorage.removeItem(TOKEN_KEY)
@@ -144,7 +223,14 @@ export const usePushStore = defineStore('push', () => {
     busy.value = false
   }
 
-  const sendTest = async () => (await pushAPI.test()).data
+  const sendTest = async () => {
+    if (!useLocal()) return (await pushAPI.test()).data
+    const { LocalNotifications } = await import('@capacitor/local-notifications')
+    await LocalNotifications.schedule({
+      notifications: [{ id: 1, title: 'Flow', body: 'Las notificaciones funcionan en este dispositivo.', channelId: 'knexura_notices', schedule: { at: new Date(Date.now() + 2000) }, extra: { route: 'dashboard' } }],
+    })
+    return { sent: 1 }
+  }
 
   // Called once the session is up: refreshes the registration and wires notification taps.
   const init = async (userId) => {
@@ -152,7 +238,11 @@ export const usePushStore = defineStore('push', () => {
     await loadConfig()
     enabled.value = readPref() && available.value
     if (enabled.value) {
-      try { if (isNative) await registerNative(); else await registerWeb() } catch { /* silent refresh */ }
+      try { if (isNative) await (useLocal() ? registerLocal() : registerNative()); else await registerWeb() } catch { /* silent refresh */ }
+    }
+    if (isNative && !resumeWired) {
+      resumeWired = true
+      document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshLocal() })
     }
     if (!isNative && 'serviceWorker' in navigator) {
       navigator.serviceWorker.addEventListener('message', (event) => {
@@ -167,5 +257,7 @@ export const usePushStore = defineStore('push', () => {
     }
   }
 
-  return { channels, enabled, busy, error, available, platform, init, enable, disable, forget, sendTest }
+  const local = computed(() => useLocal())
+
+  return { channels, enabled, busy, error, available, local, platform, init, enable, disable, forget, sendTest }
 })

@@ -129,6 +129,7 @@ export default {
       failed: 'No se pudo activar. Intenta de nuevo en un momento.',
       unsupported: 'Este dispositivo o navegador no admite notificaciones, o el servidor aún no las tiene configuradas.',
       iosHint: 'En iPhone, las notificaciones web solo funcionan si agregas la app a la pantalla de inicio.',
+      localHint: 'Los avisos se programan en este teléfono cuando abres la app. Para recibirlos con la app cerrada, el servidor debe tener las notificaciones push configuradas.',
     },
     assistantMemory: {
       title: 'Memoria del asistente',
@@ -1165,6 +1166,7 @@ export default {
     notices: { title: 'Flow te avisa', view: 'Ver', dismiss: 'Descartar' },
     card: { expenses: 'Gastos', income: 'Ingresos', balance: 'Balance', total: 'Total' },
     sounds: 'Sonidos de la interfaz',
+    voiceUnavailable: 'Este dispositivo no ofrece voces para que el asistente hable; las respuestas se muestran en texto.',
     voiceSettings: 'Voz del asistente',
     voiceChoose: 'Elegir voz',
     voiceSpeed: 'Velocidad',

@@ -16,7 +16,7 @@
           <h2>{{ t('assistant.open') }}</h2>
           <p>{{ listening ? t('assistant.listening') : t('assistant.subtitle') }}</p>
         </div>
-        <button v-if="!isNativeApp" type="button" class="vf-close" :aria-label="t('assistant.voiceSettings')" @click="openVoiceSettings">
+        <button type="button" class="vf-close" :aria-label="t('assistant.voiceSettings')" @click="openVoiceSettings">
           <v-icon size="24">mdi-tune-variant</v-icon>
         </button>
         <button
@@ -179,6 +179,7 @@
         <v-btn icon="mdi-close" variant="text" :aria-label="t('common.close')" @click="voiceSettingsOpen = false" />
       </template>
       <v-card-text>
+        <template v-if="canSpeak">
         <NativeSelectField
           :model-value="activeVoiceURI"
           :items="voiceOptions"
@@ -188,6 +189,8 @@
         />
         <div class="text-caption mt-4">{{ t('assistant.voiceSpeed') }}: {{ voicePrefs.rate.toFixed(2) }}x</div>
         <v-slider :model-value="voicePrefs.rate" min="0.8" max="1.3" step="0.05" hide-details @update:model-value="(value) => updateVoicePrefs({ rate: value })" />
+        </template>
+        <div v-else class="text-caption text-medium-emphasis">{{ t('assistant.voiceUnavailable') }}</div>
         <v-switch :model-value="sounds" :label="t('assistant.sounds')" density="compact" hide-details color="primary" class="mt-1" @update:model-value="toggleSounds" />
         <v-switch
           :model-value="wakeWord.enabled"
@@ -211,9 +214,21 @@
           @update:model-value="wakeWord.setSensitivity"
         />
         <v-alert v-if="wakeWord.error" type="warning" variant="tonal" density="compact" class="mt-2" :text="t(`assistant.wakeWord.errors.${wakeWord.error}`)" />
+        <v-switch
+          v-if="push.available"
+          :model-value="push.enabled"
+          :loading="push.busy"
+          :label="t('profile.pushNotifications.enable')"
+          density="compact"
+          hide-details
+          color="primary"
+          class="mt-1"
+          @update:model-value="(value) => (value ? push.enable() : push.disable())"
+        />
+        <v-alert v-if="push.error" type="warning" variant="tonal" density="compact" class="mt-2" :text="t(`profile.pushNotifications.${push.error}`)" />
       </v-card-text>
       <v-card-actions>
-        <v-btn variant="tonal" prepend-icon="mdi-play" @click="testVoice">{{ t('assistant.voiceTest') }}</v-btn>
+        <v-btn v-if="canSpeak" variant="tonal" prepend-icon="mdi-play" @click="testVoice">{{ t('assistant.voiceTest') }}</v-btn>
         <v-spacer />
         <v-btn variant="text" @click="voiceSettingsOpen = false">{{ t('common.close') }}</v-btn>
       </v-card-actions>
@@ -241,6 +256,7 @@ import { useDisplay } from 'vuetify'
 import { Capacitor } from '@capacitor/core'
 import { useAssistantStore, ROUTE_PATHS } from '@/stores/assistant'
 import { useWakeWordStore } from '@/stores/wakeword'
+import { usePushStore } from '@/stores/push'
 import { useCategoriesStore } from '@/stores/categories'
 import { useWalletsStore } from '@/stores/wallets'
 import { useSnackbar } from '@/stores/snackbar'
@@ -259,6 +275,7 @@ const { mobile } = useDisplay()
 const isMobile = computed(() => mobile.value)
 const assistant = useAssistantStore()
 const wakeWord = useWakeWordStore()
+const push = usePushStore()
 const wakeConsentOpen = ref(false)
 const sensitivityOptions = computed(() => ['low', 'normal', 'high'].map((value) => ({ title: t(`assistant.wakeWord.levels.${value}`), value })))
 
@@ -332,7 +349,7 @@ const listenAgain = async () => {
   if (!continuous.value || !viaVoice.value || !assistant.visible || !isSupported.value) return
   if (listening.value || assistant.state === 'thinking' || result.value?.type === 'error') return
   // Without speech synthesis (native app) give the user a moment to read the reply first.
-  if (Capacitor.isNativePlatform()) await new Promise((resolve) => setTimeout(resolve, 700))
+  if (Capacitor.isNativePlatform() && !availableVoicesFor().length) await new Promise((resolve) => setTimeout(resolve, 700))
   if (!assistant.visible || listening.value) return
   assistant.state = 'listening'
   start()
@@ -383,7 +400,6 @@ const restart = () => {
 }
 
 // Spoken replies only on the web build (speechSynthesis); the native app shows text.
-const isNativeApp = Capacitor.isNativePlatform()
 const speaking = ref(false)
 const voicePrefs = ref(readPrefs())
 const speechLanguage = computed(() => (locale.value === 'en' ? 'en' : 'es'))
@@ -397,8 +413,9 @@ const cancelSpeech = () => {
 
 // Speaks sentence by sentence with the best voice the device has; resolves when finished or cancelled.
 const speak = async (text) => {
-  if (!text || Capacitor.isNativePlatform() || !('speechSynthesis' in window)) return
+  if (!text || !('speechSynthesis' in window)) return
   await whenVoicesReady()
+  if (!availableVoicesFor().length) return
   const sentences = splitSentences(humanizeForSpeech(text, speechLanguage.value))
   if (!sentences.length) return
   const token = ++speechToken
@@ -425,6 +442,8 @@ const speak = async (text) => {
 
 // Voice settings (menu in the header).
 const availableVoices = ref([])
+const availableVoicesFor = () => voicesFor(speechLanguage.value)
+const canSpeak = computed(() => availableVoices.value.length > 0)
 const voiceOptions = computed(() => availableVoices.value.map((voice) => ({ title: `${voice.name} (${voice.lang})`, value: voice.voiceURI })))
 const activeVoiceURI = computed(() => voicePrefs.value.voiceURI || pickVoice(speechLanguage.value)?.voiceURI || null)
 const loadVoices = async () => {
@@ -594,7 +613,7 @@ const markGreeted = () => {
 // show the greeting as text and the mic opens straight away.
 const onOpen = async () => {
   ensureLists()
-  const speakGreeting = !isNativeApp && 'speechSynthesis' in window && isSupported.value && !greetedToday()
+  const speakGreeting = 'speechSynthesis' in window && availableVoicesFor().length > 0 && isSupported.value && !greetedToday()
   if (!speakGreeting) {
     assistant.greet()
     if (isSupported.value && assistant.state === 'idle') toggleMic()

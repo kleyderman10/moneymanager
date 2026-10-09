@@ -16,6 +16,7 @@
           @update:model-value="toggle"
         />
         <v-alert v-if="push.error" type="warning" variant="tonal" density="compact" class="mt-2" :text="t(`profile.pushNotifications.${push.error}`)" />
+        <v-alert v-if="push.local" type="info" variant="tonal" density="compact" class="mt-2" :text="t('profile.pushNotifications.localHint')" />
         <v-alert v-if="showIosHint" type="info" variant="tonal" density="compact" class="mt-2" :text="t('profile.pushNotifications.iosHint')" />
         <v-btn v-if="push.enabled" variant="outlined" size="small" class="mt-3" prepend-icon="mdi-bell-ring-outline" :loading="testing" @click="sendTest">
           {{ t('profile.pushNotifications.test') }}
