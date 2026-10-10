@@ -26,6 +26,9 @@ export const useSubscriptionStore = defineStore('subscriptions', () => {
 
   const requiresSubscription = computed(() => Boolean(status.value?.requiresSubscription))
   const isReadOnly = computed(() => Boolean(status.value?.isReadOnly ?? requiresSubscription.value))
+  // Expired license: data entry stays open, AI features are Pro-only apart from a few free uses a month.
+  const aiFreeRemaining = computed(() => status.value?.aiFree?.remaining ?? 0)
+  const aiLocked = computed(() => Boolean(status.value?.requiresSubscription) && aiFreeRemaining.value <= 0)
   const hasEntitlement = computed(() => status.value?.hasEntitlement !== false)
   const isTrialing = computed(() => status.value?.status === 'trialing')
   const showTrialNotice = computed(() => isTrialing.value && status.value.daysRemaining <= 15)
@@ -201,6 +204,8 @@ export const useSubscriptionStore = defineStore('subscriptions', () => {
     requiresSubscription,
     isReadOnly,
     hasEntitlement,
+    aiLocked,
+    aiFreeRemaining,
     isTrialing,
     showTrialNotice,
     setStatus,

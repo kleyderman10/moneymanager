@@ -71,6 +71,11 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config
     if (error.response?.status === 402) {
+      if (error.response?.data?.code === 'AI_SUBSCRIPTION_REQUIRED') {
+        useSnackbar().info(i18n.global.t('layout.aiProRequired'))
+        window.dispatchEvent(new CustomEvent('billing:ai-locked'))
+        return Promise.reject(error)
+      }
       const subscription = error.response?.data?.subscription
       if (subscription) {
         window.dispatchEvent(new CustomEvent('billing:read-only', { detail: subscription }))

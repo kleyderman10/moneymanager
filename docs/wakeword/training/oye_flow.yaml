@@ -1,0 +1,47 @@
+# Configuración de entrenamiento para openWakeWord (train.py).  Ver README.md de esta carpeta.
+# Los clips (positivos y negativos) se generan con generate_spanish_clips.py y se copian a
+# <output_dir>/<model_name>/{positive_train,positive_test,negative_train,negative_test}.
+model_name: oye_flow
+target_phrase:
+  - "oye flow"
+
+# Frases cercanas que NO deben activar (ver negative_phrases.txt; se cargan desde allí en el script).
+custom_negative_phrases: []
+
+# Cantidad de clips. Más positivos y variedad de voces = menos falsos negativos.
+n_samples: 20000
+n_samples_val: 2000
+
+output_dir: ./my_custom_model
+
+# --- Datos de aumento (se descargan con el README) ---
+rir_paths:
+  - ./mit_rirs
+background_paths:
+  - ./audioset_16k
+  - ./fma
+background_paths_duplication_rate:
+  - 1
+  - 1
+false_positive_validation_data_path: validation_set_features.npy
+augmentation_batch_size: 16
+augmentation_rounds: 1
+feature_data_files:
+  ACAV100M_sample: openwakeword_features_ACAV100M_2000_hrs_16bit.npy
+
+# --- Entrenamiento ---
+model_type: dnn
+layer_size: 32
+steps: 50000
+max_negative_weight: 1500
+target_false_positives_per_hour: 0.2
+target_accuracy: 0.7
+target_recall: 0.5
+batch_n_per_class:
+  ACAV100M_sample: 1024
+  adversarial_negative: 50
+  positive: 50
+
+# Solo se usan si se generan clips con el TTS en inglés de openWakeWord (no recomendado para español).
+piper_sample_generator_path: ./piper-sample-generator
+tts_batch_size: 50

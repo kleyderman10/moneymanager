@@ -97,19 +97,19 @@
   <v-main class="finance-main" :class="{ 'finance-main--with-nav': isMobile }">
     <v-container fluid class="finance-content">
       <v-alert
-        v-if="showReadOnlyBanner"
-        type="error"
+        v-if="showLicenseBanner"
+        type="warning"
         variant="tonal"
         density="comfortable"
-        icon="mdi-lock-outline"
+        icon="mdi-robot-off-outline"
         class="mb-5"
       >
         <strong>{{ t('layout.trialEnded') }}</strong>
         <span class="d-block text-body-2 mt-1">
-          {{ t('layout.trialEndedBody') }}
+          {{ licenseBannerBody }}
         </span>
         <template #append>
-          <v-btn variant="text" color="error" to="/subscription">{{ t('layout.activateSubscription') }}</v-btn>
+          <v-btn variant="text" color="warning" to="/subscription">{{ t('layout.activateSubscription') }}</v-btn>
         </template>
       </v-alert>
       <v-alert
@@ -148,6 +148,7 @@ import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
+import { useSnackbar } from '@/stores/snackbar'
 import { useSubscriptionStore } from '@/stores/subscriptions'
 import { useLocale } from '@/composables/useLocale'
 import { useDisplay } from 'vuetify'
@@ -194,6 +195,7 @@ const readSafeAreaTop = () => {
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
+const snackbar = useSnackbar()
 const billingStore = useSubscriptionStore()
 
 // Shown once right after login/registration so the user can decide before any AI
@@ -215,10 +217,15 @@ const pushStore = usePushStore()
 useVoiceActivation({
   assistant: assistantStore,
   open: () => openAssistant(),
-  canListen: () => authStore.hasAcceptedAIConsent,
+  canListen: () => authStore.hasAcceptedAIConsent && !billingStore.aiLocked,
 })
 const assistantConsentRequested = ref(false)
 const openAssistant = () => {
+  if (billingStore.aiLocked) {
+    snackbar.info(t('layout.aiProRequired'))
+    router.push('/subscription')
+    return
+  }
   if (!authStore.hasAcceptedAIConsent) {
     assistantConsentRequested.value = true
     return
@@ -319,9 +326,12 @@ const currentRouteTitle = computed(() => {
 const showTrialBanner = computed(() => (
   billingStore.showTrialNotice && route.name !== 'Subscription'
 ))
-const showReadOnlyBanner = computed(() => (
-  billingStore.isReadOnly && route.name !== 'Subscription'
+const showLicenseBanner = computed(() => (
+  billingStore.requiresSubscription && route.name !== 'Subscription'
 ))
+const licenseBannerBody = computed(() => (billingStore.aiFreeRemaining > 0
+  ? t('layout.trialEndedFreeAi', { count: billingStore.aiFreeRemaining })
+  : t('layout.trialEndedBody')))
 const trialBannerTitle = computed(() => {
   const days = billingStore.status?.daysRemaining || 0
   return days === 1 ? t('layout.trialDaysLeftOne') : t('layout.trialDaysLeft', { days })
@@ -346,6 +356,7 @@ const handleLogout = async () => {
   router.push('/login')
 }
 
+const refreshLicense = () => billingStore.fetchStatus(true)
 const handleReadOnlyStatus = (event) => billingStore.setStatus(event.detail)
 
 onMounted(async () => {
@@ -353,6 +364,7 @@ onMounted(async () => {
   // Rotating the device swaps which edge has the notch/Dynamic Island inset.
   window.addEventListener('resize', readSafeAreaTop)
   window.addEventListener('billing:read-only', handleReadOnlyStatus)
+  window.addEventListener('billing:ai-locked', refreshLicense)
   window.addEventListener('keydown', handleAssistantShortcut)
   if (!authStore.user && localStorage.getItem('accessToken')) authStore.fetchProfile()
   await billingStore.fetchStatus(true)
@@ -363,6 +375,7 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   window.removeEventListener('resize', readSafeAreaTop)
   window.removeEventListener('billing:read-only', handleReadOnlyStatus)
+  window.removeEventListener('billing:ai-locked', refreshLicense)
   window.removeEventListener('keydown', handleAssistantShortcut)
 })
 </script>

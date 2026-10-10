@@ -565,6 +565,11 @@ const authStore = useAuthStore()
 // (OpenAI/Gemini) — Apple exige que la app pida permiso antes de eso, no solo que
 // lo documente en la política de privacidad. Ver AIConsentDialog.vue.
 const requireAIConsent = () => {
+  if (billingStore.aiLocked) {
+    modeDialog.value = false
+    snackbar.info(t('layout.aiProRequired'))
+    return false
+  }
   if (authStore.hasAcceptedAIConsent) return true
   modeDialog.value = false
   snackbar.error(t('transactions.aiConsentRequired'))

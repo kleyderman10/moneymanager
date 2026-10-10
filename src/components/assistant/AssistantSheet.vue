@@ -192,6 +192,7 @@
         </template>
         <div v-else class="text-caption text-medium-emphasis">{{ t('assistant.voiceUnavailable') }}</div>
         <v-switch :model-value="sounds" :label="t('assistant.sounds')" density="compact" hide-details color="primary" class="mt-1" @update:model-value="toggleSounds" />
+        <template v-if="wakeWord.modelAvailable !== false">
         <v-switch
           :model-value="wakeWord.enabled"
           :disabled="!wakeWord.supported"
@@ -214,6 +215,7 @@
           @update:model-value="wakeWord.setSensitivity"
         />
         <v-alert v-if="wakeWord.error" type="warning" variant="tonal" density="compact" class="mt-2" :text="t(`assistant.wakeWord.errors.${wakeWord.error}`)" />
+        </template>
         <v-switch
           v-if="push.available"
           :model-value="push.enabled"
@@ -457,7 +459,7 @@ const updateVoicePrefs = (changes) => {
 const testVoice = () => speak(t('assistant.voiceTestPhrase'))
 const voiceSettingsOpen = ref(false)
 const openVoiceSettings = async () => {
-  await loadVoices()
+  await Promise.all([loadVoices(), wakeWord.checkModel()])
   voiceSettingsOpen.value = true
 }
 

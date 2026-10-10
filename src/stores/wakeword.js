@@ -44,6 +44,8 @@ export const useWakeWordStore = defineStore('wakeword', () => {
   const starting = ref(false)
   const sensitivity = ref('normal')
   const error = ref(null)
+  // null until checked; false hides the option (the model is not bundled in this build)
+  const modelAvailable = ref(null)
   const lastDetection = ref(null)
   const detections = ref(0)
   const score = ref(0)
@@ -62,6 +64,13 @@ export const useWakeWordStore = defineStore('wakeword', () => {
   let wired = false
   // Retrying forever after a failure would drain the battery: one automatic attempt per failure.
   let blocked = false
+
+  const checkModel = async () => {
+    if (!supported.value) { modelAvailable.value = false; return false }
+    modelAvailable.value = provider.isModelAvailable ? await provider.isModelAvailable(MODEL) : true
+    if (!modelAvailable.value && enabled.value) setEnabled(false)
+    return modelAvailable.value
+  }
 
   const setHandler = (handler) => { onDetected = handler }
 
@@ -170,7 +179,7 @@ export const useWakeWordStore = defineStore('wakeword', () => {
   const retry = () => { blocked = false; error.value = null }
 
   return {
-    enabled, state, initialized, starting, error, sensitivity, threshold, lastDetection, detections, score, peak,
+    modelAvailable, checkModel, enabled, state, initialized, starting, error, sensitivity, threshold, lastDetection, detections, score, peak,
     supported, listening, phrase,
     setEnabled, setSensitivity, setThreshold, setHandler, sync, start, stop, pause, resume, retry,
   }

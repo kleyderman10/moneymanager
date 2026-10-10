@@ -2,6 +2,8 @@
 
 El modelo se entrena aparte (Python, solo para entrenar/evaluar/exportar). Nada de Python va dentro de la app.
 
+> Guía práctica y archivos listos (configuración, generador de clips en español, plantilla de ficha): [training/README.md](training/README.md).
+
 ## Resumen
 
 openWakeWord entrena un clasificador pequeño sobre los *embeddings* de audio. Los ejemplos positivos se generan con voz sintética (TTS), por lo que no se necesitan grabaciones de usuarios.

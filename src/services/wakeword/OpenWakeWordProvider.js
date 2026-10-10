@@ -52,6 +52,11 @@ export class OpenWakeWordProvider extends WakeWordProvider {
     })
   }
 
+  async isModelAvailable(model = 'oye_flow.onnx') {
+    if (!this.supported) return false
+    try { return Boolean((await this.plugin.modelAvailable({ model })).available) } catch { return false }
+  }
+
   start() { return this._queue(() => this._call('start', WAKE_STATES.LISTENING)) }
   stop() { return this._queue(() => this._call('stop')) }
   pause() { return this._queue(() => this._call('pause')) }

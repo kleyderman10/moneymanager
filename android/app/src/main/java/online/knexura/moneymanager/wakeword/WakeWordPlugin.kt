@@ -55,6 +55,19 @@ class WakeWordPlugin : Plugin(), WakeWordListener {
         call.resolve(stateObject())
     }
 
+    /** Whether the model file ships in this build (the licensed one is not bundled in every build). */
+    @PluginMethod
+    fun modelAvailable(call: PluginCall) {
+        val model = call.getString("model") ?: "oye_flow.onnx"
+        val available = !model.contains('/') && !model.contains("..") && try {
+            context.assets.open("wakewords/$model").close()
+            true
+        } catch (e: Exception) {
+            false
+        }
+        call.resolve(JSObject().put("available", available))
+    }
+
     @PluginMethod
     fun start(call: PluginCall) {
         if (!hasMicrophone()) {

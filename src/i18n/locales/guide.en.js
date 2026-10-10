@@ -369,7 +369,7 @@ export default {
       },
       readOnly: {
         q: 'What happens when my trial or subscription ends?',
-        a: 'Your data isn\'t deleted: it becomes read-only. You can still view it, but creating, editing or deleting needs an active subscription.',
+        a: 'Your data isn\'t deleted: you can keep recording transactions. AI features (assistant, receipt scanner, statement import and chat) are part of the Pro version and need an active license.',
       },
       security: {
         q: 'How do I protect my account?',

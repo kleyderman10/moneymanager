@@ -369,7 +369,7 @@ export default {
       },
       readOnly: {
         q: '¿Qué pasa si se termina mi prueba o mi suscripción?',
-        a: 'Tus datos no se borran: quedan en modo solo lectura. Puedes verlos, pero para crear, editar o eliminar necesitas una suscripción activa.',
+        a: 'Tus datos no se borran y puedes seguir registrando movimientos. Las funciones de IA (asistente, escáner de recibos, importar extractos y chat) son de la versión Pro y necesitan una licencia activa.',
       },
       security: {
         q: '¿Cómo protejo mi cuenta?',
