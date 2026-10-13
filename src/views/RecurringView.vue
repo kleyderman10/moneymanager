@@ -32,6 +32,29 @@
       </div>
     </v-card>
 
+    <!-- Detected in the history without AI: same merchant, similar amount, every week or month. -->
+    <v-card v-if="visibleSuggestions.length && !billingStore.isReadOnly" class="mb-4" data-tour="recurring-suggestions">
+      <v-card-title class="d-flex align-center ga-3 upcoming__title">
+        <span class="kf-icon-tile"><v-icon size="20">mdi-lightbulb-on-outline</v-icon></span>
+        <span class="text-body-1 font-weight-bold">{{ t('recurring.suggestionsTitle') }}</span>
+      </v-card-title>
+      <v-card-subtitle class="pb-2">{{ t('recurring.suggestionsHint') }}</v-card-subtitle>
+      <div class="upcoming__list">
+        <div v-for="item in visibleSuggestions" :key="suggestionKey(item)" class="upcoming__item">
+          <span class="kf-icon-tile" :class="item.type === 'income' ? 'kf-icon-tile--income' : 'kf-icon-tile--expense'">
+            <v-icon size="18">{{ categoryIcon(item.category) }}</v-icon>
+          </span>
+          <div class="kf-row__body">
+            <div class="kf-row__title">{{ item.description }}</div>
+            <div class="kf-row__meta">{{ t('recurring.suggestionMeta', { frequency: freqLabels[item.frequency], count: item.occurrences, date: formatDate(item.nextDate) }) }}</div>
+          </div>
+          <span class="kf-amount" :class="item.type === 'income' ? 'kf-income' : 'kf-expense'">{{ money(item.amount) }}</span>
+          <v-btn size="small" variant="tonal" color="primary" @click="openFromSuggestion(item)">{{ t('recurring.suggestionCreate') }}</v-btn>
+          <v-btn icon="mdi-close" size="small" variant="text" :aria-label="t('recurring.suggestionDismiss')" @click="dismissSuggestion(item)" />
+        </div>
+      </div>
+    </v-card>
+
     <v-card v-if="!isMobile">
       <v-data-table :items="store.transactions" :headers="headers" :loading="store.loading" hover>
         <template #item.amount="{ value, item }">
@@ -137,7 +160,7 @@ import { useRecurringStore } from '@/stores/recurring'
 import { useSnackbar } from '@/stores/snackbar'
 import { useSubscriptionStore } from '@/stores/subscriptions'
 import { useLocale } from '@/composables/useLocale'
-import { walletsAPI } from '@/api'
+import { walletsAPI, recurringAPI } from '@/api'
 import { useCategoriesStore } from '@/stores/categories'
 import NativeSelectField from '@/components/NativeSelectField.vue'
 import MoneyField from '@/components/MoneyField.vue'
@@ -200,6 +223,37 @@ const openCreate = () => {
   }
   dialog.value = true
 }
+// Suggestions: the user reviews the prefilled form and saves; dismissed ones stay hidden on
+// this device.
+const DISMISSED_KEY = 'kf_dismissed_recurring'
+const readDismissed = () => {
+  try { return new Set(JSON.parse(localStorage.getItem(DISMISSED_KEY) || '[]')) } catch { return new Set() }
+}
+const suggestions = ref([])
+const dismissed = ref(readDismissed())
+const suggestionKey = (item) => `${item.type}|${item.description}|${item.frequency}`
+const visibleSuggestions = computed(() => suggestions.value.filter((item) => !dismissed.value.has(suggestionKey(item))))
+const fetchSuggestions = async () => {
+  try { suggestions.value = (await recurringAPI.getSuggestions()).data } catch { suggestions.value = [] }
+}
+const dismissSuggestion = (item) => {
+  dismissed.value = new Set([...dismissed.value, suggestionKey(item)])
+  try { localStorage.setItem(DISMISSED_KEY, JSON.stringify([...dismissed.value])) } catch { /* private mode */ }
+}
+const openFromSuggestion = (item) => {
+  openCreate()
+  form.value = {
+    ...form.value,
+    type: item.type,
+    amount: item.amount,
+    category: item.category?._id || null,
+    description: item.description,
+    frequency: item.frequency,
+    startDate: item.nextDate,
+    wallet: item.wallet || form.value.wallet,
+  }
+}
+
 const openEdit = (item) => { editing.value = item._id; attemptedSave.value = false; form.value = { type: item.type, amount: item.amount, category: item.category?._id || null, description: item.description, frequency: item.frequency, startDate: item.startDate ? new Date(item.startDate).toISOString().slice(0, 10) : '', endDate: item.endDate ? new Date(item.endDate).toISOString().slice(0, 10) : null, wallet: item.wallet?._id || null }; dialog.value = true }
 
 const save = async () => {
@@ -209,7 +263,7 @@ const save = async () => {
   const payload = { ...form.value, endDate: form.value.endDate || null }
   try {
     if (editing.value) { await store.update(editing.value, payload); snackbar.success(t('budgets.updated')) }
-    else { await store.create(payload); snackbar.success(t('recurring.created')) }
+    else { await store.create(payload); snackbar.success(t('recurring.created')); fetchSuggestions() }
     store.fetchUpcoming()
     dialog.value = false
   } catch (err) { snackbar.error(err?.response?.data?.message || t('transactions.saveError')) }
@@ -218,7 +272,7 @@ const save = async () => {
 const confirmDelete = (item) => { toDelete.value = item._id; deleteDialog.value = true }
 const doDelete = async () => { try { await store.remove(toDelete.value); snackbar.success(t('budgets.deleted')); store.fetchUpcoming() } catch (err) { snackbar.error(err?.response?.data?.message || t('transactions.deleteError')) }; deleteDialog.value = false }
 
-onMounted(async () => { store.fetchAll(); store.fetchUpcoming(); const [cats, walRes] = await Promise.all([categoriesStore.fetchCached(), walletsAPI.getAll()]); categories.value = cats; wallets.value = walRes.data })
+onMounted(async () => { store.fetchAll(); store.fetchUpcoming(); fetchSuggestions(); const [cats, walRes] = await Promise.all([categoriesStore.fetchCached(), walletsAPI.getAll()]); categories.value = cats; wallets.value = walRes.data })
 </script>
 
 <style scoped>

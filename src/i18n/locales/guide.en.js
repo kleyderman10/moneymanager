@@ -51,7 +51,7 @@ export default {
       },
       add: {
         title: 'Log a transaction',
-        body: 'Tap here and choose how: type it in, scan an invoice or receipt, or upload your bank\'s PDF statement to import several at once.',
+        body: 'Tap here and choose how: type it in, scan an invoice or receipt, or import your bank\'s statement (PDF, Excel or CSV) to log several at once.',
       },
       form: {
         title: 'What it asks for',
@@ -73,7 +73,7 @@ export default {
       },
       add: {
         title: 'Create an account',
-        body: 'Give it a name, choose the type and the starting balance. For credit cards you can set the limit and the statement and payment dates. If your bank supports it, you can connect it to sync.',
+        body: 'Give it a name, choose the type and the starting balance. For credit cards you can set the limit and the statement and payment dates.',
       },
       networth: {
         title: 'Total net worth',
@@ -257,7 +257,7 @@ export default {
         summary: 'Log, search, edit and export income and expenses.',
         steps: [
           'Tap "New transaction" (or the + button on your phone).',
-          'Choose how to log it: type it in, scan a receipt or upload the bank\'s PDF statement.',
+          'Choose how to log it: type it in, scan a receipt or import the bank\'s statement (PDF, Excel or CSV).',
           'Fill in type, amount, category, account and date, then save.',
           'To edit or delete, tap the transaction in the list.',
           'Use filters to search by type, category or dates, and export to CSV when you need it.',
@@ -269,7 +269,7 @@ export default {
         steps: [
           'Tap "New account" and choose the type: cash, bank or credit.',
           'Enter the name and current balance. For cards, add the limit and statement and payment dates.',
-          'If your bank is available, connect it to sync the account.',
+          'To bring in your bank\'s transactions, import its statement (PDF, Excel or CSV) from Transactions.',
           'To move money between accounts use "Transfer": it doesn\'t count as an expense.',
           'Balances update automatically with every transaction.',
         ],
@@ -357,7 +357,7 @@ export default {
     faq: {
       ai: {
         q: 'What is AI used for, and is it required?',
-        a: 'AI scans receipts, reads PDF statements, suggests categories and budgets, and answers the chat. It\'s optional: everything else works without it. You can turn it on or off in My profile.',
+        a: 'AI scans receipts, reads PDF statements that cannot be read automatically, suggests categories and budgets, and answers the chat. It\'s optional: everything else works without it. You can turn it on or off in My profile.',
       },
       privacy: {
         q: 'What happens to my data if I use AI?',
@@ -369,7 +369,7 @@ export default {
       },
       readOnly: {
         q: 'What happens when my trial or subscription ends?',
-        a: 'Your data isn\'t deleted: you can keep recording transactions. AI features (assistant, receipt scanner, statement import and chat) are part of the Pro version and need an active license.',
+        a: 'Your data isn\'t deleted: you can keep recording transactions. AI features (assistant, receipt scanner, AI statement reading and chat) are part of the Pro version and need an active license.',
       },
       security: {
         q: 'How do I protect my account?',
@@ -385,7 +385,7 @@ export default {
       },
       bank: {
         q: 'Can I connect my bank?',
-        a: 'When creating a bank or credit account you can connect it if your institution is available. Otherwise, import the PDF statement from Transactions.',
+        a: 'Direct bank connection is not available for now. Download your transactions as Excel, CSV or PDF from online banking and import them from Transactions: they are read for free and without AI.',
       },
     },
   },

@@ -267,11 +267,11 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useDisplay } from 'vuetify'
-import { summaryAPI, recurringAPI, creditsAPI, walletsAPI, simulationsAPI } from '@/api'
+import { dashboardAPI, recurringAPI } from '@/api'
 import { useAiInsights } from '@/stores/aiInsights'
 import { useSubscriptionStore } from '@/stores/subscriptions'
 import { useLocale } from '@/composables/useLocale'
@@ -426,19 +426,14 @@ const load = async () => {
   const startDate = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
   const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString()
   try {
-    const [summaryResponse, upcomingResponse, creditsResponse, walletsResponse, cashFlowResponse] = await Promise.all([
-      summaryAPI.get({ startDate, endDate }),
-      recurringAPI.getUpcoming(7),
-      creditsAPI.getAll(),
-      walletsAPI.getAll(),
-      simulationsAPI.capacity({}).catch(() => null),
-    ])
-    summary.value = summaryResponse.data
-    upcoming.value = upcomingResponse.data
-    credits.value = creditsResponse.data
-    wallets.value = walletsResponse.data
-    creditCards.value = walletsResponse.data.filter((wallet) => wallet.type === 'credit')
-    cashFlow.value = cashFlowResponse?.data?.capacity || null
+    // One request for the whole screen (summary, upcoming, credits, accounts, capacity).
+    const { data } = await dashboardAPI.get({ startDate, endDate, upcomingDays: 7 })
+    summary.value = data.summary
+    upcoming.value = data.upcoming
+    credits.value = data.credits
+    wallets.value = data.wallets
+    creditCards.value = data.wallets.filter((wallet) => wallet.type === 'credit')
+    cashFlow.value = data.capacity || null
     tryProcessRecurring()
   } catch {
     // La pantalla sigue usable con el estado vacío; el aviso permite reintentar.
@@ -449,8 +444,13 @@ const load = async () => {
 onMounted(() => {
   load()
   insightsStore.fetchInsights()
-  insightsStore.fetchHealthScore()
 })
+
+// The health score is an AI feature: without consent the API answers 403, so it is requested
+// only once consent exists (also right after the user accepts it).
+watch(() => authStore.hasAcceptedAIConsent, (accepted) => {
+  if (accepted) insightsStore.fetchHealthScore()
+}, { immediate: true })
 </script>
 
 <style scoped>

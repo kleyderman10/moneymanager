@@ -1,8 +1,10 @@
 <template>
   <AIChatPanel v-if="!billingStore.requiresSubscription && authStore.hasAcceptedAIConsent" />
-  <AIConsentDialog :visible="showAIConsent || assistantConsentRequested" @decline="onConsentDecline" @accept="onConsentAccept" />
-  <AssistantSheet />
-  <QuickNav v-model="quickNavOpen" :is-admin="authStore.isStaff" />
+  <!-- Dialogs are mounted on first use (and kept afterwards), so their code is not part of
+       the first screen's download. -->
+  <AIConsentDialog v-if="consentDialogUsed" :visible="consentDialogVisible" @decline="onConsentDecline" @accept="onConsentAccept" />
+  <AssistantSheet v-if="assistantSheetUsed" />
+  <QuickNav v-if="quickNavUsed" v-model="quickNavOpen" :is-admin="authStore.isStaff" />
 
   <AppDrawer
     v-model="drawer"
@@ -144,7 +146,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount, defineAsyncComponent } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
@@ -152,11 +154,7 @@ import { useSnackbar } from '@/stores/snackbar'
 import { useSubscriptionStore } from '@/stores/subscriptions'
 import { useLocale } from '@/composables/useLocale'
 import { useDisplay } from 'vuetify'
-import AIChatPanel from '@/components/AIChatPanel.vue'
-import AIConsentDialog from '@/components/AIConsentDialog.vue'
-import AssistantSheet from '@/components/assistant/AssistantSheet.vue'
 import AppDrawer from '@/components/navigation/AppDrawer.vue'
-import QuickNav from '@/components/navigation/QuickNav.vue'
 import MobileBottomNavigation from '@/components/navigation/MobileBottomNavigation.vue'
 import VoiceActionButton from '@/components/navigation/VoiceActionButton.vue'
 import { useAssistantStore } from '@/stores/assistant'
@@ -164,6 +162,20 @@ import { usePushStore } from '@/stores/push'
 import { useVoiceActivation } from '@/composables/useVoiceActivation'
 import { useTour } from '@/composables/useTour'
 import { TOUR_BY_ROUTE } from '@/tours/definitions'
+
+// Separate chunks: the AI chat (markdown-it, DOMPurify) and the voice assistant are the
+// heaviest parts of the layout and are not needed to paint the first screen.
+const AIChatPanel = defineAsyncComponent(() => import('@/components/AIChatPanel.vue'))
+const AIConsentDialog = defineAsyncComponent(() => import('@/components/AIConsentDialog.vue'))
+const AssistantSheet = defineAsyncComponent(() => import('@/components/assistant/AssistantSheet.vue'))
+const QuickNav = defineAsyncComponent(() => import('@/components/navigation/QuickNav.vue'))
+
+// True from the first time `source` is truthy: the component then stays mounted.
+const usedOnce = (source) => {
+  const used = ref(false)
+  watch(source, (value) => { if (value) used.value = true }, { immediate: true })
+  return used
+}
 
 const { t } = useI18n()
 const { money, dateLong } = useLocale()
@@ -244,6 +256,10 @@ const onConsentDecline = () => {
   assistantConsentRequested.value = false
 }
 const quickNavOpen = ref(false)
+const consentDialogVisible = computed(() => showAIConsent.value || assistantConsentRequested.value)
+const consentDialogUsed = usedOnce(consentDialogVisible)
+const assistantSheetUsed = usedOnce(() => assistantStore.visible)
+const quickNavUsed = usedOnce(quickNavOpen)
 const handleAssistantShortcut = (event) => {
   if ((event.ctrlKey || event.metaKey) && !event.shiftKey && event.key.toLowerCase() === 'k') {
     event.preventDefault()

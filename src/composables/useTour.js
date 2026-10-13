@@ -1,4 +1,7 @@
 import { driver } from 'driver.js'
+// Only the authenticated layout uses tours: their styles load with it, not on the login screen.
+import 'driver.js/dist/driver.css'
+import '@/styles/tour.css'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useDisplay, useTheme } from 'vuetify'

@@ -65,10 +65,16 @@ export const registersAPI = {
   bulkDelete: (ids) => api.post('/registers/bulk-delete', { ids }),
   exportCSV: (params) => api.get('/registers/export', { params, responseType: 'blob' }),
   getTags: () => api.get('/registers/tags'),
+  // Bank notification/SMS text → proposed transaction (no AI, nothing is saved).
+  parseText: (text) => api.post('/registers/parse-text', { text }),
 }
 
 export const summaryAPI = {
   get: (params) => api.get('/summary', { params }),
+}
+
+export const dashboardAPI = {
+  get: (params) => api.get('/dashboard', { params }),
 }
 
 export const simulationsAPI = {
@@ -134,6 +140,8 @@ export const recurringAPI = {
   getAll: () => api.get('/recurring'),
   getById: (id) => api.get(`/recurring/${id}`),
   getUpcoming: (days) => api.get('/recurring/upcoming', { params: { days } }),
+  // Recurring payments detected in the history (no AI).
+  getSuggestions: () => api.get('/recurring/suggestions'),
   create: (data) => api.post('/recurring', data),
   update: (id, data) => api.put(`/recurring/${id}`, data),
   delete: (id) => api.delete(`/recurring/${id}`),
@@ -182,6 +190,8 @@ export const whatsappAPI = {
 }
 
 export const statementsAPI = {
+  // Without AI (PDF with text, CSV, Excel): no consent or quota needed.
+  analyzeLocal: (data) => api.post('/statements/analyze-local', data),
   analyze: (data) => api.post('/statements/analyze', data),
   import: (data) => api.post('/statements/import', data),
 }

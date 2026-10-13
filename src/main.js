@@ -1,17 +1,13 @@
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import { createVuetify } from 'vuetify'
-import * as components from 'vuetify/components'
-import * as directives from 'vuetify/directives'
 import { aliases, mdi } from 'vuetify/iconsets/mdi'
 import { Capacitor } from '@capacitor/core'
 import 'vuetify/styles'
 import '@mdi/font/css/materialdesignicons.css'
 import '@fontsource-variable/inter'
-import 'driver.js/dist/driver.css'
 import './styles/finance.css'
 import './styles/design-tokens.css'
-import './styles/tour.css'
 import './styles/flow.css'
 
 import App from './App.vue'
@@ -60,9 +56,10 @@ if (Capacitor.isNativePlatform()) {
   }
 }
 
+// Components and directives are not registered here: vite-plugin-vuetify (autoImport) imports
+// only the ones each template uses, with their CSS. Registering all of them shipped ~420 kB of
+// unused JS and ~490 kB of unused CSS on first load.
 const vuetify = createVuetify({
-  components,
-  directives,
   display: { mobileBreakpoint: 'md' },
   icons: {
     defaultSet: 'mdi',

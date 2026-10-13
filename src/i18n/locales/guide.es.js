@@ -51,7 +51,7 @@ export default {
       },
       add: {
         title: 'Registrar un movimiento',
-        body: 'Toca aquí y elige cómo hacerlo: digitarlo, escanear una factura o recibo, o subir el extracto PDF de tu banco para importar varios de una vez.',
+        body: 'Toca aquí y elige cómo hacerlo: digitarlo, escanear una factura o recibo, o importar el extracto de tu banco (PDF, Excel o CSV) para registrar varios de una vez.',
       },
       form: {
         title: 'Qué información pide',
@@ -73,7 +73,7 @@ export default {
       },
       add: {
         title: 'Crear una cuenta',
-        body: 'Ponle un nombre, elige el tipo y el saldo inicial. Para tarjetas de crédito puedes indicar el cupo y las fechas de corte y pago. Si tu banco lo permite, puedes conectarla para sincronizarla.',
+        body: 'Ponle un nombre, elige el tipo y el saldo inicial. Para tarjetas de crédito puedes indicar el cupo y las fechas de corte y pago.',
       },
       networth: {
         title: 'Patrimonio total',
@@ -257,7 +257,7 @@ export default {
         summary: 'Registrar, buscar, editar y exportar ingresos y gastos.',
         steps: [
           'Toca "Nuevo movimiento" (o el botón + en el celular).',
-          'Elige cómo registrarlo: digitarlo, escanear una factura o subir el extracto PDF del banco.',
+          'Elige cómo registrarlo: digitarlo, escanear una factura o importar el extracto del banco (PDF, Excel o CSV).',
           'Completa tipo, monto, categoría, cuenta y fecha, y guarda.',
           'Para editar o eliminar, toca el movimiento en la lista.',
           'Usa los filtros para buscar por tipo, categoría o fechas, y exporta a CSV cuando lo necesites.',
@@ -269,7 +269,7 @@ export default {
         steps: [
           'Toca "Nueva cuenta" y elige el tipo: efectivo, banco o crédito.',
           'Escribe el nombre y el saldo actual. En tarjetas, agrega el cupo y las fechas de corte y pago.',
-          'Si tu banco está disponible, conéctalo para sincronizar la cuenta.',
+          'Para traer los movimientos del banco, importa su extracto (PDF, Excel o CSV) desde Movimientos.',
           'Para mover dinero entre cuentas usa "Transferir": no cuenta como gasto.',
           'Los saldos se actualizan solos con cada movimiento.',
         ],
@@ -357,7 +357,7 @@ export default {
     faq: {
       ai: {
         q: '¿Para qué sirve la IA y es obligatoria?',
-        a: 'La IA escanea facturas, lee extractos PDF, sugiere categorías y presupuestos y responde el chat. No es obligatoria: sin ella puedes usar todo lo demás. Puedes activarla o desactivarla desde Mi perfil.',
+        a: 'La IA escanea facturas, lee los extractos PDF que no se pueden leer automáticamente, sugiere categorías y presupuestos y responde el chat. No es obligatoria: sin ella puedes usar todo lo demás. Puedes activarla o desactivarla desde Mi perfil.',
       },
       privacy: {
         q: '¿Qué pasa con mis datos si uso la IA?',
@@ -369,7 +369,7 @@ export default {
       },
       readOnly: {
         q: '¿Qué pasa si se termina mi prueba o mi suscripción?',
-        a: 'Tus datos no se borran y puedes seguir registrando movimientos. Las funciones de IA (asistente, escáner de recibos, importar extractos y chat) son de la versión Pro y necesitan una licencia activa.',
+        a: 'Tus datos no se borran y puedes seguir registrando movimientos. Las funciones de IA (asistente, escáner de recibos, lectura de extractos con IA y chat) son de la versión Pro y necesitan una licencia activa.',
       },
       security: {
         q: '¿Cómo protejo mi cuenta?',
@@ -385,7 +385,7 @@ export default {
       },
       bank: {
         q: '¿Puedo conectar mi banco?',
-        a: 'Al crear una cuenta de tipo banco o crédito puedes conectarla si tu entidad está disponible. Si no, puedes importar el extracto PDF desde Movimientos.',
+        a: 'Por ahora la conexión directa con bancos no está disponible. Descarga tus movimientos en Excel, CSV o PDF desde tu banca en línea e impórtalos desde Movimientos: se leen sin costo y sin IA.',
       },
     },
   },

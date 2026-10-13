@@ -632,10 +632,12 @@ const onOpen = async () => {
   if (assistant.visible && isSupported.value && assistant.state === 'idle' && !listening.value) toggleMic()
 }
 
+// immediate: MainLayout mounts this sheet lazily, on the first open, so `visible` may
+// already be true when the watcher is created.
 watch(() => assistant.visible, (visible) => {
   if (visible) onOpen()
   if (!visible && listening.value) cancelMic()
-})
+}, { immediate: true })
 
 watch(listening, (value) => {
   if (!value && assistant.state === 'listening' && !liveTranscript.value) assistant.state = 'idle'

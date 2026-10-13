@@ -128,7 +128,7 @@
           <v-text-field v-if="form.institutionCode === 'other'" v-model="form.institutionName" :label="t('wallets.institutionName')" variant="outlined" density="compact" :hint="t('wallets.institutionNameHint')" persistent-hint class="mb-3" />
 
           <BankConnector
-            v-if="['bank', 'credit'].includes(form.type) && !form.belvoLinkId"
+            v-if="bankLinkEnabled && ['bank', 'credit'].includes(form.type) && !form.belvoLinkId"
             class="mt-2"
             @success="onBelvoLinked"
           />
@@ -300,7 +300,7 @@
 
 <script setup>
 import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, defineAsyncComponent } from 'vue'
 import WalletMovementsDialog from '@/components/wallets/WalletMovementsDialog.vue'
 import WalletReconcileDialog from '@/components/wallets/WalletReconcileDialog.vue'
 import { useDisplay } from 'vuetify'
@@ -313,8 +313,12 @@ import { useLocale } from '@/composables/useLocale'
 import { CURRENCIES } from '@/constants/countries'
 import { financialInstitutionsAPI, walletsAPI } from '@/api'
 import NativeSelectField from '@/components/NativeSelectField.vue'
-import BankConnector from '@/components/BankConnector.vue'
 import MoneyField from '@/components/MoneyField.vue'
+
+// Bank linking (Belvo) is off until its cost is justified. Build with VITE_BELVO_ENABLED=true
+// (and BELVO_ENABLED=true in the API) to show it again; while off its code is not even loaded.
+const bankLinkEnabled = import.meta.env.VITE_BELVO_ENABLED === 'true'
+const BankConnector = bankLinkEnabled ? defineAsyncComponent(() => import('@/components/BankConnector.vue')) : null
 
 const { t, locale: appLocale } = useI18n()
 const { money, number, date } = useLocale()

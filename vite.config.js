@@ -52,8 +52,16 @@ export default defineConfig(({ mode }) => ({
         // Web Push handlers (public/push-sw.js) run inside the generated service worker.
         importScripts: ['push-sw.js'],
         globPatterns: ['**/*.{js,css,html,ico,png,webp,svg,woff,woff2,ttf,eot}'],
-        // Not precached: ~1 MB that only users who turn the wake word on ever need.
-        globIgnores: ['**/wakeword-*.js'],
+        // Not precached: ~1 MB that only users who turn the wake word on ever need, and the
+        // large install icons (~0.9 MB of PNG) that the browser reads from the manifest, not the
+        // app. pwa-192x192/64x64 stay: the favicon and push notifications (push-sw.js) use them.
+        globIgnores: [
+          '**/wakeword-*.js',
+          '**/pwa-512x512.png',
+          '**/maskable-icon-*.png',
+          '**/apple-touch-icon-*.png',
+          '**/knexura-flow-icon.png',
+        ],
         runtimeCaching: [
           {
             urlPattern: /^\/api\/.*/i,
@@ -74,7 +82,8 @@ export default defineConfig(({ mode }) => ({
       output: {
         manualChunks(id) {
           if (id.includes('node_modules/chart.js') || id.includes('node_modules/vue-chartjs')) return 'charts'
-          if (id.includes('node_modules/vuetify')) return 'vuetify'
+          // Vuetify is not forced into one chunk: each component (and its CSS) travels with the
+          // views that use it, so the login screen does not download the data tables or dialogs.
           // Wake-word engine (WebAssembly inlined): its own chunk, loaded only when the feature is on.
           if (id.includes('node_modules/@picovoice')) return 'wakeword'
           if (id.includes('node_modules/vue-i18n') || id.includes('node_modules/@intlify')) return 'i18n'

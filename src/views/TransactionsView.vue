@@ -222,6 +222,11 @@
               <div class="text-body-2 font-weight-bold">{{ t('transactions.uploadStatement') }}</div>
               <div class="text-caption text-grey">{{ t('transactions.uploadStatementHint') }}</div>
             </v-card>
+            <v-card variant="outlined" class="pa-4 text-center" style="cursor: pointer; flex: 1 1 120px; min-width: 120px" hover @click="startPaste">
+              <v-icon size="40" color="primary" class="mb-2">mdi-message-text-outline</v-icon>
+              <div class="text-body-2 font-weight-bold">{{ t('transactions.pasteNotification') }}</div>
+              <div class="text-caption text-grey">{{ t('transactions.pasteNotificationHint') }}</div>
+            </v-card>
             <v-card variant="outlined" class="pa-4 text-center" style="cursor: pointer; flex: 1 1 120px; min-width: 120px" hover @click="openManualCreate">
               <v-icon size="40" color="primary" class="mb-2">mdi-pencil-box</v-icon>
               <div class="text-body-2 font-weight-bold">{{ t('transactions.typeIn') }}</div>
@@ -261,10 +266,45 @@
     <input
       ref="pdfFileInput"
       type="file"
-      accept="application/pdf"
+      :accept="STATEMENT_ACCEPT"
       style="display: none"
       @change="handleStatementFile"
     />
+
+    <v-dialog v-model="pasteDialog" max-width="480">
+      <v-card :title="t('transactions.pasteNotification')">
+        <v-card-text>
+          <p class="text-body-2 text-grey mb-3">{{ t('transactions.pasteNotificationBody') }}</p>
+          <v-textarea
+            v-model="pasteText"
+            :label="t('transactions.pasteNotificationLabel')"
+            :placeholder="t('transactions.pasteNotificationPlaceholder')"
+            rows="4"
+            auto-grow
+            counter="1000"
+            maxlength="1000"
+            autofocus
+          />
+          <v-btn v-if="canReadClipboard" variant="text" size="small" prepend-icon="mdi-content-paste" @click="pasteFromClipboard">{{ t('transactions.pasteFromClipboard') }}</v-btn>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" @click="pasteDialog = false">{{ t('common.cancel') }}</v-btn>
+          <v-btn color="primary" :disabled="pasteText.trim().length < 3" :loading="pasteLoading" @click="applyPastedText">{{ t('transactions.pasteContinue') }}</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <v-dialog v-model="statementAiOffer" max-width="420">
+      <v-card :title="t('transactions.statementTryAi')">
+        <v-card-text>{{ t('transactions.statementNotRecognizedAi') }}</v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" @click="statementAiOffer = false">{{ t('common.cancel') }}</v-btn>
+          <v-btn color="primary" prepend-icon="mdi-robot-outline" @click="analyzeStatementWithAi">{{ t('transactions.statementTryAi') }}</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
 
     <input
       ref="scanFileInput"
@@ -449,6 +489,15 @@
           <v-chip size="small" color="success" class="ml-2">{{ t('transactions.toImportCount', { count: selectedStatementRows.length }, selectedStatementRows.length) }}</v-chip>
         </v-card-title>
         <v-card-text>
+          <div class="d-flex align-center flex-wrap ga-2 mb-3">
+            <v-chip size="small" variant="tonal" :prepend-icon="statementContext.source === 'ai' ? 'mdi-robot-outline' : 'mdi-file-check-outline'">
+              {{ statementContext.source === 'ai' ? t('transactions.statementReadWithAi') : t('transactions.statementReadLocally') }}
+            </v-chip>
+            <template v-if="canRetryStatementWithAi">
+              <span class="text-caption text-grey">{{ t('transactions.statementLooksWrong') }}</span>
+              <v-btn size="small" variant="text" color="primary" prepend-icon="mdi-robot-outline" @click="retryStatementWithAi">{{ t('transactions.statementTryAi') }}</v-btn>
+            </template>
+          </div>
           <v-alert v-if="statementContext.summary.duplicates > 0" type="info" variant="tonal" density="compact" class="mb-3">
             {{ t('transactions.duplicateRowsNotice') }}
           </v-alert>
@@ -538,7 +587,7 @@ import { useSnackbar } from '@/stores/snackbar'
 import { useSubscriptionStore } from '@/stores/subscriptions'
 import { useAuthStore } from '@/stores/auth'
 import { useLocale } from '@/composables/useLocale'
-import { walletsAPI, aiAPI, statementsAPI, recurringAPI } from '@/api'
+import { walletsAPI, aiAPI, statementsAPI, recurringAPI, registersAPI } from '@/api'
 import AISuggestCategory from '@/components/AISuggestCategory.vue'
 import VoiceInputButton from '@/components/VoiceInputButton.vue'
 import ReceiptScanner from '@/components/ReceiptScanner.vue'
@@ -620,8 +669,17 @@ const statementContext = ref({
   statementId: null,
   wallet: null,
   period: {},
+  source: null,
   summary: { detected: 0, duplicates: 0, new: 0 },
 })
+// Statements are read without AI first (PDF with text, Excel, CSV). Only a PDF the rules could
+// not read (or that the user says looks wrong) is offered to the AI, which uses quota.
+const STATEMENT_ACCEPT = '.pdf,.csv,.xlsx,.xls,.txt,application/pdf,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+const statementFile = ref(null) // { base64, name, isPdf } of the last file, to retry with AI
+const statementAiOffer = ref(false)
+const canRetryStatementWithAi = computed(() => (
+  statementContext.value.source === 'pdf-rules' && statementFile.value?.isPdf && !billingStore.aiLocked
+))
 
 const form = ref({ type: 'expense', amount: 0, date: new Date().toISOString().slice(0, 10), category: null, description: '', wallet: null, tags: [], installments: 1 })
 const typeOptions = computed(() => [{ title: t('transactions.income'), value: 'income' }, { title: t('transactions.expense'), value: 'expense' }])
@@ -878,6 +936,49 @@ const onModeDialogAfterLeave = () => {
 
 const openCreate = openManualCreate
 
+// Paste a bank notification or SMS: the API reads it with rules (no AI) and the form opens
+// prefilled for the user to check and save.
+const pasteDialog = ref(false)
+const pasteText = ref('')
+const pasteLoading = ref(false)
+const canReadClipboard = typeof navigator !== 'undefined' && Boolean(navigator.clipboard?.readText)
+
+const startPaste = () => {
+  modeDialog.value = false
+  pasteText.value = ''
+  pasteDialog.value = true
+}
+
+const pasteFromClipboard = async () => {
+  try {
+    pasteText.value = (await navigator.clipboard.readText()).slice(0, 1000)
+  } catch {
+    snackbar.info(t('transactions.pasteManually'))
+  }
+}
+
+const applyPastedText = async () => {
+  pasteLoading.value = true
+  try {
+    const { data } = await registersAPI.parseText(pasteText.value)
+    pasteDialog.value = false
+    openManualCreate()
+    form.value = {
+      ...form.value,
+      type: data.type,
+      amount: data.amount,
+      description: data.description || form.value.description,
+      date: data.date || form.value.date,
+      category: data.category || null,
+    }
+    snackbar.success(t('transactions.pasteRecognized'))
+  } catch (err) {
+    snackbar.error(err?.response?.status === 422 ? t('transactions.pasteNotRecognized') : (err?.response?.data?.message || t('transactions.pasteNotRecognized')))
+  } finally {
+    pasteLoading.value = false
+  }
+}
+
 const startScan = () => {
   if (!requireAIConsent()) return
   modeDialog.value = false
@@ -919,7 +1020,6 @@ const readFileAsBase64 = (file) => new Promise((resolve, reject) => {
 const MAX_PDF_MB = 8
 
 const startStatement = () => {
-  if (!requireAIConsent()) return
   modeDialog.value = false
   statementWallet.value = form.value.wallet
   statementWalletDialog.value = true
@@ -935,56 +1035,96 @@ const pickStatementPdf = () => {
   pdfFileInput.value?.click()
 }
 
-const handleStatementFile = async (event) => {
-  const file = event.target.files[0]
-  if (!file) return
-  if (file.type && file.type !== 'application/pdf') {
-    snackbar.error(t('transactions.fileMustBePdf'))
-    event.target.value = ''
-    return
+const showStatementReview = (data) => {
+  statementContext.value = {
+    statementId: data.statementId,
+    wallet: data.wallet,
+    period: data.period || {},
+    source: data.source || 'ai',
+    summary: data.summary || { detected: 0, duplicates: 0, new: 0 },
   }
-  if (file.size > MAX_PDF_MB * 1024 * 1024) {
-    snackbar.error(t('transactions.pdfTooLarge', { max: MAX_PDF_MB }))
-    event.target.value = ''
-    return
+  statementRows.value = data.rows.map(r => ({
+    date: r.date,
+    description: r.description || '',
+    amount: Number(r.amount) || 0,
+    type: r.type || 'expense',
+    category: r.category || null,
+    duplicate: !!r.duplicate,
+    selected: r.selected !== undefined ? !!r.selected : !r.duplicate,
+    suggestedCategory: r.suggestedCategory || '',
+  }))
+  statementReviewDialog.value = true
+  if (statementContext.value.summary.duplicates > 0) {
+    snackbar.info(t('transactions.duplicatesSkipped', { count: statementContext.value.summary.duplicates }, statementContext.value.summary.duplicates))
   }
+}
+
+const statementErrorMessage = (err) => {
+  const status = err?.response?.status
+  const code = err?.response?.data?.code
+  if (status === 413) return t('transactions.pdfExceedsLimit', { max: MAX_PDF_MB })
+  if (status === 415) return t('transactions.statementUnsupportedFormat')
+  if (code === 'TOO_MANY_ROWS') return t('transactions.statementTooManyRows')
+  if (code === 'FORMAT_NOT_RECOGNIZED') return t('transactions.statementNotRecognized')
+  if (status === 422) return t('transactions.noTransactionsDetected')
+  if (status === 429) return t('transactions.dailyQuotaReached')
+  return err?.response?.data?.message || err?.message || t('transactions.analyzeStatementError')
+}
+
+const withStatementOverlay = async (subtitle, task) => {
   scanningOverlay.value = true
   scanningMessage.value = t('transactions.analyzingStatement')
-  scanningSubtitle.value = t('transactions.readingPdf')
+  scanningSubtitle.value = subtitle
   try {
-    const pdfBase64 = await readFileAsBase64(file)
-    const res = await statementsAPI.analyze({ wallet: statementWallet.value, pdf: pdfBase64, filename: file.name })
-    const data = res.data
-    statementContext.value = {
-      statementId: data.statementId,
-      wallet: data.wallet,
-      period: data.period || {},
-      summary: data.summary || { detected: 0, duplicates: 0, new: 0 },
-    }
-    statementRows.value = data.rows.map(r => ({
-      date: r.date,
-      description: r.description || '',
-      amount: Number(r.amount) || 0,
-      type: r.type || 'expense',
-      category: r.category || null,
-      duplicate: !!r.duplicate,
-      selected: r.selected !== undefined ? !!r.selected : !r.duplicate,
-      suggestedCategory: r.suggestedCategory || '',
-    }))
-    statementReviewDialog.value = true
-    if (statementContext.value.summary.duplicates > 0) {
-      snackbar.info(t('transactions.duplicatesSkipped', { count: statementContext.value.summary.duplicates }, statementContext.value.summary.duplicates))
-    }
-  } catch (err) {
-    const status = err?.response?.status
-    const msg = err?.response?.data?.message || err?.message || t('transactions.analyzeStatementError')
-    if (status === 413) snackbar.error(t('transactions.pdfExceedsLimit', { max: MAX_PDF_MB }))
-    else if (status === 422) snackbar.error(t('transactions.noTransactionsDetected'))
-    else if (status === 429) snackbar.error(t('transactions.dailyQuotaReached'))
-    else snackbar.error(msg)
+    await task()
+  } finally {
+    scanningOverlay.value = false
   }
-  scanningOverlay.value = false
+}
+
+const analyzeStatementWithAi = async () => {
+  statementAiOffer.value = false
+  if (!requireAIConsent() || !statementFile.value) return
+  const { base64, name } = statementFile.value
+  await withStatementOverlay(t('transactions.statementReadWithAi'), async () => {
+    try {
+      const res = await statementsAPI.analyze({ wallet: statementWallet.value, pdf: base64, filename: name })
+      showStatementReview(res.data)
+    } catch (err) {
+      snackbar.error(statementErrorMessage(err))
+    }
+  })
+}
+
+const retryStatementWithAi = () => {
+  statementReviewDialog.value = false
+  analyzeStatementWithAi()
+}
+
+const handleStatementFile = async (event) => {
+  const file = event.target.files[0]
   event.target.value = ''
+  if (!file) return
+  if (file.size > MAX_PDF_MB * 1024 * 1024) {
+    snackbar.error(t('transactions.pdfTooLarge', { max: MAX_PDF_MB }))
+    return
+  }
+  await withStatementOverlay(t('transactions.readingPdf'), async () => {
+    try {
+      const base64 = await readFileAsBase64(file)
+      const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name)
+      statementFile.value = { base64, name: file.name, isPdf }
+      const res = await statementsAPI.analyzeLocal({ wallet: statementWallet.value, file: base64, filename: file.name })
+      showStatementReview(res.data)
+    } catch (err) {
+      // A PDF the rules could not read can still be read by the AI, if the user wants to.
+      if (err?.response?.data?.code === 'FORMAT_NOT_RECOGNIZED' && err.response.data.canUseAi && !billingStore.aiLocked) {
+        statementAiOffer.value = true
+        return
+      }
+      snackbar.error(statementErrorMessage(err))
+    }
+  })
 }
 
 const cancelStatementReview = () => {
