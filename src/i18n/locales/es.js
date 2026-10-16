@@ -883,7 +883,7 @@ export default {
     subscribeFor: 'Suscribirme por {price}',
     restorePurchases: 'Restaurar compras',
     cancelRenewal: 'Cancelar renovación',
-    nativeIapDisclosure: '{plan} — {price} por {interval}. La suscripción se renueva automáticamente y se cobra a tu cuenta de {store} al confirmar la compra. Se renovará salvo que la canceles al menos 24 horas antes del fin del periodo vigente. Puedes administrarla o cancelarla en {manageHint}.',
+    nativeIapDisclosure: '{plan} — {price}{period}. La suscripción se renueva automáticamente y se cobra a tu cuenta de {store} al confirmar la compra. Se renovará salvo que la canceles al menos 24 horas antes del fin del periodo vigente. Puedes administrarla o cancelarla en {manageHint}.',
     termsOfUse: 'Términos de uso (EULA)',
     summary: 'Resumen',
     plan: 'Plan',

@@ -114,7 +114,7 @@
 
             <div v-if="useNativeIAP" class="text-caption text-medium-emphasis mt-4">
               <p class="mb-2">
-                {{ t('subscription.nativeIapDisclosure', { plan: status.plan.name, price: formattedPrice, interval: intervalLabel(status.plan.intervalCount).toLowerCase(), store: storeLabel, manageHint }) }}
+                {{ t('subscription.nativeIapDisclosure', { plan: displayedPlan?.name, price: formattedPrice, period: periodSuffix, store: storeLabel, manageHint }) }}
               </p>
               <a v-if="isApplePlatform" href="#" class="me-3" @click.prevent="openTerms">
                 {{ t('subscription.termsOfUse') }}
@@ -266,6 +266,9 @@ const periodSuffixFor = (count) => ({
 const planLabel = (plan) => intervalLabel(plan.intervalCount)
 const planPrice = (plan) => (useNativeIAP.value ? `US$${plan.usdAmount}` : formatCurrency(plan.amount, plan.currency))
 
+// The plan whose price is on screen, so the renewal disclosure never pairs one plan's name with
+// another plan's price: the one being picked during checkout, otherwise the current one.
+const displayedPlan = computed(() => (status.value?.canCheckout && selectedPlan.value) || status.value?.plan)
 const formattedPrice = computed(() => {
   if (status.value?.canCheckout && selectedPlan.value) return planPrice(selectedPlan.value)
   return formatCurrency(status.value?.plan?.amount || 15000, status.value?.plan?.currency || 'COP')

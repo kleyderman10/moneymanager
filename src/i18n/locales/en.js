@@ -883,7 +883,7 @@ export default {
     subscribeFor: 'Subscribe for {price}',
     restorePurchases: 'Restore purchases',
     cancelRenewal: 'Cancel renewal',
-    nativeIapDisclosure: '{plan} — {price} per {interval}. The subscription renews automatically and is charged to your {store} account when you confirm the purchase. It will renew unless you cancel it at least 24 hours before the end of the current period. You can manage or cancel it in {manageHint}.',
+    nativeIapDisclosure: '{plan} — {price}{period}. The subscription renews automatically and is charged to your {store} account when you confirm the purchase. It will renew unless you cancel it at least 24 hours before the end of the current period. You can manage or cancel it in {manageHint}.',
     termsOfUse: 'Terms of use (EULA)',
     summary: 'Summary',
     plan: 'Plan',
