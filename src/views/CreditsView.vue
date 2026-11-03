@@ -73,14 +73,17 @@
                 <v-expansion-panel-text>
                   <div v-if="credit.paymentPlan?.length" class="plan-scroll">
                     <v-table density="compact">
-                      <thead><tr><th>{{ t('credits.installment') }}</th><th>{{ t('transactions.date') }}</th><th class="text-right">{{ t('credits.payment') }}</th><th class="text-right">{{ t('credits.interest') }}</th><th class="text-right">{{ t('credits.capitalBalanceShort') }}</th></tr></thead>
+                      <thead><tr><th>{{ t('credits.installment') }}</th><th>{{ t('transactions.date') }}</th><th class="text-right">{{ t('credits.payment') }}</th><th class="text-right">{{ t('credits.interest') }}</th><th class="text-right">{{ t('credits.capitalBalanceShort') }}</th><th class="plan-action-col"></th></tr></thead>
                       <tbody>
-                        <tr v-for="row in credit.paymentPlan" :key="row.period">
+                        <tr v-for="(row, rowIndex) in credit.paymentPlan" :key="row.period" :class="{ 'plan-row--next': rowIndex === 0 }">
                           <td>{{ credit.installmentsPaid + row.period }}</td>
                           <td>{{ formatDate(row.dueDate) }}</td>
                           <td class="text-right">{{ money(row.payment, credit.currency) }}</td>
                           <td class="text-right">{{ money(row.interest, credit.currency) }}</td>
                           <td class="text-right">{{ money(row.balance, credit.currency) }}</td>
+                          <td class="plan-action-col text-right">
+                            <v-btn v-if="rowIndex === 0 && canPayNext(credit)" size="x-small" color="primary" variant="flat" prepend-icon="mdi-cash-check" @click="openQuickPay(credit, row)">{{ t('credits.payInstallment') }}</v-btn>
+                          </td>
                         </tr>
                       </tbody>
                     </v-table>
@@ -206,6 +209,22 @@
           <div class="text-caption text-medium-emphasis">{{ t('credits.paymentRecordedHint') }}</div>
         </v-card-text>
         <v-card-actions><v-spacer /><v-btn variant="text" @click="paymentDialog = false">{{ t('common.cancel') }}</v-btn><v-btn color="primary" :loading="paymentSaving" @click="savePayment">{{ t('credits.savePayment') }}</v-btn></v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <v-dialog v-model="quickPayDialog" max-width="420">
+      <v-card :title="t('credits.payInstallmentTitle', { number: quickPay.number })">
+        <v-card-text>
+          <div class="text-caption text-medium-emphasis">{{ quickPay.credit?.name }} · {{ formatDate(quickPay.dueDate) }}</div>
+          <div class="kf-amount text-h4 my-3">{{ money(quickPay.amount, quickPay.credit?.currency) }}</div>
+          <NativeSelectField v-model="quickPay.wallet" :items="wallets" item-title="name" item-value="_id" :label="t('credits.payFromAccount')" :placeholder="t('credits.selectAccount')" required />
+          <div class="text-caption text-medium-emphasis mt-2">{{ t('credits.quickPayHint') }}</div>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" @click="quickPayDialog = false">{{ t('common.cancel') }}</v-btn>
+          <v-btn color="primary" :loading="paymentSaving" :disabled="!quickPay.wallet" @click="confirmQuickPay">{{ t('credits.confirmPay') }}</v-btn>
+        </v-card-actions>
       </v-card>
     </v-dialog>
 
@@ -337,6 +356,34 @@ const openPayment = (credit) => {
   paymentForm.value = { amount: credit.installmentAmount || credit.summary?.nextPaymentAmount || 0, interestAmount: null, paymentType: 'installment', date: today(), wallet: null, description: '', notes: '' }
   paymentDialog.value = true
 }
+// Monto de la próxima cuota: igual que el formulario completo de pago.
+const nextInstallmentAmount = (credit) => credit.installmentAmount || credit.summary?.nextPaymentAmount || 0
+const canPayNext = (credit) => !billingStore.isReadOnly && credit.summary?.status !== 'paid_off' && nextInstallmentAmount(credit) > 0
+
+const quickPayDialog = ref(false)
+const quickPay = ref({ credit: null, number: 0, dueDate: null, amount: 0, wallet: null })
+const openQuickPay = (credit, row) => {
+  quickPay.value = {
+    credit,
+    number: credit.installmentsPaid + row.period,
+    dueDate: row.dueDate,
+    amount: nextInstallmentAmount(credit),
+    // Con una sola cuenta no hay nada que elegir.
+    wallet: wallets.value.length === 1 ? wallets.value[0]._id : null,
+  }
+  quickPayDialog.value = true
+}
+const confirmQuickPay = async () => {
+  const { credit, amount, wallet } = quickPay.value
+  if (!credit || !wallet) return
+  paymentSaving.value = true
+  try {
+    await store.addPayment(credit._id, { amount, interestAmount: null, paymentType: 'installment', date: today(), wallet, description: '', notes: '' })
+    snackbar.success(t('credits.paymentRegistered'))
+    quickPayDialog.value = false
+  } catch (err) { snackbar.error(err?.response?.data?.message || t('credits.registerPaymentError')) }
+  paymentSaving.value = false
+}
 const savePayment = async () => {
   if (!paymentCredit.value) return
   paymentSaving.value = true
@@ -398,6 +445,8 @@ onMounted(async () => {
 .credit-next { font-size: 0.95rem; }
 .credit-advice { margin: 0; padding-left: 18px; font-size: 0.8rem; }
 .plan-scroll { max-height: 460px; overflow: auto; }
+.plan-action-col { width: 1%; white-space: nowrap; }
+.plan-row--next { background: rgba(var(--v-theme-primary), 0.08); }
 
 .wizard-step-title {
   margin-bottom: 18px;

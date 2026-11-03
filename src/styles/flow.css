@@ -394,3 +394,29 @@ html { background: var(--kf-bg-deep); }
   .auth-primary-btn { background: var(--kf-gradient-primary) !important; color: var(--kf-on-primary) !important; }
 }
 
+
+/* ---------- Authentication: card spacing and clipping ----------
+   `.v-card` resets padding to 0 and clips its content (overflow: hidden). Depending on the order
+   Vuetify injects its component CSS, that wins over `.auth-card`, so fields and buttons touched
+   the card edge and their borders, focus rings and the "¿Olvidaste…?" link were cut off.
+   The extra `.auth-shell` selector makes the card spacing win regardless of load order. */
+.auth-shell .auth-card {
+  padding: 36px 32px 32px;
+  overflow: visible;
+  min-width: 0;
+}
+.auth-shell .auth-form-side {
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow: clip;
+}
+.auth-shell .auth-card .v-field { min-width: 0; }
+.auth-shell .auth-forgot-link { white-space: normal; height: auto; min-height: 32px; }
+
+@media (max-width: 959px) {
+  .auth-shell .auth-card { padding: 26px 20px 30px; }
+}
+@media (max-width: 380px) {
+  .auth-shell .auth-card { padding: 22px 16px 26px; }
+  .auth-shell .auth-form-side { padding-left: 12px !important; padding-right: 12px !important; }
+}
