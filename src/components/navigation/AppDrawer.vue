@@ -43,7 +43,11 @@
           :data-tour="item.tour"
           :append-icon="mobile ? 'mdi-chevron-right' : undefined"
           @click="mobile && $emit('update:modelValue', false)"
-        />
+        >
+          <template v-if="item.to === '/pending' && pending.count > 0" #append>
+            <v-badge :content="pending.count" color="error" inline />
+          </template>
+        </v-list-item>
       </template>
     </v-list>
 
@@ -64,6 +68,7 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useNavSections } from '@/composables/useNavSections'
+import { usePendingStore } from '@/stores/pending'
 const brandIcon = '/knexura-flow-icon.webp'
 
 const props = defineProps({
@@ -84,6 +89,7 @@ const initials = computed(() => {
 })
 
 const sections = useNavSections(() => props.isAdmin)
+const pending = usePendingStore()
 </script>
 
 <style scoped>

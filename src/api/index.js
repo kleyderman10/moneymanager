@@ -95,12 +95,28 @@ export const creditsAPI = {
   delete: (id) => api.delete(`/credits/${id}`),
 }
 
+export const pendingAPI = {
+  getAll: () => api.get('/pending-registers'),
+  count: () => api.get('/pending-registers/count', { silent: true }),
+  create: (text, source = 'paste') => api.post('/pending-registers', { text, source }),
+  confirm: (id, data = {}) => api.post(`/pending-registers/${id}/confirm`, data),
+  dismiss: (id) => api.post(`/pending-registers/${id}/dismiss`),
+}
+
+export const captureAPI = {
+  getAll: () => api.get('/capture-tokens'),
+  create: (data) => api.post('/capture-tokens', data),
+  revoke: (id) => api.delete(`/capture-tokens/${id}`),
+}
+
 export const splitsAPI = {
   getAll: () => api.get('/splits'),
   getReceived: () => api.get('/splits/received'),
   getById: (id) => api.get(`/splits/${id}`),
   create: (data) => api.post('/splits', data),
+  update: (id, data) => api.put(`/splits/${id}`, data),
   delete: (id) => api.delete(`/splits/${id}`),
+  markUnpaid: (id, participantId) => api.patch(`/splits/${id}/participants/${participantId}/unpaid`),
   createLink: (id, participantId) => api.post(`/splits/${id}/participants/${participantId}/link`),
   markPaid: (id, participantId) => api.patch(`/splits/${id}/participants/${participantId}/paid`),
   accept: (id, participantId, data = {}) => api.post(`/splits/${id}/participants/${participantId}/accept`, data),

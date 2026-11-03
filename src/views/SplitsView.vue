@@ -7,7 +7,7 @@
         <p class="page-intro__subtitle">{{ t('splits.subtitle') }}</p>
       </div>
       <v-spacer />
-      <v-btn v-if="!isMobile && !billingStore.isReadOnly" color="primary" prepend-icon="mdi-plus" @click="formDialog = true">{{ t('splits.newSplit') }}</v-btn>
+      <v-btn v-if="!isMobile && !billingStore.isReadOnly" color="primary" prepend-icon="mdi-plus" @click="openCreate">{{ t('splits.newSplit') }}</v-btn>
     </div>
 
     <v-tabs v-model="tab" color="primary" class="mb-4">
@@ -34,10 +34,12 @@
                 <div class="text-caption text-medium-emphasis">{{ date(split.date) }}</div>
               </div>
               <v-spacer />
+              <v-btn icon="mdi-pencil-outline" size="small" variant="text" :aria-label="t('common.edit')" @click="openEdit(split)" />
               <v-btn icon="mdi-delete-outline" size="small" variant="text" color="error" :aria-label="t('common.delete')" @click="askDelete(split)" />
             </v-card-title>
             <v-card-text>
               <div class="kf-amount text-h5">{{ money(split.total, split.currency) }}</div>
+              <div v-if="walletName(split)" class="text-caption text-medium-emphasis mb-1"><v-icon size="14">mdi-wallet-outline</v-icon> {{ t('splits.paidWith', { name: walletName(split) }) }}</div>
               <div class="text-caption text-medium-emphasis mb-2">
                 {{ t('splits.collected') }}: <strong>{{ money(split.collected, split.currency) }}</strong>
                 · {{ t('splits.pending') }}: <strong>{{ money(split.pending, split.currency) }}</strong>
@@ -49,6 +51,7 @@
                     <v-chip v-if="person.linked && !person.isOwner" size="x-small" color="primary" variant="outlined" class="mr-1">Flow</v-chip>
                     <v-btn v-if="!person.isOwner && person.status === 'pending'" icon="mdi-qrcode" size="x-small" variant="text" :aria-label="t('splits.share')" @click="openShare(split, person)" />
                     <v-btn v-if="!person.isOwner && ['pending', 'accepted'].includes(person.status)" icon="mdi-check-circle-outline" size="x-small" variant="text" color="success" :aria-label="t('splits.markPaid')" @click="markPaid(split, person)" />
+                    <v-btn v-if="!person.isOwner && person.status === 'paid'" icon="mdi-undo-variant" size="x-small" variant="text" :aria-label="t('splits.undoPaid')" @click="markUnpaid(split, person)" />
                   </template>
                 </v-list-item>
               </v-list>
@@ -82,11 +85,11 @@
       </v-row>
     </template>
 
-    <SplitFormDialog v-model="formDialog" @created="onCreated" />
+    <SplitFormDialog v-model="formDialog" :split="editing" @created="onCreated" />
     <ShareSplitDialog v-model="shareDialog" :split="shareSplit" :participant="shareParticipant" @linked="store.fetchAll" />
     <ConfirmDialog v-model="deleteDialog" :title="t('splits.deleteTitle')" :message="t('splits.deleteConfirm')" :loading="deleting" @confirm="doDelete" />
 
-    <v-btn v-if="isMobile && !billingStore.isReadOnly" icon="mdi-plus" color="primary" size="x-large" class="finance-fab" :aria-label="t('splits.newSplit')" @click="formDialog = true" />
+    <v-btn v-if="isMobile && !billingStore.isReadOnly" icon="mdi-plus" color="primary" size="x-large" class="finance-fab" :aria-label="t('splits.newSplit')" @click="openCreate" />
   </div>
 </template>
 
@@ -96,6 +99,7 @@ import { useDisplay } from 'vuetify'
 import { useI18n } from 'vue-i18n'
 import { useSplitsStore } from '@/stores/splits'
 import { useSnackbar } from '@/stores/snackbar'
+import { useWalletsStore } from '@/stores/wallets'
 import { useSubscriptionStore } from '@/stores/subscriptions'
 import { useLocale } from '@/composables/useLocale'
 import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
@@ -112,6 +116,7 @@ const billingStore = useSubscriptionStore()
 
 const tab = ref('mine')
 const formDialog = ref(false)
+const editing = ref(null)
 const shareDialog = ref(false)
 const shareSplit = ref(null)
 const shareParticipant = ref(null)
@@ -136,9 +141,32 @@ const openShare = (split, person) => {
   shareDialog.value = true
 }
 
+const walletsStore = useWalletsStore()
+const walletName = (split) => walletsStore.wallets.find((w) => w._id === split.wallet)?.name || ''
+
+const openCreate = () => {
+  editing.value = null
+  formDialog.value = true
+}
+const openEdit = (split) => {
+  editing.value = split
+  formDialog.value = true
+}
+
+const markUnpaid = async (split, person) => {
+  try {
+    await store.markUnpaid(split.id, person.id)
+    walletsStore.fetchAll()
+    snackbar.success(t('splits.undoneMsg'))
+  } catch (error) {
+    snackbar.error(errorMessage(error))
+  }
+}
+
 const markPaid = async (split, person) => {
   try {
     await store.markPaid(split.id, person.id)
+    walletsStore.fetchAll()
     snackbar.success(t('splits.markedPaid'))
   } catch (error) {
     snackbar.error(errorMessage(error))
@@ -163,6 +191,7 @@ const doDelete = async () => {
   deleting.value = true
   try {
     await store.remove(toDelete.value.id)
+    walletsStore.fetchAll()
     deleteDialog.value = false
   } catch (error) {
     snackbar.error(errorMessage(error))
@@ -170,5 +199,5 @@ const doDelete = async () => {
   deleting.value = false
 }
 
-onMounted(() => store.fetchAll())
+onMounted(() => { store.fetchAll(); walletsStore.fetchAll() })
 </script>

@@ -153,6 +153,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useSnackbar } from '@/stores/snackbar'
 import { useSubscriptionStore } from '@/stores/subscriptions'
 import { useLocale } from '@/composables/useLocale'
+import { useClipboardDetector } from '@/composables/useClipboardDetector'
 import { useDisplay } from 'vuetify'
 import AppDrawer from '@/components/navigation/AppDrawer.vue'
 import MobileBottomNavigation from '@/components/navigation/MobileBottomNavigation.vue'
@@ -222,6 +223,7 @@ const dismissAIConsent = () => authStore.dismissAIConsent()
 // Global assistant: available to every user once they accept the AI consent. Without it,
 // the button opens the consent dialog first and the assistant right after accepting.
 const assistantStore = useAssistantStore()
+useClipboardDetector()
 const pushStore = usePushStore()
 
 // Wake word ("Oye Flow"): see useVoiceActivation for how it hands the microphone to the assistant.

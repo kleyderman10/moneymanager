@@ -4,4 +4,7 @@
     <string name="title_activity_main">Knexura Flow</string>
     <string name="package_name">online.knexura.moneymanager</string>
     <string name="custom_url_scheme">online.knexura.moneymanager</string>
+    <string name="capture_channel_name">Avisos por confirmar</string>
+    <string name="capture_notification_title">Nuevo movimiento por confirmar</string>
+    <string name="capture_notification_text">Detectamos un aviso de tu banco. Revísalo y confírmalo en Knexura Flow.</string>
 </resources>

@@ -1,11 +1,19 @@
 <template>
   <v-dialog :model-value="modelValue" :fullscreen="isMobile" max-width="640" scrollable @update:model-value="emit('update:modelValue', $event)">
-    <v-card :title="t('splits.newSplit')">
+    <v-card :title="isEdit ? t('splits.editSplit') : t('splits.newSplit')">
       <v-card-text>
-        <ReceiptScanner class="mb-3" @scanned="applyScan" />
+        <v-alert v-if="locked" type="info" variant="tonal" density="compact" class="mb-3">{{ t('splits.lockedHint') }}</v-alert>
+        <ReceiptScanner v-if="!isEdit" class="mb-3" @scanned="applyScan" />
         <v-text-field v-model="form.title" :label="t('splits.titleLabel')" density="compact" maxlength="120" />
-        <MoneyField v-model="form.total" :label="t('splits.total')" />
-        <NativeSelectField v-model="form.mode" :items="modeOptions" :label="t('splits.mode')" class="mt-3" />
+        <fieldset class="split-fieldset" :disabled="locked">
+          <MoneyField v-model="form.total" :label="t('splits.total')" />
+          <NativeSelectField v-model="form.mode" :items="modeOptions" :label="t('splits.mode')" :disabled="locked" class="mt-3" />
+        </fieldset>
+        <v-text-field v-model="form.date" :label="t('splits.dateLabel')" type="date" density="compact" class="mt-3" />
+        <NativeSelectField v-model="form.wallet" :items="wallets" item-title="name" item-value="_id" :label="t('splits.walletLabel')" :placeholder="t('splits.noWallet')" class="mt-3" />
+        <div class="text-caption text-medium-emphasis mt-1">{{ t('splits.walletHint') }}</div>
+        <v-text-field v-model="form.notes" :label="t('splits.notesLabel')" density="compact" maxlength="500" class="mt-3" />
+        <fieldset class="split-fieldset" :disabled="locked">
 
         <div class="text-subtitle-2 mt-4 mb-1">{{ t('splits.participants') }}</div>
         <div v-for="(person, index) in form.participants" :key="index" class="split-person">
@@ -39,11 +47,12 @@
           <v-btn size="small" variant="text" prepend-icon="mdi-plus" @click="addItem">{{ t('splits.addItem') }}</v-btn>
           <div class="text-caption text-medium-emphasis mt-1">{{ t('splits.itemsHint') }}</div>
         </template>
+        </fieldset>
       </v-card-text>
       <v-card-actions>
         <v-spacer />
         <v-btn variant="text" @click="emit('update:modelValue', false)">{{ t('common.cancel') }}</v-btn>
-        <v-btn color="primary" :loading="saving" :disabled="!canSave" @click="save">{{ t('splits.createSplit') }}</v-btn>
+        <v-btn color="primary" :loading="saving" :disabled="!canSave" @click="save">{{ isEdit ? t('splits.saveChanges') : t('splits.createSplit') }}</v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>
@@ -54,18 +63,25 @@ import { ref, computed, watch } from 'vue'
 import { useDisplay } from 'vuetify'
 import { useI18n } from 'vue-i18n'
 import { useSplitsStore } from '@/stores/splits'
+import { useWalletsStore } from '@/stores/wallets'
 import { useSnackbar } from '@/stores/snackbar'
 import ReceiptScanner from '@/components/ReceiptScanner.vue'
 import MoneyField from '@/components/MoneyField.vue'
 import NativeSelectField from '@/components/NativeSelectField.vue'
 
-const props = defineProps({ modelValue: { type: Boolean, default: false } })
-const emit = defineEmits(['update:modelValue', 'created'])
+const props = defineProps({
+  modelValue: { type: Boolean, default: false },
+  // Si se pasa una cuenta, el diálogo la edita en vez de crear una nueva.
+  split: { type: Object, default: null },
+})
+const emit = defineEmits(['update:modelValue', 'created', 'saved'])
 
 const { t } = useI18n()
 const { mobile } = useDisplay()
 const isMobile = computed(() => mobile.value)
 const store = useSplitsStore()
+const walletsStore = useWalletsStore()
+const wallets = computed(() => walletsStore.wallets)
 const snackbar = useSnackbar()
 const saving = ref(false)
 
@@ -75,12 +91,42 @@ const blank = () => ({
   mode: 'equal',
   source: 'manual',
   date: null,
+  wallet: null,
+  notes: '',
   participants: [{ name: t('splits.me'), email: '', isOwner: true }, { name: '', email: '' }],
   items: [],
 })
+
+// Carga una cuenta existente para editarla.
+const fromSplit = (split) => ({
+  title: split.title,
+  total: split.total,
+  mode: split.mode,
+  source: split.source,
+  date: split.date ? String(split.date).slice(0, 10) : null,
+  wallet: split.wallet,
+  notes: split.notes || '',
+  participants: split.participants.map((p) => ({
+    id: p.id,
+    name: p.name,
+    email: p.email || '',
+    isOwner: p.isOwner,
+    percentage: p.percentage,
+    amount: p.amount,
+  })),
+  items: (split.items || []).map((i) => ({ description: i.description, amount: i.amount, assignedTo: [...(i.assignedTo || [])] })),
+})
+
+const isEdit = computed(() => Boolean(props.split))
+// Con alguien que ya aceptó o pagó, el total y las personas no se pueden tocar.
+const locked = computed(() => Boolean(props.split?.locked))
 const form = ref(blank())
 
-watch(() => props.modelValue, (open) => { if (open) form.value = blank() })
+watch(() => props.modelValue, (open) => {
+  if (!open) return
+  form.value = props.split ? fromSplit(props.split) : blank()
+  walletsStore.fetchAll()
+})
 
 const modeOptions = computed(() => [
   { title: t('splits.modeEqual'), value: 'equal' },
@@ -121,13 +167,17 @@ const canSave = computed(() => (
 
 const save = async () => {
   const f = form.value
-  const payload = {
+  const common = {
     title: f.title.trim(),
+    ...(f.date ? { date: f.date } : {}),
+    wallet: f.wallet || null,
+    notes: f.notes || '',
+  }
+  const structure = {
     total: f.total,
     mode: f.mode,
-    source: f.source,
-    ...(f.date ? { date: f.date } : {}),
     participants: f.participants.map((p) => ({
+      ...(p.id ? { id: p.id } : {}),
       name: p.name.trim(),
       ...(p.email?.trim() ? { email: p.email.trim() } : {}),
       ...(p.isOwner ? { isOwner: true } : {}),
@@ -138,10 +188,19 @@ const save = async () => {
   }
   saving.value = true
   try {
-    const created = await store.create(payload)
-    snackbar.success(t('splits.created'))
-    emit('update:modelValue', false)
-    emit('created', created)
+    if (isEdit.value) {
+      // Bloqueada: solo viajan los campos que el servidor permite cambiar.
+      await store.update(props.split.id, locked.value ? common : { ...common, ...structure })
+      snackbar.success(t('splits.updated'))
+      emit('update:modelValue', false)
+      emit('saved')
+    } else {
+      const created = await store.create({ ...common, ...structure, source: f.source })
+      snackbar.success(t('splits.created'))
+      emit('update:modelValue', false)
+      emit('created', created)
+    }
+    walletsStore.fetchAll()
   } catch (error) {
     const first = error?.response?.data?.errors?.[0]?.message
     snackbar.error(first || error?.response?.data?.message || t('splits.saveError'))
@@ -151,6 +210,8 @@ const save = async () => {
 </script>
 
 <style scoped>
+.split-fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
+.split-fieldset:disabled { opacity: 0.55; }
 .split-person { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
 .split-item { margin-bottom: 12px; padding: 8px; border: 1px solid rgba(var(--v-border-color), 0.2); border-radius: 8px; }
 </style>

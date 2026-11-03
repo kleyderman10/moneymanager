@@ -29,6 +29,18 @@ export const useSplitsStore = defineStore('splits', () => {
     return res.data
   }
 
+  const update = async (id, data) => {
+    const res = await splitsAPI.update(id, data)
+    replace(res.data)
+    return res.data
+  }
+
+  const markUnpaid = async (id, participantId) => {
+    const res = await splitsAPI.markUnpaid(id, participantId)
+    replace(res.data)
+    return res.data
+  }
+
   const remove = async (id) => {
     await splitsAPI.delete(id)
     splits.value = splits.value.filter((item) => item.id !== id)
@@ -46,5 +58,5 @@ export const useSplitsStore = defineStore('splits', () => {
     received.value = received.value.filter((entry) => entry.participantId !== item.participantId)
   }
 
-  return { splits, received, loading, fetchAll, create, remove, markPaid, respond }
+  return { splits, received, loading, fetchAll, create, update, remove, markPaid, markUnpaid, respond }
 })

@@ -41,6 +41,8 @@ export default defineConfig(({ mode }) => ({
         orientation: 'portrait',
         scope: '/',
         start_url: '/',
+        // "Compartir → Knexura Flow" desde un SMS o aviso: entra a la bandeja Por confirmar.
+        share_target: { action: '/share-target', method: 'GET', params: { title: 'title', text: 'text' } },
         icons: [
           { src: 'pwa-64x64.png', sizes: '64x64', type: 'image/png' },
           { src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png' },

@@ -12,6 +12,7 @@ export const useNavSections = (isAdmin) => {
       items: [
         { to: '/', icon: 'mdi-home-outline', title: t('nav.dashboard'), exact: true },
         { to: '/transactions', icon: 'mdi-swap-vertical', title: t('nav.transactions') },
+        { to: '/pending', icon: 'mdi-inbox-arrow-down-outline', title: t('nav.pending') },
         { to: '/reports', icon: 'mdi-chart-bar', title: t('nav.reports') },
       ],
     },

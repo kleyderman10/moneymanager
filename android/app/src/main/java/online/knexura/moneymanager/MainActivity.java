@@ -5,6 +5,7 @@ import android.view.WindowManager;
 
 import com.getcapacitor.BridgeActivity;
 
+import online.knexura.moneymanager.capture.NotificationCapturePlugin;
 import online.knexura.moneymanager.wakeword.WakeWordPlugin;
 
 public class MainActivity extends BridgeActivity {
@@ -12,6 +13,7 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         // Local plugin: it must be registered before super.onCreate().
         registerPlugin(WakeWordPlugin.class);
+        registerPlugin(NotificationCapturePlugin.class);
         super.onCreate(savedInstanceState);
         // Finance app: block screenshots/screen recording and hide the content in the
         // recent-apps thumbnail so balances and transactions aren't captured.

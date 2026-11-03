@@ -45,6 +45,16 @@ const routes = [
         component: () => import('@/views/TransactionsView.vue'),
       },
       {
+        path: 'pending',
+        name: 'Pending',
+        component: () => import('@/views/PendingView.vue'),
+      },
+      {
+        path: 'share-target',
+        name: 'ShareTarget',
+        component: () => import('@/views/ShareTargetView.vue'),
+      },
+      {
         path: 'categories',
         name: 'Categories',
         component: () => import('@/views/CategoriesView.vue'),
@@ -131,7 +141,8 @@ const router = createRouter({
 router.beforeEach(async (to) => {
   const token = localStorage.getItem('accessToken')
   if (to.meta.requiresAuth && !token) {
-    return '/login'
+    // Conserva el destino (p. ej. el texto compartido a /share-target) para volver tras iniciar sesión.
+    return { path: '/login', query: { redirect: to.fullPath } }
   }
   if (to.meta.guest && token) return '/'
 
