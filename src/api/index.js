@@ -95,6 +95,20 @@ export const creditsAPI = {
   delete: (id) => api.delete(`/credits/${id}`),
 }
 
+export const splitsAPI = {
+  getAll: () => api.get('/splits'),
+  getReceived: () => api.get('/splits/received'),
+  getById: (id) => api.get(`/splits/${id}`),
+  create: (data) => api.post('/splits', data),
+  delete: (id) => api.delete(`/splits/${id}`),
+  createLink: (id, participantId) => api.post(`/splits/${id}/participants/${participantId}/link`),
+  markPaid: (id, participantId) => api.patch(`/splits/${id}/participants/${participantId}/paid`),
+  accept: (id, participantId, data = {}) => api.post(`/splits/${id}/participants/${participantId}/accept`, data),
+  decline: (id, participantId) => api.post(`/splits/${id}/participants/${participantId}/decline`),
+  getShared: (token) => api.get(`/splits/shared/${token}`),
+  acceptShared: (token, data = {}) => api.post(`/splits/shared/${token}/accept`, data),
+}
+
 export const reportsAPI = {
   monthly: (year, month) => api.get(`/reports/monthly/${year}/${month}`),
   yearly: (year) => api.get(`/reports/yearly/${year}`),

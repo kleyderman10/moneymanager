@@ -22,6 +22,12 @@ const routes = [
     meta: { guest: true },
   },
   {
+    // Pública: quien recibe el QR/enlace puede ver su parte antes de iniciar sesión.
+    path: '/split/:token',
+    name: 'SplitShared',
+    component: () => import('@/views/SplitPublicView.vue'),
+  },
+  {
     path: '/',
     component: () => import('@/layouts/MainLayout.vue'),
     meta: { requiresAuth: true },
@@ -62,6 +68,11 @@ const routes = [
         path: 'credits',
         name: 'Credits',
         component: () => import('@/views/CreditsView.vue'),
+      },
+      {
+        path: 'splits',
+        name: 'Splits',
+        component: () => import('@/views/SplitsView.vue'),
       },
       {
         path: 'recurring',

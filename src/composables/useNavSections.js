@@ -22,6 +22,7 @@ export const useNavSections = (isAdmin) => {
       items: [
         { to: '/wallets', icon: 'mdi-wallet-outline', title: t('nav.wallets'), tour: 'nav-wallets' },
         { to: '/credits', icon: 'mdi-bank', title: t('nav.credits') },
+        { to: '/splits', icon: 'mdi-account-multiple-outline', title: t('nav.splits') },
         { to: '/budgets', icon: 'mdi-chart-pie', title: t('nav.budgets') },
         { to: '/goals', icon: 'mdi-target', title: t('nav.goals') },
         { to: '/simulators?tab=capacity', icon: 'mdi-calculator-variant-outline', title: t('nav.simulators') },
