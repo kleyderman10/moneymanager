@@ -50,7 +50,8 @@
                     <v-chip size="x-small" :color="statusColor[person.status]" variant="tonal" class="mr-1">{{ t(`splits.status.${person.status}`) }}</v-chip>
                     <v-chip v-if="person.linked && !person.isOwner" size="x-small" color="primary" variant="outlined" class="mr-1">Flow</v-chip>
                     <v-btn v-if="!person.isOwner && person.status === 'pending'" icon="mdi-qrcode" size="x-small" variant="text" :aria-label="t('splits.share')" @click="openShare(split, person)" />
-                    <v-btn v-if="!person.isOwner && ['pending', 'accepted'].includes(person.status)" icon="mdi-check-circle-outline" size="x-small" variant="text" color="success" :aria-label="t('splits.markPaid')" @click="markPaid(split, person)" />
+                    <v-btn v-if="!person.isOwner && person.status === 'reported'" icon="mdi-close-circle-outline" size="x-small" variant="text" color="error" :aria-label="t('splits.rejectReport')" @click="rejectReport(split, person)" />
+                    <v-btn v-if="!person.isOwner && ['pending', 'accepted', 'reported'].includes(person.status)" :icon="person.status === 'reported' ? 'mdi-check-decagram' : 'mdi-check-circle-outline'" size="x-small" variant="text" color="success" :aria-label="person.status === 'reported' ? t('splits.confirmPaid') : t('splits.markPaid')" @click="markPaid(split, person)" />
                     <v-btn v-if="!person.isOwner && person.status === 'paid'" icon="mdi-undo-variant" size="x-small" variant="text" :aria-label="t('splits.undoPaid')" @click="markUnpaid(split, person)" />
                   </template>
                 </v-list-item>
@@ -62,23 +63,28 @@
     </template>
 
     <template v-else>
-      <v-card v-if="!store.received.length && !store.loading" class="pa-8 text-center text-grey">
+      <v-card v-if="!receivedItems.length && !store.loading" class="pa-8 text-center text-grey">
         <v-icon size="x-large" color="primary">mdi-inbox-arrow-down</v-icon>
         <div class="mt-2 text-body-1">{{ t('splits.noReceived') }}</div>
       </v-card>
       <v-row v-else>
-        <v-col v-for="item in store.received" :key="item.participantId" cols="12" md="6" xl="4">
+        <v-col v-for="item in receivedItems" :key="item.participantId" cols="12" md="6" xl="4">
           <v-card>
             <v-card-title class="text-subtitle-1">{{ item.title }}</v-card-title>
             <v-card-text>
               <div class="text-caption text-medium-emphasis">{{ t('splits.from', { name: item.ownerName }) }} · {{ date(item.date) }}</div>
               <div class="kf-amount text-h5 mt-1">{{ money(item.amount, item.currency) }}</div>
               <div class="text-caption text-medium-emphasis">{{ t('splits.ofTotal', { total: money(item.total, item.currency) }) }}</div>
+              <v-chip size="small" :color="statusColor[item.status]" variant="tonal" class="mt-2">{{ t(`splits.status.${item.status}`) }}</v-chip>
+              <div v-if="item.status === 'reported'" class="text-caption text-medium-emphasis mt-1">{{ t('splits.waitingConfirm', { name: item.ownerName }) }}</div>
             </v-card-text>
-            <v-card-actions v-if="!billingStore.isReadOnly">
+            <v-card-actions v-if="!billingStore.isReadOnly && item.status === 'pending'">
               <v-btn variant="text" @click="respond(item, 'decline')">{{ t('splits.decline') }}</v-btn>
               <v-spacer />
               <v-btn color="primary" variant="tonal" @click="respond(item, 'accept')">{{ t('splits.accept') }}</v-btn>
+            </v-card-actions>
+            <v-card-actions v-else-if="!billingStore.isReadOnly && item.status === 'accepted'">
+              <v-btn color="success" variant="tonal" block prepend-icon="mdi-cash-check" :loading="reporting === item.participantId" @click="reportPaid(item)">{{ t('splits.reportPaid') }}</v-btn>
             </v-card-actions>
           </v-card>
         </v-col>
@@ -95,6 +101,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { useDisplay } from 'vuetify'
 import { useI18n } from 'vue-i18n'
 import { useSplitsStore } from '@/stores/splits'
@@ -114,7 +121,8 @@ const store = useSplitsStore()
 const snackbar = useSnackbar()
 const billingStore = useSubscriptionStore()
 
-const tab = ref('mine')
+const route = useRoute()
+const tab = ref(route.query.tab === 'received' ? 'received' : 'mine')
 const formDialog = ref(false)
 const editing = ref(null)
 const shareDialog = ref(false)
@@ -124,8 +132,11 @@ const deleteDialog = ref(false)
 const deleting = ref(false)
 const toDelete = ref(null)
 
-const statusColor = { pending: 'warning', accepted: 'primary', paid: 'success', declined: 'error' }
-const pendingReceived = computed(() => store.received.length)
+const statusColor = { pending: 'warning', accepted: 'primary', reported: 'info', paid: 'success', declined: 'error' }
+// Las rechazadas no se muestran; las aceptadas siguen visibles para poder reportar el pago.
+const receivedItems = computed(() => store.received.filter((item) => item.status !== 'declined'))
+const pendingReceived = computed(() => store.received.filter((item) => item.status === 'pending').length)
+const reporting = ref(null)
 
 const errorMessage = (error) => error?.response?.data?.message || t('splits.saveError')
 
@@ -171,6 +182,26 @@ const markPaid = async (split, person) => {
   } catch (error) {
     snackbar.error(errorMessage(error))
   }
+}
+
+const rejectReport = async (split, person) => {
+  try {
+    await store.rejectReport(split.id, person.id)
+    snackbar.success(t('splits.reportRejected'))
+  } catch (error) {
+    snackbar.error(errorMessage(error))
+  }
+}
+
+const reportPaid = async (item) => {
+  reporting.value = item.participantId
+  try {
+    await store.reportPaid(item)
+    snackbar.success(t('splits.reportSent'))
+  } catch (error) {
+    snackbar.error(errorMessage(error))
+  }
+  reporting.value = null
 }
 
 const respond = async (item, action) => {

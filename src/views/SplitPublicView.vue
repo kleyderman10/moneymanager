@@ -10,9 +10,14 @@
           <div class="kf-amount text-h4 my-3">{{ money(info.amount, info.currency) }}</div>
           <div class="text-caption text-medium-emphasis">{{ t('splits.publicFor', { name: info.participantName }) }} · {{ date(info.date) }}</div>
           <v-alert v-if="done" type="success" variant="tonal" class="mt-4">{{ t('splits.publicDone') }}</v-alert>
+          <v-alert v-else-if="suggestApp" type="info" variant="tonal" class="mt-4">{{ t('splits.publicLinkedHint') }}</v-alert>
           <v-alert v-else-if="!loggedIn" type="info" variant="tonal" class="mt-4">{{ t('splits.publicLogin') }}</v-alert>
         </v-card-text>
-        <v-card-actions v-if="!done">
+        <v-card-actions v-if="!done && suggestApp" class="flex-column ga-2">
+          <v-btn color="primary" block variant="flat" :href="appUrl" prepend-icon="mdi-open-in-app">{{ t('splits.publicOpenInApp') }}</v-btn>
+          <v-btn block variant="text" @click="continueWeb = true">{{ t('splits.publicContinueWeb') }}</v-btn>
+        </v-card-actions>
+        <v-card-actions v-else-if="!done">
           <v-btn v-if="!loggedIn" color="primary" block variant="flat" @click="goLogin">{{ t('splits.publicLoginBtn') }}</v-btn>
           <v-btn v-else color="primary" block variant="flat" :loading="accepting" @click="accept">{{ t('splits.accept') }}</v-btn>
         </v-card-actions>
@@ -30,7 +35,8 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { Capacitor } from '@capacitor/core'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { splitsAPI } from '@/api'
@@ -49,6 +55,11 @@ const loading = ref(true)
 const accepting = ref(false)
 const done = ref(false)
 const info = ref(null)
+const continueWeb = ref(false)
+
+// Quien ya tiene Knexura Flow no debería iniciar sesión en el navegador: se le lleva a la app.
+const appUrl = `knexuraflow://split/${encodeURIComponent(token)}`
+const suggestApp = computed(() => Boolean(info.value?.linked) && !Capacitor.isNativePlatform() && !continueWeb.value)
 
 onMounted(async () => {
   try {
@@ -57,6 +68,10 @@ onMounted(async () => {
     info.value = null
   }
   loading.value = false
+  // Dentro de la app y con sesión: directo a "Recibidas", sin pasos extra.
+  if (info.value?.linked && Capacitor.isNativePlatform() && loggedIn) {
+    router.replace({ path: '/splits', query: { tab: 'received' } })
+  }
 })
 
 // Tras iniciar sesión o registrarse, el usuario vuelve a esta misma pantalla.

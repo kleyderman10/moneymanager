@@ -51,11 +51,13 @@ export const usePushStore = defineStore('push', () => {
   }
 
   // The router is loaded lazily: it imports stores that import this one.
-  const goTo = async (routeName) => {
+  const goTo = async (routeName, data = {}) => {
     const path = ROUTE_PATHS[routeName]
     if (!path) return
     const { default: router } = await import('@/router')
-    router.push(path)
+    // Los avisos de cuentas compartidas indican en qué pestaña caer (recibidas / mías).
+    const tab = ['mine', 'received'].includes(data?.tab) ? data.tab : null
+    router.push(tab ? { path, query: { tab } } : path)
   }
 
   const loadConfig = async () => {
@@ -80,7 +82,7 @@ export const usePushStore = defineStore('push', () => {
       })
       await PushNotifications.addListener('registrationError', () => { error.value = 'failed'; registration?.resolve(false) })
       await PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
-        goTo(action.notification?.data?.route)
+        goTo(action.notification?.data?.route, action.notification?.data)
       })
     }
     const permission = await PushNotifications.requestPermissions()

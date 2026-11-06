@@ -19,6 +19,22 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
+            <!-- Enlaces de cuentas compartidas: abren la app en lugar del navegador. Requieren que
+                 el dominio sirva /.well-known/assetlinks.json (autoVerify). -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="moneymanager-e7fa9ac13e3f.herokuapp.com" android:pathPrefix="/split/" />
+            </intent-filter>
+            <!-- Respaldo con esquema propio (botón "Abrir en la app" de la página web). -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="knexuraflow" android:host="split" />
+            </intent-filter>
         </activity>
 
         <!-- Reads notifications from the configured bank apps (user grants "notification access"). -->

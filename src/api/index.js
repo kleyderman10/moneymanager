@@ -121,6 +121,8 @@ export const splitsAPI = {
   markPaid: (id, participantId) => api.patch(`/splits/${id}/participants/${participantId}/paid`),
   accept: (id, participantId, data = {}) => api.post(`/splits/${id}/participants/${participantId}/accept`, data),
   decline: (id, participantId) => api.post(`/splits/${id}/participants/${participantId}/decline`),
+  reportPaid: (id, participantId) => api.post(`/splits/${id}/participants/${participantId}/report-paid`),
+  rejectReport: (id, participantId) => api.patch(`/splits/${id}/participants/${participantId}/reject-report`),
   getShared: (token) => api.get(`/splits/shared/${token}`),
   acceptShared: (token, data = {}) => api.post(`/splits/shared/${token}/accept`, data),
 }

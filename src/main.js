@@ -32,6 +32,19 @@ if (Capacitor.isNativePlatform()) {
       .then((keys) => Promise.all(keys.map((key) => caches.delete(key))))
       .catch(() => {})
   }
+  // Enlaces de cuentas compartidas (https://<dominio>/split/<token> o knexuraflow://split/<token>):
+  // se abren dentro de la app en lugar del navegador.
+  import('@capacitor/app')
+    .then(({ App: CapApp }) => CapApp.addListener('appUrlOpen', ({ url }) => {
+      try {
+        const parsed = new URL(url)
+        const path = parsed.protocol === 'knexuraflow:'
+          ? `/${parsed.hostname}${parsed.pathname}`
+          : parsed.pathname
+        if (/^\/split\/[A-Za-z0-9_-]{20,100}$/.test(path)) router.push(path)
+      } catch { /* enlace no válido */ }
+    }))
+    .catch(() => {})
   // The header is dark in every theme: light status-bar text keeps the clock readable on iOS.
   import('@capacitor/status-bar')
     .then(({ StatusBar, Style }) => StatusBar.setStyle({ style: Style.Dark }))

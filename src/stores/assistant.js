@@ -20,6 +20,7 @@ export const ROUTE_PATHS = {
   recurring: '/recurring',
   reports: '/reports',
   simulators: '/simulators?tab=capacity',
+  splits: '/splits',
   profile: '/profile',
   subscription: '/subscription',
   help: '/help',
