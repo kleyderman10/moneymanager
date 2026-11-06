@@ -1,6 +1,7 @@
 import axios from 'axios'
 import { i18n } from '@/i18n'
 import { useSnackbar } from '@/stores/snackbar'
+import { getClientPlatform, APP_VERSION } from '@/utils/clientInfo'
 
 const apiBaseURL = import.meta.env.VITE_API_BASE_URL || '/api'
 
@@ -63,6 +64,8 @@ api.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
+  config.headers['X-Client-Platform'] = getClientPlatform()
+  config.headers['X-App-Version'] = APP_VERSION
   return config
 })
 

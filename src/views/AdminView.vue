@@ -87,7 +87,26 @@
             :style="isMobile ? 'flex: 1 1 40%' : 'max-width: 180px'"
             @update:model-value="loadUsers(1)"
           />
+          <v-select
+            v-model="userFilters.platform"
+            :items="platformFilterOptions"
+            :label="t('admin.platform')"
+            density="compact"
+            hide-details
+            :style="isMobile ? 'flex: 1 1 40%' : 'max-width: 180px'"
+            @update:model-value="loadUsers(1)"
+          />
+          <v-select
+            v-model="userFilters.inactiveDays"
+            :items="inactiveFilterOptions"
+            :label="t('admin.lastActivity')"
+            density="compact"
+            hide-details
+            :style="isMobile ? 'flex: 1 1 40%' : 'max-width: 200px'"
+            @update:model-value="loadUsers(1)"
+          />
           <v-btn variant="tonal" prepend-icon="mdi-magnify" @click="loadUsers(1)">{{ t('common.search') }}</v-btn>
+          <v-btn v-if="canAdminister" variant="text" prepend-icon="mdi-download" :loading="exporting" @click="exportUsers">{{ t('admin.exportCsv') }}</v-btn>
         </div>
 
         <!-- Phones: one card per user instead of a wide table. -->
@@ -98,6 +117,7 @@
               <div class="kf-row__body">
                 <div class="kf-row__title">{{ user.name }}</div>
                 <div class="kf-row__meta">{{ user.email }}</div>
+                <div class="kf-row__meta">{{ usageMeta(user) }}</div>
               </div>
             </div>
             <div class="d-flex flex-wrap align-center ga-2 mt-2">
@@ -161,6 +181,7 @@
                 <td>
                   <div class="font-weight-medium">{{ user.name }}</div>
                   <div class="text-caption text-medium-emphasis">{{ user.email }}</div>
+                  <div class="text-caption text-medium-emphasis">{{ usageMeta(user) }}</div>
                 </td>
                 <td>
                   <v-chip size="small" :color="user.role === 'user' ? 'default' : 'primary'" variant="tonal">
@@ -228,6 +249,14 @@
             @update:model-value="loadUsers"
           />
         </div>
+      </v-window-item>
+
+      <v-window-item value="stats">
+        <AdminStats v-if="tab === 'stats'" />
+      </v-window-item>
+
+      <v-window-item value="tools">
+        <AdminTools v-if="tab === 'tools'" />
       </v-window-item>
 
       <v-window-item value="audit">
@@ -350,11 +379,14 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, defineAsyncComponent } from 'vue'
 import { useDisplay } from 'vuetify'
 import KfSegmented from '@/components/ui/KfSegmented.vue'
 import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
 import AdminAuditLog from '@/components/AdminAuditLog.vue'
+// Las gráficas y herramientas solo se descargan al abrir su pestaña.
+const AdminStats = defineAsyncComponent(() => import('@/components/admin/AdminStats.vue'))
+const AdminTools = defineAsyncComponent(() => import('@/components/admin/AdminTools.vue'))
 import { adminAPI } from '@/api'
 import KpiCard from '@/components/finance/KpiCard.vue'
 import { useI18n } from 'vue-i18n'
@@ -372,6 +404,8 @@ const tabOptions = computed(() => [
   { value: 'overview', label: t('admin.overview') },
   { value: 'users', label: t('admin.users') },
   { value: 'subscriptions', label: t('admin.subscriptions') },
+  { value: 'stats', label: t('admin.stats.tab') },
+  { value: 'tools', label: t('admin.tools.tab') },
   ...(authStore.isAdmin ? [{ value: 'audit', label: t('admin.audit.tab') }] : []),
 ])
 const statusShare = (status) => {
@@ -388,7 +422,7 @@ const authStore = useAuthStore()
 
 const tab = ref('overview')
 
-const userFilters = ref({ q: '', status: '', role: '' })
+const userFilters = ref({ q: '', status: '', role: '', platform: '', inactiveDays: '' })
 const subscriptionFilters = ref({ q: '', status: '' })
 
 const statusFilterOptions = computed(() => [
@@ -426,6 +460,39 @@ const statusColor = (status) => ({
 const formatDate = (value) => {
   if (!value) return '—'
   return date(value, { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })
+}
+
+const platformFilterOptions = computed(() => [
+  { title: t('admin.all'), value: '' },
+  ...['android', 'ios', 'pwa', 'web', 'unknown'].map((p) => ({ title: t(`admin.stats.platform.${p}`), value: p })),
+])
+const inactiveFilterOptions = computed(() => [
+  { title: t('admin.all'), value: '' },
+  { title: t('admin.inactiveDays', { n: 7 }), value: 7 },
+  { title: t('admin.inactiveDays', { n: 30 }), value: 30 },
+  { title: t('admin.inactiveDays', { n: 90 }), value: 90 },
+])
+const usageMeta = (user) => {
+  const platform = t(`admin.stats.platform.${user.lastPlatform || 'unknown'}`)
+  const seen = user.lastActiveAt ? date(user.lastActiveAt) : t('admin.neverSeen')
+  return `${platform}${user.lastAppVersion ? ` ${user.lastAppVersion}` : ''} · ${seen}`
+}
+
+const exporting = ref(false)
+const exportUsers = async () => {
+  exporting.value = true
+  try {
+    const res = await adminAPI.exportUsers({ ...userFilters.value })
+    const url = URL.createObjectURL(res.data)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `usuarios-${new Date().toISOString().slice(0, 10)}.csv`
+    link.click()
+    URL.revokeObjectURL(url)
+  } catch (error) {
+    snackbar.error(error?.response?.data?.message || t('common.loadError'))
+  }
+  exporting.value = false
 }
 
 const loadUsers = (page = 1) => admin.fetchUsers({ ...userFilters.value, page })

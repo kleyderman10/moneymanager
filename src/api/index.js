@@ -252,4 +252,13 @@ export const adminAPI = {
   getAuditLog: (params) => api.get('/admin/audit-log', { params }),
   getSubscriptions: (params) => api.get('/admin/subscriptions', { params }),
   updateSubscription: (id, data) => api.patch(`/admin/subscriptions/${id}`, data),
+  getStats: (name, params) => api.get(`/admin/stats/${name}`, { params }),
+  getHealth: () => api.get('/admin/health'),
+  exportUsers: (params) => api.get('/admin/users/export', { params, responseType: 'blob' }),
+  scanEmails: (params) => api.get('/admin/users/unreachable-emails', { params, timeout: 120_000 }),
+  purgeEmails: (ids) => api.post('/admin/users/unreachable-emails/purge', { ids }, { timeout: 120_000 }),
+  broadcast: (data) => api.post('/admin/broadcast', data, { timeout: 120_000 }),
+  getPendingSignups: () => api.get('/admin/pending-signups'),
+  resendPendingSignup: (id) => api.post(`/admin/pending-signups/${id}/resend`),
+  deletePendingSignup: (id) => api.delete(`/admin/pending-signups/${id}`),
 }
