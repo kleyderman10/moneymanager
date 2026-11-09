@@ -246,6 +246,7 @@
             :model-value="admin.usersMeta.page"
             :length="admin.usersMeta.totalPages"
             density="comfortable"
+            :total-visible="isMobile ? 5 : 7"
             @update:model-value="loadUsers"
           />
         </div>
@@ -342,6 +343,7 @@
             :model-value="admin.subscriptionsMeta.page"
             :length="admin.subscriptionsMeta.totalPages"
             density="comfortable"
+            :total-visible="isMobile ? 5 : 7"
             @update:model-value="loadSubscriptions"
           />
         </div>

@@ -29,7 +29,7 @@
       </v-table>
     </v-card>
     <div v-if="totalPages > 1" class="d-flex justify-center mt-4">
-      <v-pagination :model-value="page" :length="totalPages" density="comfortable" @update:model-value="load" />
+      <v-pagination :model-value="page" :length="totalPages" density="comfortable" :total-visible="5" @update:model-value="load" />
     </div>
   </div>
 </template>
