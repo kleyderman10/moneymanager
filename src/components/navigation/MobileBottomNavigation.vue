@@ -124,6 +124,13 @@ const active = computed(() => {
   white-space: nowrap;
 }
 
+@media (max-width: 359px) {
+  .kf-bottom-nav__item {
+    font-size: 10px;
+    letter-spacing: -0.02em;
+  }
+}
+
 .kf-bottom-nav__item--active {
   position: relative;
   color: var(--kf-primary);

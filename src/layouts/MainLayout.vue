@@ -1,5 +1,5 @@
 <template>
-  <AIChatPanel v-if="!billingStore.requiresSubscription && authStore.hasAcceptedAIConsent" />
+  <AIChatPanel v-if="chatAvailable && chatUsed" />
   <!-- Dialogs are mounted on first use (and kept afterwards), so their code is not part of
        the first screen's download. -->
   <AIConsentDialog v-if="consentDialogUsed" :visible="consentDialogVisible" @decline="onConsentDecline" @accept="onConsentAccept" />
@@ -54,6 +54,18 @@
       </div>
       <v-spacer />
     </template>
+
+    <!-- Assistant chat: one fixed place on every screen, so nothing floats over the content. -->
+    <v-btn
+      v-if="chatAvailable"
+      icon="mdi-robot-outline"
+      variant="text"
+      class="mr-1"
+      data-tour="ai-chat"
+      :aria-label="t('aiChat.assistantName')"
+      :title="t('aiChat.assistantName')"
+      @click="openChat"
+    />
 
     <v-menu location="bottom end">
       <template #activator="{ props: menuProps }">
@@ -159,6 +171,7 @@ import AppDrawer from '@/components/navigation/AppDrawer.vue'
 import MobileBottomNavigation from '@/components/navigation/MobileBottomNavigation.vue'
 import VoiceActionButton from '@/components/navigation/VoiceActionButton.vue'
 import { useAssistantStore } from '@/stores/assistant'
+import { useAiChatStore } from '@/stores/aiChat'
 import { usePushStore } from '@/stores/push'
 import { useVoiceActivation } from '@/composables/useVoiceActivation'
 import { useTour } from '@/composables/useTour'
@@ -223,6 +236,14 @@ const dismissAIConsent = () => authStore.dismissAIConsent()
 // Global assistant: available to every user once they accept the AI consent. Without it,
 // the button opens the consent dialog first and the assistant right after accepting.
 const assistantStore = useAssistantStore()
+// Chat with the assistant: the dialog (markdown-it, DOMPurify) loads on first use.
+const chatStore = useAiChatStore()
+const chatUsed = ref(false)
+const chatAvailable = computed(() => !billingStore.requiresSubscription && authStore.hasAcceptedAIConsent)
+const openChat = () => {
+  chatUsed.value = true
+  chatStore.open()
+}
 useClipboardDetector()
 const pushStore = usePushStore()
 
@@ -374,6 +395,25 @@ const handleLogout = async () => {
   router.push('/login')
 }
 
+// The page's "+" button steps aside while the user scrolls down to read, so it never sits on
+// top of a row's own buttons, and returns on the first scroll up. Styles: .kf-fab-away.
+const SCROLL_STEP = 8
+let lastScrollY = 0
+const fabAway = ref(false)
+const handleFabScroll = () => {
+  const y = window.scrollY
+  if (y < 24) fabAway.value = false
+  else if (y > lastScrollY + SCROLL_STEP) fabAway.value = true
+  else if (y < lastScrollY - SCROLL_STEP) fabAway.value = false
+  lastScrollY = y
+}
+watch(
+  () => fabAway.value || (isMobile.value && drawer.value),
+  (away) => document.documentElement.classList.toggle('kf-fab-away', Boolean(away)),
+  { immediate: true }
+)
+watch(() => route.fullPath, () => { fabAway.value = false; lastScrollY = 0 })
+
 const refreshLicense = () => billingStore.fetchStatus(true)
 const handleReadOnlyStatus = (event) => billingStore.setStatus(event.detail)
 
@@ -384,6 +424,7 @@ onMounted(async () => {
   window.addEventListener('billing:read-only', handleReadOnlyStatus)
   window.addEventListener('billing:ai-locked', refreshLicense)
   window.addEventListener('keydown', handleAssistantShortcut)
+  window.addEventListener('scroll', handleFabScroll, { passive: true })
   if (!authStore.user && localStorage.getItem('accessToken')) authStore.fetchProfile()
   await billingStore.fetchStatus(true)
   assistantStore.fetchInsights()
@@ -395,5 +436,7 @@ onBeforeUnmount(() => {
   window.removeEventListener('billing:read-only', handleReadOnlyStatus)
   window.removeEventListener('billing:ai-locked', refreshLicense)
   window.removeEventListener('keydown', handleAssistantShortcut)
+  window.removeEventListener('scroll', handleFabScroll)
+  document.documentElement.classList.remove('kf-fab-away')
 })
 </script>

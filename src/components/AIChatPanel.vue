@@ -1,18 +1,5 @@
 <template>
   <div>
-    <v-btn
-      color="secondary"
-      size="large"
-      class="ai-fab"
-      data-tour="ai-chat"
-      :style="fabStyle"
-      :aria-label="t('aiChat.assistantName')"
-      @click="chatStore.toggle"
-    >
-      <v-icon>mdi-robot</v-icon>
-      <v-tooltip activator="parent" location="left">{{ t('aiChat.assistantName') }}</v-tooltip>
-    </v-btn>
-
     <v-dialog
       v-model="chatStore.visible"
       :fullscreen="isMobile"
@@ -127,15 +114,7 @@ const { t, locale } = useI18n()
 const { mobile } = useDisplay()
 const isMobile = computed(() => mobile.value)
 
-// Stacked above the per-view "+ Nuevo" FAB (.finance-fab, bottom: 88px, 56px tall, right: 16px)
-// with a clean 16px gap between them so the two floating buttons never touch or overlap.
-const fabStyle = computed(() => ({
-  position: 'fixed',
-  // On phones it stacks above the page's "+" action, which sits above the bottom navigation.
-  bottom: isMobile.value ? 'calc(var(--kf-fab-bottom) + 68px)' : 'calc(24px + var(--safe-bottom))',
-  right: isMobile.value ? '20px' : '24px',
-  zIndex: '100',
-}))
+// The launcher lives in the top bar (MainLayout); this component is only the dialog.
 
 const suggestionKeys = ['chip1', 'chip2', 'chip3', 'chip4']
 

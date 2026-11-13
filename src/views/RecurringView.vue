@@ -89,17 +89,20 @@
             <v-icon size="20">{{ categoryIcon(tx.category) }}</v-icon>
           </span>
           <span class="kf-row__body">
-            <span class="kf-row__title d-block">{{ tx.description || tx.category?.name }}</span>
+            <span class="kf-row__title">{{ tx.description || tx.category?.name }}</span>
             <span class="kf-row__meta d-block">{{ freqLabels[tx.frequency] }} · {{ t('recurring.since') }} {{ formatDate(tx.startDate) }}</span>
           </span>
           <span class="kf-row__end kf-amount" :class="tx.type === 'income' ? 'kf-income' : 'kf-expense'">{{ tx.type === 'income' ? '+' : '-' }}{{ money(tx.amount) }}</span>
-          <v-icon v-if="!billingStore.isReadOnly" size="18" class="text-medium-emphasis">mdi-chevron-right</v-icon>
+          <v-icon v-if="!billingStore.isReadOnly" size="18" class="text-medium-emphasis recurring-row__chevron">mdi-chevron-right</v-icon>
         </component>
       </template>
     </div>
 
     <v-dialog v-model="dialog" :fullscreen="isMobile" max-width="500">
-      <v-card :title="editing ? t('recurring.editRecurring') : t('recurring.newRecurringTitle')" class="capture-form">
+      <v-card :title="editing ? t('recurring.editRecurring') : t('recurring.newRecurringTitle')" class="capture-form kf-form-dialog">
+        <template #append>
+          <v-btn icon="mdi-close" variant="text" class="kf-dialog-close" :aria-label="t('common.close')" @click="dialog = false" />
+        </template>
         <v-card-text>
           <label class="form-label">{{ t('transactions.type') }}</label>
           <div class="segmented-toggle mb-3">
@@ -282,4 +285,11 @@ onMounted(async () => { store.fetchAll(); store.fetchUpcoming(); fetchSuggestion
 .upcoming__item + .upcoming__item { border-top: 1px solid var(--kf-divider); }
 .recurring-row { width: 100%; font: inherit; text-align: left; cursor: pointer; }
 div.recurring-row { cursor: default; }
+/* Narrow phones: the name needs the room more than the chevron does. */
+.recurring-row .kf-row__end { font-size: 0.95rem; }
+@media (max-width: 359px) {
+  .recurring-row { gap: 10px; }
+  .recurring-row .kf-row__end { font-size: 0.9rem; }
+  .recurring-row__chevron { display: none; }
+}
 </style>

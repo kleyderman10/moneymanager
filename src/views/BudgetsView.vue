@@ -20,7 +20,10 @@
       </v-col>
     </v-row>
     <v-dialog v-model="dialog" :fullscreen="isMobile" max-width="400">
-      <v-card :title="editing ? t('budgets.editBudget') : t('budgets.newBudget')" class="budget-form">
+      <v-card :title="editing ? t('budgets.editBudget') : t('budgets.newBudget')" class="budget-form kf-form-dialog">
+        <template #append>
+          <v-btn icon="mdi-close" variant="text" class="kf-dialog-close" :aria-label="t('common.close')" @click="dialog = false" />
+        </template>
         <v-card-text>
           <MoneyField v-model="form.amount" :label="t('budgets.limitAmount')" size="hero" required />
           <v-row dense>

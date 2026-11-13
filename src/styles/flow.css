@@ -120,7 +120,8 @@ html { background: var(--kf-bg-deep); }
 .kf-amount,
 .metric-card__value,
 .dashboard-hero__amount { font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-.kf-amount { font-weight: 700; letter-spacing: -0.02em; }
+/* Amounts never break in the middle of a number. */
+.kf-amount { font-weight: 700; letter-spacing: -0.02em; white-space: nowrap; }
 .kf-income, .text-green, .text-income { color: var(--kf-income) !important; }
 .kf-expense, .text-red, .text-expense { color: var(--kf-expense) !important; }
 .text-grey { color: var(--kf-text-secondary) !important; }
@@ -222,7 +223,20 @@ html { background: var(--kf-bg-deep); }
 }
 .kf-row + .kf-row { margin-top: 8px; }
 .kf-row__body { flex: 1 1 auto; min-width: 0; }
-.kf-row__title { overflow: hidden; font-size: 0.92rem; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+/* Names get a second line before being cut; the meta line under them stays on one. */
+.kf-row__title {
+  display: -webkit-box;
+  overflow: hidden;
+  white-space: normal;
+  overflow-wrap: break-word;
+  hyphens: auto;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  font-size: 0.92rem;
+  font-weight: 650;
+  line-height: 1.25;
+}
 .kf-row__meta { overflow: hidden; color: var(--kf-text-secondary); font-size: 0.76rem; text-overflow: ellipsis; white-space: nowrap; }
 .kf-row__end { flex: 0 0 auto; text-align: right; }
 
@@ -267,13 +281,17 @@ html { background: var(--kf-bg-deep); }
   color: var(--kf-text) !important;
   font-weight: 800;
 }
-.kf-topbar__title {
-  position: absolute;
-  left: 50%;
-  max-width: calc(100% - 150px);
-  transform: translateX(-50%);
+.kf-topbar .kf-topbar__title {
+  position: static;
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: none;
+  padding: 0 8px;
+  transform: none;
+  text-align: center;
   pointer-events: none;
 }
+.kf-topbar .kf-topbar__title + .v-spacer { display: none; }
 .kf-topbar__title span {
   display: block;
   overflow: hidden;
@@ -306,12 +324,6 @@ html { background: var(--kf-bg-deep); }
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
 
-/* Chat assistant launcher: secondary action, quieter than the voice button and the "+". */
-.v-btn.ai-fab {
-  border: 1px solid var(--kf-border) !important;
-  background: var(--kf-surface-elevated) !important;
-  color: var(--kf-primary) !important;
-}
 
 /* ---------- Authentication (login, register, recover) ---------- */
 .auth-shell { background: var(--kf-bg-deep) !important; }
@@ -411,7 +423,7 @@ html { background: var(--kf-bg-deep); }
   overflow: clip;
 }
 .auth-shell .auth-card .v-field { min-width: 0; }
-.auth-shell .auth-forgot-link { white-space: normal; height: auto; min-height: 32px; }
+.auth-shell .auth-forgot-link { white-space: normal; height: auto; min-height: 44px; font-size: 0.875rem !important; }
 
 @media (max-width: 959px) {
   .auth-shell .auth-card { padding: 26px 20px 30px; }

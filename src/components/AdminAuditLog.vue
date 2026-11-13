@@ -5,7 +5,19 @@
         <v-btn variant="text" @click="load(1)">{{ t('common.retry') }}</v-btn>
       </template>
     </v-alert>
-    <v-card>
+    <!-- Phones: one card per entry; four columns do not fit a 360px screen. -->
+    <div v-if="isMobile">
+      <div v-for="row in items" :key="row._id" class="kf-row audit-row">
+        <div class="kf-row__body">
+          <div class="kf-row__title">{{ actionLabel(row.action) }}</div>
+          <div class="kf-row__meta audit-row__meta">{{ row.admin?.email || '—' }}</div>
+          <div class="kf-row__meta audit-row__meta">{{ t('admin.audit.target') }}: {{ row.targetId || '—' }}</div>
+          <div class="kf-row__meta">{{ dateLong(row.createdAt, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) }}</div>
+        </div>
+      </div>
+      <v-card v-if="!loading && !items.length" class="pa-6 text-center text-medium-emphasis">{{ t('admin.audit.empty') }}</v-card>
+    </div>
+    <v-card v-else>
       <v-table>
         <thead>
           <tr>
@@ -35,13 +47,16 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useDisplay } from 'vuetify'
 import { adminAPI } from '@/api'
 import { useLocale } from '@/composables/useLocale'
 
 const { t, te } = useI18n()
 const { dateLong } = useLocale()
+const { mobile } = useDisplay()
+const isMobile = computed(() => mobile.value)
 
 const items = ref([])
 const page = ref(1)
@@ -67,3 +82,8 @@ const load = async (nextPage = 1) => {
 
 onMounted(() => load(1))
 </script>
+
+<style scoped>
+.audit-row { align-items: flex-start; }
+.audit-row__meta { white-space: normal; overflow-wrap: anywhere; }
+</style>

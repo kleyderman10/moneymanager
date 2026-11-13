@@ -119,7 +119,10 @@
     </v-row>
 
     <v-dialog v-model="dialog" :fullscreen="isMobile" max-width="620">
-      <v-card :title="editing ? t('credits.editCredit') : t('credits.registerCredit')" class="capture-form">
+      <v-card :title="editing ? t('credits.editCredit') : t('credits.registerCredit')" class="capture-form kf-form-dialog">
+        <template #append>
+          <v-btn icon="mdi-close" variant="text" class="kf-dialog-close" :aria-label="t('common.close')" @click="dialog = false" />
+        </template>
         <v-card-text>
           <div class="wizard-progress">
             <template v-for="(label, idx) in wizardSteps" :key="label">
@@ -196,7 +199,10 @@
     </v-dialog>
 
     <v-dialog v-model="paymentDialog" :fullscreen="isMobile" max-width="500">
-      <v-card :title="t('credits.registerPaymentFor', { name: paymentCredit?.name || '' })">
+      <v-card :title="t('credits.registerPaymentFor', { name: paymentCredit?.name || '' })" class="kf-form-dialog">
+        <template #append>
+          <v-btn icon="mdi-close" variant="text" class="kf-dialog-close" :aria-label="t('common.close')" @click="paymentDialog = false" />
+        </template>
         <v-card-text>
           <v-alert v-if="paymentCredit" type="info" variant="tonal" density="compact" class="mb-4">{{ t('credits.capitalBalance') }}: <strong>{{ money(paymentCredit.summary?.capitalBalance, paymentCredit.currency) }}</strong> · {{ t('credits.currentTotal') }}: <strong>{{ money(paymentCredit.summary?.totalBalance, paymentCredit.currency) }}</strong></v-alert>
           <v-text-field v-model.number="paymentForm.amount" :label="t('credits.amountPaid')" type="number" min="0" density="compact" prefix="$" required />

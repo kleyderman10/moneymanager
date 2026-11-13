@@ -17,7 +17,7 @@
     </v-card>
 
     <template v-else>
-      <button v-if="!billingStore.isReadOnly" type="button" class="goals-add mb-4" @click="openCreate">
+      <button v-if="!billingStore.isReadOnly" type="button" class="goals-add mb-4" data-tour="page-add" @click="openCreate">
         <v-icon>mdi-plus</v-icon>
         <span>{{ t('goals.addNewGoal') }}</span>
         <v-icon class="ml-auto" size="20">mdi-chevron-right</v-icon>
@@ -70,7 +70,10 @@
     </template>
 
     <v-dialog v-model="dialog" :fullscreen="isMobile" max-width="400">
-      <v-card :title="editing ? t('goals.editGoal') : t('goals.newGoal')" class="capture-form">
+      <v-card :title="editing ? t('goals.editGoal') : t('goals.newGoal')" class="capture-form kf-form-dialog">
+        <template #append>
+          <v-btn icon="mdi-close" variant="text" class="kf-dialog-close" :aria-label="t('common.close')" @click="dialog = false" />
+        </template>
         <v-card-text>
           <v-text-field v-model="form.name" :label="t('profile.name')" variant="outlined" density="compact" required class="mb-3" />
           <MoneyField v-model="form.targetAmount" :label="t('goals.targetAmount')" size="hero" required />
@@ -101,7 +104,9 @@
       @confirm="doDelete"
     />
 
-    <v-btn v-if="isMobile && !billingStore.isReadOnly" icon="mdi-plus" color="primary" size="x-large" class="finance-fab" :aria-label="t('goals.newGoal')" data-tour="page-add" @click="openCreate" />
+    <!-- With goals on screen the list opens with its own "add" row; the floating "+" would only
+         sit on top of each card's edit and delete buttons. -->
+    <v-btn v-if="isMobile && !billingStore.isReadOnly && !store.goals.length" icon="mdi-plus" color="primary" size="x-large" class="finance-fab" :aria-label="t('goals.newGoal')" data-tour="page-add" @click="openCreate" />
   </div>
 </template>
 
@@ -207,11 +212,17 @@ onMounted(() => store.fetchAll())
 }
 
 .goal-card__name {
+  display: -webkit-box;
   overflow: hidden;
+  white-space: normal;
+  overflow-wrap: break-word;
+  hyphens: auto;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
   font-size: 1.04rem;
   font-weight: 700;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.2;
 }
 
 .goal-card__date {

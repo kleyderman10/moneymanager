@@ -81,7 +81,7 @@
               @click:append-inner="showPassword = !showPassword"
             />
             <div class="text-right mb-2">
-              <v-btn variant="text" color="primary" size="x-small" class="auth-forgot-link px-0" to="/forgot-password">{{ t('auth.forgotPassword') }}</v-btn>
+              <v-btn variant="text" color="primary" size="small" class="auth-forgot-link px-0" to="/forgot-password">{{ t('auth.forgotPassword') }}</v-btn>
             </div>
 
             <v-btn type="submit" color="primary" block size="large" class="auth-primary-btn mt-2" append-icon="mdi-arrow-right" :loading="authStore.loading && !bioLoading">

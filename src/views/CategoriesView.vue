@@ -22,11 +22,11 @@
       <v-list-item
         v-for="cat in filteredCategories"
         :key="cat._id"
-        :title="cat.name"
         @click="!billingStore.isReadOnly && openEdit(cat)"
       >
+        <v-list-item-title class="kf-clamp-2">{{ cat.name }}</v-list-item-title>
         <template #prepend>
-          <v-avatar :color="cat.color" size="40">
+          <v-avatar :color="categoryMarkColor(cat)" size="40" class="category-avatar">
             <v-icon :icon="categoryIcon(cat)" />
           </v-avatar>
         </template>
@@ -42,7 +42,10 @@
     </v-list>
 
     <v-dialog v-model="dialog" :fullscreen="isMobile" max-width="400">
-      <v-card :title="editing ? t('categories.editCategory') : t('categories.newCategory')" class="capture-form">
+      <v-card :title="editing ? t('categories.editCategory') : t('categories.newCategory')" class="capture-form kf-form-dialog">
+        <template #append>
+          <v-btn icon="mdi-close" variant="text" class="kf-dialog-close" :aria-label="t('common.close')" @click="dialog = false" />
+        </template>
         <v-card-text>
           <label class="form-label">{{ t('transactions.type') }}</label>
           <div class="segmented-toggle mb-3">
@@ -96,6 +99,7 @@
 </template>
 
 <script setup>
+import { categoryMarkColor } from '@/constants/categoryColors'
 import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
 import { categoryIcon } from '@/utils/categoryIcon'
 const iconOptions = ['mdi-food-outline', 'mdi-car-outline', 'mdi-home-outline', 'mdi-movie-outline', 'mdi-lightning-bolt-outline', 'mdi-shopping-outline', 'mdi-heart-outline', 'mdi-cash-plus', 'mdi-shape-outline']
@@ -170,3 +174,8 @@ const doDelete = async () => {
 
 onMounted(() => store.fetchAll())
 </script>
+
+<style scoped>
+/* Dark glyph on the light palette colors keeps the category icon readable. */
+.category-avatar :deep(.v-icon) { color: #04222b; }
+</style>

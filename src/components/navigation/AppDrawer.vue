@@ -169,6 +169,11 @@ const pending = usePendingStore()
   line-height: 1.25;
 }
 
+.kf-drawer :deep(.v-navigation-drawer__content) {
+  scrollbar-width: thin;
+  scrollbar-color: var(--kf-border) transparent;
+}
+
 .kf-drawer :deep(.v-list-item .v-list-item__prepend .v-icon) {
   color: var(--kf-text-secondary);
   opacity: 1;

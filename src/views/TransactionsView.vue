@@ -131,7 +131,7 @@
           <span class="kf-amount" :class="item.type === 'income' ? 'kf-income' : 'kf-expense'">{{ item.type === 'income' ? '+' : '-' }}{{ money(value) }}</span>
         </template>
         <template #item.category="{ value }">
-          <v-chip size="small" :color="getCategoryColor(value).bg" :style="{ color: getCategoryColor(value).text }"><v-icon :icon="categoryIcon(value)" size="18" class="mr-1" />{{ value?.name }}</v-chip>
+          <v-chip size="small" class="tx-category-chip" :title="value?.name" :color="getCategoryColor(value).bg" :style="{ color: getCategoryColor(value).text }"><v-icon :icon="categoryIcon(value)" size="18" class="mr-1" /><span class="tx-category-chip__name">{{ value?.name }}</span></v-chip>
         </template>
         <template #item.wallet="{ value }">{{ value?.name || '—' }}</template>
         <template #item.actions="{ item }">
@@ -180,8 +180,8 @@
                 <v-icon :icon="categoryIcon(reg.category)" size="20" />
               </span>
             </template>
-            <v-list-item-title class="tx-mobile-row__title">{{ reg.description || reg.category?.name || t('transactions.noDescription') }}</v-list-item-title>
-            <v-list-item-subtitle>
+            <v-list-item-title class="tx-mobile-row__title kf-clamp-2">{{ reg.description || reg.category?.name || t('transactions.noDescription') }}</v-list-item-title>
+            <v-list-item-subtitle class="tx-mobile-row__meta">
               {{ reg.category?.name }}<span v-if="reg.wallet"> · {{ reg.wallet.name }}</span>
             </v-list-item-subtitle>
             <template #append>
@@ -211,23 +211,23 @@
         <v-card-text class="text-center">
           <p class="text-body-2 text-grey mb-4">{{ t('transactions.howToEnter') }}</p>
           <div class="d-flex ga-3 justify-center flex-wrap">
-            <v-card variant="outlined" class="pa-4 text-center" style="cursor: pointer; flex: 1 1 120px; min-width: 120px" hover @click="startScan">
+            <v-card variant="outlined" class="pa-4 text-center mode-card" style="cursor: pointer; flex: 1 1 96px; min-width: 96px" hover @click="startScan">
               <v-icon size="40" color="primary" class="mb-2">mdi-camera-document</v-icon>
               <div class="text-body-2 font-weight-bold">{{ t('transactions.scanDocument') }}</div>
               <div class="text-caption text-grey">{{ t('transactions.scanDocumentHint') }}</div>
             </v-card>
-            <v-card variant="outlined" class="pa-4 text-center" style="cursor: pointer; flex: 1 1 120px; min-width: 120px" hover @click="startStatement">
+            <v-card variant="outlined" class="pa-4 text-center mode-card" style="cursor: pointer; flex: 1 1 96px; min-width: 96px" hover @click="startStatement">
               <v-icon size="40" color="primary" class="mb-2">mdi-file-document-outline</v-icon>
-              <v-badge v-if="newBadge" :content="t('transactions.newBadge')" color="success" offset-x="-32" offset-y="6" />
+              <v-chip v-if="newBadge" size="x-small" color="success" variant="flat" class="mode-card__badge">{{ t('transactions.newBadge') }}</v-chip>
               <div class="text-body-2 font-weight-bold">{{ t('transactions.uploadStatement') }}</div>
               <div class="text-caption text-grey">{{ t('transactions.uploadStatementHint') }}</div>
             </v-card>
-            <v-card variant="outlined" class="pa-4 text-center" style="cursor: pointer; flex: 1 1 120px; min-width: 120px" hover @click="startPaste">
+            <v-card variant="outlined" class="pa-4 text-center mode-card" style="cursor: pointer; flex: 1 1 96px; min-width: 96px" hover @click="startPaste">
               <v-icon size="40" color="primary" class="mb-2">mdi-message-text-outline</v-icon>
               <div class="text-body-2 font-weight-bold">{{ t('transactions.pasteNotification') }}</div>
               <div class="text-caption text-grey">{{ t('transactions.pasteNotificationHint') }}</div>
             </v-card>
-            <v-card variant="outlined" class="pa-4 text-center" style="cursor: pointer; flex: 1 1 120px; min-width: 120px" hover @click="openManualCreate">
+            <v-card variant="outlined" class="pa-4 text-center mode-card" style="cursor: pointer; flex: 1 1 96px; min-width: 96px" hover @click="openManualCreate">
               <v-icon size="40" color="primary" class="mb-2">mdi-pencil-box</v-icon>
               <div class="text-body-2 font-weight-bold">{{ t('transactions.typeIn') }}</div>
               <div class="text-caption text-grey">{{ t('transactions.typeInHint') }}</div>
@@ -324,7 +324,10 @@
     </v-dialog>
 
     <v-dialog v-model="dialog" :fullscreen="isMobile" max-width="500">
-      <v-card :title="editing ? t('transactions.editTransaction') : t('transactions.newTransactionTitle')" class="capture-form">
+      <v-card :title="editing ? t('transactions.editTransaction') : t('transactions.newTransactionTitle')" class="capture-form kf-form-dialog">
+        <template #append>
+          <v-btn icon="mdi-close" variant="text" class="kf-dialog-close" :aria-label="t('common.close')" @click="dialog = false" />
+        </template>
         <v-card-text>
           <div class="tool-tiles">
             <AISuggestCategory
@@ -362,17 +365,8 @@
 
           <MoneyField v-model="form.amount" :label="t('wallets.amount')" size="hero" required />
 
-          <label class="form-label mt-2">{{ t('transactions.date') }}</label>
-          <div class="chip-row mb-2">
-            <button type="button" class="chip-option" :class="{ 'chip-option--active': !showDatePicker && isToday(form.date) }" @click="setDateToday">{{ t('common.today') }}</button>
-            <button type="button" class="chip-option" :class="{ 'chip-option--active': !showDatePicker && isYesterday(form.date) }" @click="setDateYesterday">{{ t('transactions.yesterday') }}</button>
-            <button type="button" class="chip-option" :class="{ 'chip-option--active': showDatePicker }" @click="showDatePicker = true">
-              <v-icon size="14">mdi-calendar</v-icon> {{ t('transactions.choose') }}
-            </button>
-          </div>
-          <v-text-field v-if="showDatePicker" v-model="form.date" type="date" variant="outlined" density="compact" required class="mb-2" />
 
-          <label class="form-label">{{ t('transactions.category') }}</label>
+          <label class="form-label mt-2">{{ t('transactions.category') }}</label>
           <div class="chip-row mb-2">
             <button
               v-for="cat in frequentCategories"
@@ -428,6 +422,16 @@
             density="compact"
             class="mt-2"
           />
+
+          <label class="form-label mt-3">{{ t('transactions.date') }}</label>
+          <div class="chip-row mb-2">
+            <button type="button" class="chip-option" :class="{ 'chip-option--active': !showDatePicker && isToday(form.date) }" @click="setDateToday">{{ t('common.today') }}</button>
+            <button type="button" class="chip-option" :class="{ 'chip-option--active': !showDatePicker && isYesterday(form.date) }" @click="setDateYesterday">{{ t('transactions.yesterday') }}</button>
+            <button type="button" class="chip-option" :class="{ 'chip-option--active': showDatePicker }" @click="showDatePicker = true">
+              <v-icon size="14">mdi-calendar</v-icon> {{ t('transactions.choose') }}
+            </button>
+          </div>
+          <v-text-field v-if="showDatePicker" v-model="form.date" type="date" variant="outlined" density="compact" required class="mb-2" />
 
           <v-btn v-if="!showTagsField" variant="text" size="small" color="primary" class="px-0 mt-1" prepend-icon="mdi-plus" @click="showTagsField = true">
             {{ t('transactions.tag') }}
@@ -756,7 +760,7 @@ const headers = computed(() => [
   { title: t('transactions.category'), key: 'category' },
   { title: t('transactions.description'), key: 'description' },
   { title: t('transactions.account'), key: 'wallet' },
-  { title: t('wallets.amount'), key: 'amount' },
+  { title: t('wallets.amount'), key: 'amount', nowrap: true },
   { title: '', key: 'actions', sortable: false, width: 112 },
 ])
 
@@ -1421,6 +1425,12 @@ onMounted(async () => {
   border-top: 1px solid var(--kf-divider);
 }
 
+/* A long category name must not set the width of the whole column: the amount and the row
+   actions need that room. The full name is in the tooltip. */
+:deep(.tx-category-chip) { max-width: 140px; }
+:deep(.tx-category-chip .v-chip__content) { min-width: 0; }
+:deep(.tx-category-chip__name) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 :deep(.tx-row--alt) {
   background: rgba(0, 229, 208, 0.025);
 }
@@ -1448,7 +1458,24 @@ onMounted(async () => {
   gap: 4px;
 }
 
+/* Entry-mode cards ("Escanear", "Importar", "Pegar", "Digitar"). */
+.mode-card { overflow-wrap: break-word; hyphens: auto; }
+.mode-card__badge { display: flex; width: fit-content; margin: 0 auto 4px; }
+@media (max-width: 359px) {
+  .mode-card { padding: 12px 6px !important; }
+  .mode-card .text-body-2 { font-size: 0.8rem !important; line-height: 1.2; }
+  .mode-card .text-caption { font-size: 0.7rem !important; line-height: 1.25; }
+}
+
 .tx-mobile-row__title {
   font-weight: 650;
+  line-height: 1.25;
+}
+
+.tx-mobile-row__meta {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 </style>

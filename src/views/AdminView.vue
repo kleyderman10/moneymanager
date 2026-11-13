@@ -116,8 +116,8 @@
               <v-avatar size="40" class="kf-avatar admin-avatar" :style="{ '--avatar-bg': avatarColor(user.name) }">{{ (user.name || '?').trim()[0]?.toUpperCase() }}</v-avatar>
               <div class="kf-row__body">
                 <div class="kf-row__title">{{ user.name }}</div>
-                <div class="kf-row__meta">{{ user.email }}</div>
-                <div class="kf-row__meta">{{ usageMeta(user) }}</div>
+                <div class="kf-row__meta admin-row__email">{{ user.email }}</div>
+                <div class="kf-row__meta admin-row__email">{{ usageMeta(user) }}</div>
               </div>
             </div>
             <div class="d-flex flex-wrap align-center ga-2 mt-2">
@@ -136,12 +136,9 @@
                 density="compact"
                 hide-details
                 :disabled="!canAdminister"
-                :label="user.isActive ? t('admin.active') : t('admin.inactive')"
+                :label="user.isActive ? t('admin.accountActive') : t('admin.accountInactive')"
                 @update:model-value="(value) => toggleUserStatus(user, value)"
               />
-              <v-btn v-if="canAdminister" size="small" variant="text" color="primary" @click="toggleUserRole(user)">
-                {{ user.role === 'admin' ? t('admin.removeAdmin') : t('admin.makeAdmin') }}
-              </v-btn>
               <v-menu>
                 <template #activator="{ props: menuProps }">
                   <v-btn v-bind="menuProps" icon="mdi-dots-vertical" size="small" variant="text" :aria-label="t('admin.actions')" />
@@ -151,6 +148,11 @@
                   <v-list-item prepend-icon="mdi-email-check-outline" :title="t('admin.support.resendVerification')" @click="askSupport(user, 'verification')" />
                   <template v-if="canAdminister">
                     <v-list-item prepend-icon="mdi-shield-off-outline" :title="t('admin.support.resetTwoFactor')" @click="askSupport(user, 'twoFactor')" />
+                    <v-list-item
+                      prepend-icon="mdi-crown-outline"
+                      :title="user.role === 'admin' ? t('admin.removeAdmin') : t('admin.makeAdmin')"
+                      @click="askSupport(user, 'role')"
+                    />
                     <v-list-item
                       v-if="user.role !== 'admin'"
                       prepend-icon="mdi-lifebuoy"
@@ -180,7 +182,7 @@
               <tr v-for="user in admin.users" :key="user._id">
                 <td>
                   <div class="font-weight-medium">{{ user.name }}</div>
-                  <div class="text-caption text-medium-emphasis">{{ user.email }}</div>
+                  <div class="text-caption text-medium-emphasis" :title="user.email">{{ user.email }}</div>
                   <div class="text-caption text-medium-emphasis">{{ usageMeta(user) }}</div>
                 </td>
                 <td>
@@ -201,19 +203,11 @@
                     density="compact"
                     hide-details
                     :disabled="!canAdminister"
-                    :label="user.isActive ? t('admin.active') : t('admin.inactive')"
+                    :label="user.isActive ? t('admin.accountActive') : t('admin.accountInactive')"
                     @update:model-value="(value) => toggleUserStatus(user, value)"
                   />
                 </td>
                 <td class="text-right">
-                  <v-btn
-                    v-if="canAdminister"
-                    size="small"
-                    variant="text"
-                    @click="toggleUserRole(user)"
-                  >
-                    {{ user.role === 'admin' ? t('admin.removeAdmin') : t('admin.makeAdmin') }}
-                  </v-btn>
                   <v-menu>
                     <template #activator="{ props: menuProps }">
                       <v-btn v-bind="menuProps" icon="mdi-dots-vertical" size="small" variant="text" :aria-label="t('admin.actions')" />
@@ -223,6 +217,11 @@
                       <v-list-item prepend-icon="mdi-email-check-outline" :title="t('admin.support.resendVerification')" @click="askSupport(user, 'verification')" />
                       <template v-if="canAdminister">
                         <v-list-item prepend-icon="mdi-shield-off-outline" :title="t('admin.support.resetTwoFactor')" @click="askSupport(user, 'twoFactor')" />
+                        <v-list-item
+                          prepend-icon="mdi-crown-outline"
+                          :title="user.role === 'admin' ? t('admin.removeAdmin') : t('admin.makeAdmin')"
+                          @click="askSupport(user, 'role')"
+                        />
                         <v-list-item
                           v-if="user.role !== 'admin'"
                           prepend-icon="mdi-lifebuoy"
@@ -475,7 +474,8 @@ const inactiveFilterOptions = computed(() => [
   { title: t('admin.inactiveDays', { n: 90 }), value: 90 },
 ])
 const usageMeta = (user) => {
-  const platform = t(`admin.stats.platform.${user.lastPlatform || 'unknown'}`)
+  const known = user.lastPlatform && user.lastPlatform !== 'unknown'
+  const platform = known ? t(`admin.stats.platform.${user.lastPlatform}`) : t('admin.unknownPlatform')
   const seen = user.lastActiveAt ? date(user.lastActiveAt) : t('admin.neverSeen')
   return `${platform}${user.lastAppVersion ? ` ${user.lastAppVersion}` : ''} · ${seen}`
 }
@@ -510,11 +510,14 @@ const toggleUserStatus = async (user, value) => {
   else snackbar.error(result.message)
 }
 
+// Granting or removing administrator rights always goes through the confirmation dialog
+// (askSupport(user, 'role')), which names the person affected.
 const toggleUserRole = async (user) => {
   const nextRole = user.role === 'admin' ? 'user' : 'admin'
   const result = await admin.setUserRole(user._id, nextRole)
   if (result.success) snackbar.success(nextRole === 'admin' ? t('admin.nowAdmin') : t('admin.adminRoleRemoved'))
   else snackbar.error(result.message)
+  return result.success
 }
 
 const canAdminister = computed(() => authStore.isAdmin)
@@ -527,6 +530,13 @@ const supportAction = ref('sessions')
 
 const supportCopy = computed(() => {
   const email = supportUser.value?.email
+  if (supportAction.value === 'role') {
+    const isAdmin = supportUser.value?.role === 'admin'
+    const name = supportUser.value?.name
+    return isAdmin
+      ? { title: t('admin.removeAdmin'), message: t('admin.support.removeAdminConfirm', { name, email }) }
+      : { title: t('admin.makeAdmin'), message: t('admin.support.makeAdminConfirm', { name, email }) }
+  }
   if (supportAction.value === 'sessions') return { title: t('admin.support.revokeSessions'), message: t('admin.support.revokeSessionsConfirm', { email }) }
   if (supportAction.value === 'verification') return { title: t('admin.support.resendVerification'), message: t('admin.support.resendVerificationConfirm', { email }) }
   return { title: t('admin.support.resetTwoFactor'), message: t('admin.support.resetTwoFactorConfirm', { email }) }
@@ -549,6 +559,11 @@ const runSupport = async () => {
   supportBusy.value = true
   try {
     const id = supportUser.value._id
+    if (supportAction.value === 'role') {
+      if (await toggleUserRole(supportUser.value)) supportDialog.value = false
+      supportBusy.value = false
+      return
+    }
     if (supportAction.value === 'sessions') await adminAPI.revokeUserSessions(id)
     else if (supportAction.value === 'verification') await adminAPI.resendUserVerification(id)
     else await adminAPI.resetUserTwoFactor(id)
@@ -608,11 +623,18 @@ onMounted(async () => {
 
 <style scoped>
 .admin-card__title { padding: 18px 18px 6px !important; }
-.status-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+/* Tiles share each row evenly, so seven states never leave one alone on the last line. */
+.status-grid { display: flex; flex-wrap: wrap; gap: 10px; }
+.status-grid > .status-tile { flex: 1 1 190px; }
+/* A long e-mail wraps on phones instead of hiding its domain. */
+.admin-row__email { white-space: normal; overflow-wrap: anywhere; }
 .status-tile { padding: 12px; border: 1px solid var(--kf-border-subtle); border-radius: var(--kf-radius-sm); background: rgba(4, 22, 31, 0.35); }
 .status-tile__label { color: var(--kf-text-secondary); font-size: 0.82rem; }
 .status-tile__count { font-size: 1.1rem; }
 .admin-row { display: block; }
+/* The label next to the account switch stays on one line in the users table. */
+:deep(.v-switch .v-label) { white-space: nowrap; }
+:deep(.v-switch .v-selection-control) { flex-wrap: nowrap; }
 .kf-avatar.admin-avatar { border: 0; background: var(--avatar-bg) !important; color: #fff !important; }
 .admin-row__main { display: flex; align-items: center; gap: 12px; }
 </style>

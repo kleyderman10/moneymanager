@@ -1,5 +1,12 @@
 <template>
-  <div class="kf-segmented" :class="{ 'kf-segmented--block': block }" role="radiogroup" :aria-label="label">
+  <div
+    ref="root"
+    class="kf-segmented"
+    :class="{ 'kf-segmented--block': block, 'kf-segmented--more-start': moreStart, 'kf-segmented--more-end': moreEnd }"
+    role="radiogroup"
+    :aria-label="label"
+    @scroll.passive="updateFades"
+  >
     <button
       v-for="option in options"
       :key="String(option.value)"
@@ -21,6 +28,10 @@
 
 <script setup>
 // Pill-style segmented control (Todos · Ingresos · Gastos, etc.) shared across screens.
+// When the options do not fit (six admin tabs on a phone) the pill scrolls sideways and keeps
+// the selected option in view; labels are never squeezed on top of each other.
+import { ref, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
+
 const props = defineProps({
   modelValue: { type: [String, Number, Boolean, null], default: null },
   options: { type: Array, required: true }, // [{ value, label, icon?, count? }]
@@ -28,6 +39,31 @@ const props = defineProps({
   block: { type: Boolean, default: false },
 })
 const emit = defineEmits(['update:modelValue'])
+
+const root = ref(null)
+const moreStart = ref(false)
+const moreEnd = ref(false)
+const updateFades = () => {
+  const box = root.value
+  if (!box) return
+  moreStart.value = box.scrollLeft > 4
+  moreEnd.value = box.scrollLeft + box.clientWidth < box.scrollWidth - 4
+}
+const revealActive = (behavior = 'smooth') => nextTick(() => {
+  const box = root.value
+  const active = box?.querySelector('.kf-segmented__option--active')
+  if (!box || !active || box.scrollWidth <= box.clientWidth) return
+  // Centers the option inside the pill only; the page itself must not scroll.
+  box.scrollTo({ left: active.offsetLeft - (box.clientWidth - active.offsetWidth) / 2, behavior })
+})
+watch(() => props.modelValue, () => revealActive())
+watch(() => props.options, () => nextTick(updateFades), { deep: true })
+onMounted(() => {
+  revealActive('auto')
+  nextTick(updateFades)
+  window.addEventListener('resize', updateFades)
+})
+onBeforeUnmount(() => window.removeEventListener('resize', updateFades))
 
 function onKeydown(event, option) {
   const keys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End']
@@ -44,11 +80,13 @@ function onKeydown(event, option) {
 
 <style scoped>
 .kf-segmented {
+  position: relative;
   display: inline-flex;
   max-width: 100%;
   gap: 4px;
   padding: 4px;
   overflow-x: auto;
+  overscroll-behavior-x: contain;
   border: 1px solid var(--kf-border-subtle);
   border-radius: var(--kf-radius-pill);
   background: rgba(4, 22, 31, 0.7);
@@ -59,15 +97,31 @@ function onKeydown(event, option) {
   display: none;
 }
 
+/* Hints that there are more options beyond the visible edge. */
+.kf-segmented--more-end {
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent);
+}
+
+.kf-segmented--more-start {
+  -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 36px), transparent);
+  mask-image: linear-gradient(to left, #000 calc(100% - 36px), transparent);
+}
+
+.kf-segmented--more-start.kf-segmented--more-end {
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 36px, #000 calc(100% - 36px), transparent);
+  mask-image: linear-gradient(to right, transparent, #000 36px, #000 calc(100% - 36px), transparent);
+}
+
 .kf-segmented--block {
   display: flex;
   width: 100%;
 }
 
+/* Options share the width when they fit and keep their own width when they do not. */
 .kf-segmented--block .kf-segmented__option {
-  flex: 1 1 0;
-  min-width: 0;
-  padding: 0 8px;
+  flex: 1 0 auto;
+  padding: 0 12px;
   font-size: 0.84rem;
 }
 

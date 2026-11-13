@@ -429,6 +429,18 @@ onMounted(async () => {
   letter-spacing: 0;
 }
 
+.subscription-features :deep(.v-list-item-title) {
+  overflow: visible;
+  white-space: normal;
+  text-overflow: clip;
+  line-height: 1.35;
+}
+
+.subscription-features :deep(.v-list-item) {
+  align-items: flex-start;
+  padding-block: 6px;
+}
+
 .subscription-features :deep(.v-list-item__prepend) {
   color: var(--finance-primary);
 }

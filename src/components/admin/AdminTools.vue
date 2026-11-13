@@ -153,7 +153,7 @@ const healthRows = computed(() => {
   if (!d) return []
   const on = (v) => (v ? t('admin.tools.on') : t('admin.tools.off'))
   return [
-    { label: t('admin.tools.hDb'), ok: d.database === 'connected', detail: d.database },
+    { label: t('admin.tools.hDb'), ok: d.database === 'connected', detail: d.database === 'connected' ? t('admin.tools.dbConnected') : t('admin.tools.dbDisconnected') },
     { label: t('admin.tools.hEmail'), ok: d.email.configured, detail: on(d.email.configured) },
     { label: t('admin.tools.hPush'), ok: Object.values(d.push || {}).some(Boolean), detail: Object.entries(d.push || {}).map(([k, v]) => `${k}: ${on(v)}`).join(' · ') },
     { label: t('admin.tools.hAi'), ok: d.ai.openai || d.ai.gemini || d.ai.ollama, detail: Object.entries(d.ai).map(([k, v]) => `${k}: ${on(v)}`).join(' · ') },

@@ -36,7 +36,7 @@
         <v-card>
           <v-card-title class="text-body-1 font-weight-bold">{{ t('admin.stats.growth') }}</v-card-title>
           <v-card-text>
-            <div class="chart-box"><Line v-if="growthData" :data="growthData" :options="lineOptions" /></div>
+            <div v-if="growthData" class="chart-box"><Line :data="growthData" :options="lineOptions" /></div>
             <EmptyHint v-if="!data.growth?.series?.length" :text="t('admin.stats.noData')" />
           </v-card-text>
         </v-card>
@@ -45,7 +45,7 @@
         <v-card>
           <v-card-title class="text-body-1 font-weight-bold">{{ t('admin.stats.activeUsers') }}</v-card-title>
           <v-card-text>
-            <div class="chart-box"><Bar v-if="activityData" :data="activityData" :options="barOptions" /></div>
+            <div v-if="activityData" class="chart-box"><Bar :data="activityData" :options="barOptions" /></div>
             <EmptyHint v-if="!data.activity?.series?.length" :text="t('admin.stats.noData')" />
           </v-card-text>
         </v-card>
@@ -74,7 +74,7 @@
         <v-card>
           <v-card-title class="text-body-1 font-weight-bold">{{ t('admin.stats.versions') }}</v-card-title>
           <v-card-text>
-            <div class="chart-box"><Bar v-if="versionsData" :data="versionsData" :options="horizontalOptions" /></div>
+            <div v-if="versionsData" class="chart-box" :style="{ height: barsHeight(data.versions.length) }"><Bar :data="versionsData" :options="horizontalOptions" /></div>
             <EmptyHint v-if="!data.versions?.length" :text="t('admin.stats.noVersions')" />
           </v-card-text>
         </v-card>
@@ -84,7 +84,8 @@
           <v-card-title class="text-body-1 font-weight-bold">{{ t('admin.stats.features') }}</v-card-title>
           <v-card-subtitle class="text-wrap">{{ t('admin.stats.featuresHint') }}</v-card-subtitle>
           <v-card-text>
-            <div class="chart-box"><Bar v-if="featuresData" :data="featuresData" :options="horizontalOptions" /></div>
+            <div v-if="featuresData" class="chart-box" :style="{ height: barsHeight(data.features.usage.length) }"><Bar :data="featuresData" :options="horizontalOptions" /></div>
+            <EmptyHint v-else :text="t('admin.stats.noData')" />
           </v-card-text>
         </v-card>
       </v-col>
@@ -119,19 +120,19 @@
       <v-card-title class="text-body-1 font-weight-bold">{{ t('admin.stats.retention') }}</v-card-title>
       <v-card-subtitle class="text-wrap">{{ t('admin.stats.retentionHint') }}</v-card-subtitle>
       <v-card-text>
-        <v-table density="compact">
+        <v-table density="compact" class="retention-table">
           <thead>
             <tr>
-              <th>{{ t('admin.stats.cohort') }}</th>
+              <th>{{ t(isMobile ? 'admin.stats.cohortShort' : 'admin.stats.cohort') }}</th>
               <th class="text-right">{{ t('admin.stats.cohortSize') }}</th>
-              <th class="text-right">{{ t('admin.stats.week1') }}</th>
-              <th class="text-right">{{ t('admin.stats.week2') }}</th>
-              <th class="text-right">{{ t('admin.stats.week4') }}</th>
+              <th class="text-right">{{ t(isMobile ? 'admin.stats.week1Short' : 'admin.stats.week1') }}</th>
+              <th class="text-right">{{ t(isMobile ? 'admin.stats.week2Short' : 'admin.stats.week2') }}</th>
+              <th class="text-right">{{ t(isMobile ? 'admin.stats.week4Short' : 'admin.stats.week4') }}</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="row in data.retention.cohorts" :key="row.cohort">
-              <td>{{ row.cohort }}</td>
+              <td>{{ periodLabel(row.cohort, !isMobile) }}</td>
               <td class="text-right">{{ row.size }}</td>
               <td v-for="key in ['week1', 'week2', 'week4']" :key="key" class="text-right">
                 <span v-if="row[key] === null" class="text-medium-emphasis">—</span>
@@ -160,7 +161,7 @@
         <v-card>
           <v-card-title class="text-body-1 font-weight-bold">{{ t('admin.stats.revenue') }}</v-card-title>
           <v-card-text v-if="data.revenue">
-            <div class="chart-box"><Bar v-if="revenueData" :data="revenueData" :options="barOptions" /></div>
+            <div v-if="revenueData" class="chart-box"><Bar :data="revenueData" :options="barOptions" /></div>
             <div class="funnel-row mt-2"><span>{{ t('admin.stats.mrr') }}</span><strong>{{ mrrLabel }}</strong></div>
             <div class="funnel-row"><span>{{ t('admin.stats.payingUsers') }}</span><strong>{{ data.revenue.payingUsers }} ({{ data.revenue.conversionRate }}%)</strong></div>
             <div class="funnel-row"><span>{{ t('admin.stats.canceled') }}</span><strong>{{ data.revenue.canceled }}</strong></div>
@@ -188,12 +189,31 @@ import KpiCard from '@/components/finance/KpiCard.vue'
 ChartJS.register(LineElement, PointElement, BarElement, ArcElement, CategoryScale, LinearScale, Tooltip, Legend, Filler)
 
 const { t } = useI18n()
-const { money } = useLocale()
+const { money, locale } = useLocale()
+
+// The API names periods as 2026-11-13 (day or week start) or 2026-11 (month). Shown the way
+// the rest of the app writes dates.
+const periodLabel = (period, withYear = false) => {
+  const text = String(period ?? '')
+  const day = text.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  const month = text.match(/^(\d{4})-(\d{2})$/)
+  if (!day && !month) return text
+  const [, y, m, d] = day || [...month, '01']
+  const value = new Date(Date.UTC(Number(y), Number(m) - 1, Number(d)))
+  const options = day
+    ? { day: 'numeric', month: 'short', ...(withYear ? { year: 'numeric' } : {}), timeZone: 'UTC' }
+    : { month: 'short', year: 'numeric', timeZone: 'UTC' }
+  return new Intl.DateTimeFormat(locale.value, options).format(value)
+}
+
+// Horizontal bar charts grow with their rows, so one row is not a wall of color.
+const barsHeight = (rows) => `${Math.min(240, Math.max(96, rows * 34 + 40))}px`
 const { mobile } = useDisplay()
 const isMobile = computed(() => mobile.value)
 const isAdmin = computed(() => useAuthStore().isAdmin)
 
-const PLATFORM_COLORS = { android: '#3DDC84', ios: '#9AA4B2', pwa: '#7b5bd6', web: '#1f8fa8', unknown: '#5b6270' }
+// Same hues as the rest of the app (teal, gold, sky); grey only for "no data".
+const PLATFORM_COLORS = { android: '#3DDC84', ios: '#5CC8FF', pwa: '#F4B860', web: '#22D3C5', unknown: '#5b6270' }
 const platformLabel = (key) => t(`admin.stats.platform.${key}`)
 
 const EmptyHint = (props) => h('div', { class: 'text-center text-caption text-medium-emphasis py-2' }, props.text)
@@ -275,7 +295,7 @@ const growthData = computed(() => {
   const series = data.value.growth?.series
   if (!series?.length) return null
   return {
-    labels: series.map((r) => r.period),
+    labels: series.map((r) => periodLabel(r.period)),
     datasets: [
       { label: t('admin.stats.signups'), data: series.map((r) => r.signups), borderColor: '#22D3C5', backgroundColor: 'rgba(34, 211, 197, 0.15)', fill: true, tension: 0.3, pointRadius: 2 },
       { label: t('admin.stats.cumulative'), data: series.map((r) => r.total), borderColor: '#D5A94E', tension: 0.3, pointRadius: 0, borderDash: [6, 4] },
@@ -285,14 +305,14 @@ const growthData = computed(() => {
 const activityData = computed(() => {
   const series = data.value.activity?.series
   if (!series?.length) return null
-  return { labels: series.map((r) => r.period), datasets: [{ data: series.map((r) => r.activeUsers), backgroundColor: '#22D3C5', borderRadius: 4 }] }
+  return { labels: series.map((r) => periodLabel(r.period)), datasets: [{ data: series.map((r) => r.activeUsers), backgroundColor: '#22D3C5', borderRadius: 4, maxBarThickness: 36 }] }
 })
 const versionsData = computed(() => {
   const rows = data.value.versions
   if (!rows?.length) return null
   return {
     labels: rows.map((r) => `${platformLabel(r.platform)} ${r.version}`),
-    datasets: [{ data: rows.map((r) => r.users), backgroundColor: rows.map((r) => PLATFORM_COLORS[r.platform] || PLATFORM_COLORS.unknown), borderRadius: 4 }],
+    datasets: [{ data: rows.map((r) => r.users), backgroundColor: rows.map((r) => PLATFORM_COLORS[r.platform] || PLATFORM_COLORS.unknown), borderRadius: 4, maxBarThickness: 22 }],
   }
 })
 const featuresData = computed(() => {
@@ -300,7 +320,7 @@ const featuresData = computed(() => {
   if (!rows?.length) return null
   return {
     labels: rows.map((r) => t(`admin.stats.feature.${r.feature}`)),
-    datasets: [{ data: rows.map((r) => r.users), backgroundColor: '#7b5bd6', borderRadius: 4 }],
+    datasets: [{ data: rows.map((r) => r.users), backgroundColor: '#5CC8FF', borderRadius: 4, maxBarThickness: 22 }],
   }
 })
 const adoptionRows = computed(() => {
@@ -311,7 +331,7 @@ const adoptionRows = computed(() => {
 const revenueData = computed(() => {
   const series = data.value.revenue?.series
   if (!series?.length) return null
-  return { labels: series.map((r) => `${r.period} ${r.currency}`), datasets: [{ data: series.map((r) => r.amount), backgroundColor: '#D5A94E', borderRadius: 4 }] }
+  return { labels: series.map((r) => `${periodLabel(r.period)} ${r.currency}`), datasets: [{ data: series.map((r) => r.amount), backgroundColor: '#D5A94E', borderRadius: 4, maxBarThickness: 36 }] }
 })
 const mrrLabel = computed(() => {
   const mrr = data.value.revenue?.mrr || {}
@@ -322,6 +342,26 @@ const mrrLabel = computed(() => {
 
 <style scoped>
 .chart-box { position: relative; height: 240px; }
+/* Cards of the same row end at the same height. */
+[class*="v-col-"] > .v-card { height: 100%; }
+
+/* Retention on phones: the signup week stays in view while the weeks scroll under it, and a
+   fade on the right shows there is more. */
+.retention-table :deep(th), .retention-table :deep(td) { white-space: nowrap; }
+@media (max-width: 599px) {
+  .retention-table :deep(th), .retention-table :deep(td) { padding: 0 8px !important; font-size: 0.8rem; }
+  .retention-table :deep(th:first-child), .retention-table :deep(td:first-child) {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: var(--kf-surface-elevated, #0d3440);
+  }
+  .retention-table :deep(.v-table__wrapper) {
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+    mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+  }
+  .heat { min-width: 40px; padding: 2px 6px; }
+}
 .funnel-row { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border-bottom: 1px solid rgba(128, 138, 150, 0.15); font-size: 0.9rem; }
 .heat { display: inline-block; min-width: 52px; padding: 2px 8px; border-radius: 6px; background: rgba(34, 211, 197, calc(var(--heat) * 0.55 + 0.05)); }
 :deep(.platform-donut) { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }

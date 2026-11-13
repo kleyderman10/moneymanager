@@ -21,7 +21,7 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Doughnut } from 'vue-chartjs'
 import { Chart as ChartJS, ArcElement, Tooltip } from 'chart.js'
-import { categoryMarkColor } from '@/constants/categoryColors'
+import { distinctCategoryColors } from '@/constants/categoryColors'
 import { useLocale } from '@/composables/useLocale'
 
 ChartJS.register(ArcElement, Tooltip)
@@ -33,12 +33,14 @@ const props = defineProps({
 const { t } = useI18n()
 const { money } = useLocale()
 
-const items = computed(() => props.categories.map((cat) => ({
+const colors = computed(() => distinctCategoryColors(props.categories.map((cat) => cat.category)))
+
+const items = computed(() => props.categories.map((cat, index) => ({
   key: cat.category?._id || cat.category?.name || Math.random(),
   name: cat.category?.name || t('categoryDonut.noCategory'),
   count: cat.count,
   amountLabel: money(cat.total || 0),
-  color: categoryMarkColor(cat.category),
+  color: colors.value[index],
 })))
 
 const chartData = computed(() => ({
@@ -107,12 +109,18 @@ const chartOptions = computed(() => ({
 }
 
 .category-donut__name {
+  display: -webkit-box;
+  overflow: hidden;
+  white-space: normal;
+  overflow-wrap: break-word;
+  hyphens: auto;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
   color: var(--finance-ink);
   font-size: 0.84rem;
   font-weight: 650;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  line-height: 1.25;
 }
 
 .category-donut__count {

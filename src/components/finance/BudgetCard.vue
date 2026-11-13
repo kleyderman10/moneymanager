@@ -70,11 +70,17 @@ const color = computed(() => props.status?.exceeded ? 'error' : props.status?.pe
 }
 
 .budget-card__name {
+  display: -webkit-box;
   overflow: hidden;
+  white-space: normal;
+  overflow-wrap: break-word;
+  hyphens: auto;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
   font-size: 1.08rem;
   font-weight: 700;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.2;
 }
 
 .budget-card__period {

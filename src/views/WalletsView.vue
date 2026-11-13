@@ -45,7 +45,7 @@
             </v-avatar>
             <span v-else class="kf-icon-tile kf-icon-tile--lg"><v-icon :color="walletColors[wallet.type]">{{ walletIcons[wallet.type] }}</v-icon></span>
             <div class="min-w-0">
-              <div class="text-truncate">{{ wallet.name }}</div>
+              <div class="kf-clamp-2 wallet-card__name">{{ wallet.name }}</div>
               <div class="text-caption text-medium-emphasis text-truncate">{{ wallet.institution?.name || wallet.institutionName || walletLabels[wallet.accountKind] || walletLabels[wallet.type] }}</div>
             </div>
           </v-card-title>
@@ -90,26 +90,31 @@
               </div>
             </template>
           </v-card-text>
-          <v-card-actions>
+          <v-card-actions class="wallet-card__actions">
             <v-btn v-if="wallet.type === 'credit'" size="small" variant="text" prepend-icon="mdi-format-list-bulleted" @click="openStatement(wallet)">{{ t('wallets.cardMovements') }}</v-btn>
             <v-btn v-else size="small" variant="text" prepend-icon="mdi-format-list-bulleted" @click="openMovements(wallet)">{{ t('wallets.movements.button') }}</v-btn>
-            <v-btn v-if="!billingStore.isReadOnly && wallet.type === 'credit'" size="small" variant="tonal" color="primary" prepend-icon="mdi-credit-card-check-outline" @click="openPayCard(wallet)">{{ t('wallets.payCard') }}</v-btn>
+            <v-btn v-if="!billingStore.isReadOnly && wallet.type === 'credit'" size="small" variant="tonal" color="primary" class="wallet-card__pay" prepend-icon="mdi-credit-card-check-outline" @click="openPayCard(wallet)">{{ t('wallets.payCard') }}</v-btn>
             <v-btn v-if="!billingStore.isReadOnly" size="small" variant="text" prepend-icon="mdi-swap-horizontal" data-tour="wallets-transfer" @click="openTransfer(wallet)">{{ t('wallets.transfer') }}</v-btn>
-            <v-spacer />
-            <v-btn v-if="!billingStore.isReadOnly" size="small" variant="text" icon="mdi-pencil-outline" :aria-label="t('common.edit')" @click="openEdit(wallet)" />
-            <v-btn v-if="!billingStore.isReadOnly" size="small" variant="text" icon="mdi-delete-outline" color="error" :aria-label="t('common.delete')" @click="confirmDelete(wallet)" />
+            <!-- Edit and delete travel together: if they do not fit, both move to the next line. -->
+            <div v-if="!billingStore.isReadOnly" class="wallet-card__manage">
+              <v-btn size="small" variant="text" icon="mdi-pencil-outline" :aria-label="t('common.edit')" @click="openEdit(wallet)" />
+              <v-btn size="small" variant="text" icon="mdi-delete-outline" color="error" :aria-label="t('common.delete')" @click="confirmDelete(wallet)" />
+            </div>
           </v-card-actions>
         </v-card>
       </v-col>
     </v-row>
 
     <v-dialog v-model="dialog" :fullscreen="isMobile" max-width="440">
-      <v-card :title="editing ? t('wallets.editAccount') : t('wallets.newAccount')" class="capture-form">
+      <v-card :title="editing ? t('wallets.editAccount') : t('wallets.newAccount')" class="capture-form kf-form-dialog">
+        <template #append>
+          <v-btn icon="mdi-close" variant="text" class="kf-dialog-close" :aria-label="t('common.close')" @click="dialog = false" />
+        </template>
         <v-card-text>
           <v-text-field v-model="form.name" :label="t('profile.name')" variant="outlined" density="compact" required class="mb-3" />
 
           <label class="form-label">{{ t('wallets.accountType') }}</label>
-          <div class="type-card-picker mb-2">
+          <div class="type-card-picker type-card-picker--three mb-2">
             <button
               v-for="opt in typeCardOptions"
               :key="opt.value"
@@ -173,7 +178,10 @@
     </v-dialog>
 
     <v-dialog v-model="transferDialog" :fullscreen="isMobile" max-width="400">
-      <v-card :title="t('wallets.transfer')">
+      <v-card :title="t('wallets.transfer')" class="kf-form-dialog">
+        <template #append>
+          <v-btn icon="mdi-close" variant="text" class="kf-dialog-close" :aria-label="t('common.close')" @click="transferDialog = false" />
+        </template>
         <v-card-text>
           <NativeSelectField v-model="transferForm.toWalletId" :items="transferTargets" item-title="name" item-value="_id" :label="t('wallets.destinationAccount')" :placeholder="t('wallets.selectAccount')" :error="transferAttempted && !transferForm.toWalletId" required />
           <v-text-field v-model.number="transferForm.amount" :label="t('wallets.amount')" type="number" density="compact" required />
@@ -235,7 +243,10 @@
     </v-dialog>
 
     <v-dialog v-model="payDialog" :fullscreen="isMobile" max-width="520">
-      <v-card :title="t('wallets.payCardTitle', { name: payCard?.name || '' })">
+      <v-card :title="t('wallets.payCardTitle', { name: payCard?.name || '' })" class="kf-form-dialog">
+        <template #append>
+          <v-btn icon="mdi-close" variant="text" class="kf-dialog-close" :aria-label="t('common.close')" @click="payDialog = false" />
+        </template>
         <v-card-text>
           <div v-if="payLoading" class="text-center pa-6"><v-progress-circular indeterminate /></div>
           <template v-else-if="payPlan">
@@ -579,7 +590,7 @@ onMounted(async () => {
 .net-worth-card__amount {
   margin: 6px 0 18px;
   color: var(--kf-text);
-  font-size: clamp(1.9rem, 4vw, 2.6rem);
+  font-size: clamp(1.45rem, 8.2vw, 2.6rem);
   letter-spacing: -0.03em;
 }
 
@@ -602,6 +613,28 @@ onMounted(async () => {
 .net-worth-card__alert {
   color: var(--kf-text) !important;
   background: var(--kf-tint-danger) !important;
+}
+
+/* Actions drop to a second line instead of pushing edit/delete past the card edge. */
+.wallet-card__actions {
+  flex-wrap: wrap;
+  row-gap: 4px;
+}
+
+.wallet-card__manage {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+/* Phones: paying the card is the action that matters, so it gets its own full-width row. */
+@media (max-width: 599px) {
+  .wallet-card__pay {
+    order: -1;
+    flex: 1 0 100%;
+    min-height: 44px;
+    margin: 0 0 4px !important;
+  }
 }
 
 .wallet-card__title {

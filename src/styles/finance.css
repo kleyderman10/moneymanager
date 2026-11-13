@@ -390,6 +390,12 @@ body {
   text-transform: uppercase;
 }
 
+/* Page titles wrap between words and never touch the screen edge on narrow phones. */
+.page-intro h1 {
+  overflow-wrap: break-word;
+  text-wrap: balance;
+}
+
 .page-intro__subtitle {
   max-width: 640px;
   margin-top: 4px;
@@ -633,15 +639,86 @@ body {
   border-radius: 17px !important;
 }
 
-.ai-fab {
-  width: 48px !important;
-  height: 48px !important;
-  min-width: 0 !important;
-  border: 1px solid var(--kf-border) !important;
-  border-radius: 16px !important;
-  background: var(--kf-surface-elevated) !important;
-  box-shadow: var(--kf-shadow) !important;
-  color: var(--kf-primary) !important;
+/* The "+" gets out of the way while the user scrolls down to read, and while the side menu is
+   open; it comes back on the first scroll up (see MainLayout). */
+.finance-fab {
+  transition: transform 0.22s ease, opacity 0.22s ease;
+}
+
+.kf-fab-away .finance-fab {
+  transform: translateY(calc(100% + 120px));
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ---------- Form dialogs ---------- */
+/* The "x" is for phones, where the dialog covers the screen and there is nothing to tap
+   outside of it. On desktop the dialog keeps Cancel and click-outside. */
+.kf-dialog-close {
+  display: none !important;
+}
+
+.v-dialog--fullscreen .kf-dialog-close {
+  display: inline-flex !important;
+  margin-right: -8px;
+}
+
+/* Full-screen forms: title and save bar stay in place, only the fields scroll. */
+.v-dialog--fullscreen > .v-overlay__content > .kf-form-dialog {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.v-dialog--fullscreen > .v-overlay__content > .kf-form-dialog > .v-card-item {
+  flex: none;
+  padding-top: calc(12px + var(--safe-top, 0px));
+  border-bottom: 1px solid var(--kf-border-subtle);
+}
+
+.v-dialog--fullscreen > .v-overlay__content > .kf-form-dialog > .v-card-item .v-card-title {
+  white-space: normal;
+}
+
+.v-dialog--fullscreen > .v-overlay__content > .kf-form-dialog > .v-card-text {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-top: 16px;
+}
+
+.v-dialog--fullscreen > .v-overlay__content > .kf-form-dialog > .v-card-actions {
+  flex: none;
+  padding-bottom: calc(14px + var(--safe-bottom, 0px)) !important;
+  border-top: 1px solid var(--kf-border-subtle);
+}
+
+/* Row actions on touch screens: a full 44px target each, so edit and delete are not hit by
+   accident. */
+@media (pointer: coarse) {
+  .v-btn--icon.v-btn--size-small {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
+/* Lets a flex child shrink below its content so long names truncate instead of overflowing. */
+.min-w-0 {
+  min-width: 0;
+}
+
+/* Names that deserve a second line before being cut (accounts, movements, categories).
+   The doubled selector also wins over Vuetify's single-line list titles. */
+.kf-clamp-2,
+.v-list-item-title.kf-clamp-2 {
+  display: -webkit-box;
+  overflow: hidden;
+  white-space: normal;
+  overflow-wrap: break-word;
+  hyphens: auto;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
 }
 
 .chat-drawer {
@@ -1120,6 +1197,11 @@ body {
   gap: 10px;
 }
 
+/* Three options fill the row at every width (no empty fourth column, no orphan). */
+.type-card-picker.type-card-picker--three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .type-card {
   display: flex;
   flex-direction: column;
@@ -1198,9 +1280,25 @@ body {
     gap: 8px;
   }
 
+  /* The three shortcuts are one compact row: the form's own fields come first. */
   .tool-tile {
-    min-height: 70px;
-    padding: 10px 4px;
+    flex-direction: row;
+    gap: 6px;
+    min-height: 48px;
+    padding: 6px 8px;
+  }
+
+  .tool-tile__label {
+    text-align: left;
+    line-height: 1.15;
+  }
+
+  .tool-tiles__hint {
+    display: none;
+  }
+
+  .form-divider {
+    margin: 14px 0 12px;
   }
 
   .type-card-picker {
