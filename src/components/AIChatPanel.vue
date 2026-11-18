@@ -10,6 +10,9 @@
     >
       <section class="ai-chat">
         <header class="ai-chat__header">
+          <button type="button" class="ai-chat__back" :aria-label="t('aiChat.close')" @click="chatStore.close">
+            <v-icon size="26">mdi-arrow-left</v-icon>
+          </button>
           <span class="ai-chat__logo"><img :src="symbol" alt="" /></span>
           <div class="ai-chat__titles">
             <h2>{{ t('aiChat.title') }}</h2>
@@ -24,9 +27,6 @@
           >
             <v-icon size="22">mdi-delete-outline</v-icon>
           </button>
-          <button type="button" class="ai-chat__icon-btn" :aria-label="t('aiChat.close')" @click="chatStore.close">
-            <v-icon size="22">mdi-close</v-icon>
-          </button>
         </header>
 
         <div ref="msgContainer" class="ai-chat__messages" @scroll.passive="onScroll">
@@ -34,6 +34,8 @@
             <v-icon size="22" color="primary">mdi-information-outline</v-icon>
             <span>{{ t('aiChat.intro') }}</span>
           </div>
+
+          <div v-if="chatStore.messages.length" class="ai-day">{{ t('common.today') }}</div>
 
           <div v-if="!chatStore.messages.length && !chatStore.loading" class="ai-empty">
             <span class="ai-empty__logo"><img :src="symbol" alt="" /></span>
@@ -220,16 +222,30 @@ watch(() => chatStore.visible, async (v) => {
   background: rgba(7, 32, 44, 0.78);
   border-bottom: 1px solid rgba(0, 229, 208, 0.12);
 }
+.ai-chat__back {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  margin-left: -6px;
+  display: grid;
+  place-items: center;
+  color: var(--kf-text);
+  background: transparent;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+}
+.ai-chat__back:focus-visible { outline: 2px solid var(--kf-primary); outline-offset: 2px; }
 .ai-chat__logo {
   flex: none;
-  width: 48px;
-  height: 48px;
+  width: 44px;
+  height: 44px;
   display: grid;
   place-items: center;
 }
 .ai-chat__logo img { width: 40px; height: 40px; object-fit: contain; }
 .ai-chat__titles { flex: 1; min-width: 0; margin-left: 4px; }
-.ai-chat__titles h2 { font-size: 1.15rem; font-weight: 700; line-height: 1.25; margin: 0; }
+.ai-chat__titles h2 { font-size: 1.2rem; font-weight: 700; line-height: 1.25; margin: 0; }
 .ai-chat__titles p { margin: 2px 0 0; font-size: 0.85rem; color: var(--kf-text-secondary); }
 .ai-chat__icon-btn {
   flex: none;
@@ -276,12 +292,20 @@ watch(() => chatStore.visible, async (v) => {
   border: 1px solid rgba(34, 211, 197, 0.14);
   border-radius: 18px;
 }
+.ai-day {
+  align-self: center;
+  padding: 4px 14px;
+  font-size: 0.78rem;
+  color: var(--kf-text-secondary);
+  background: rgba(7, 32, 44, 0.75);
+  border-radius: 999px;
+}
 .ai-row { display: flex; animation: ai-in 180ms var(--kf-ease); }
 .ai-row--user { justify-content: flex-end; }
 @keyframes ai-in { from { opacity: 0; transform: translateY(6px); } }
 
 .ai-user {
-  max-width: 85%;
+  max-width: 82%;
   padding: 12px 16px 8px;
   background: linear-gradient(135deg, rgba(0, 150, 160, 0.26), rgba(12, 70, 80, 0.75));
   border: 1px solid rgba(0, 229, 208, 0.45);

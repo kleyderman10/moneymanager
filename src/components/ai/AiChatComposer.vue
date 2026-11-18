@@ -67,9 +67,12 @@ const onEnter = (e) => {
   display: flex;
   align-items: flex-end;
   gap: 10px;
-  padding: 12px 14px calc(12px + var(--safe-bottom, 0px));
-  background: rgba(7, 32, 44, 0.96);
-  border-top: 1px solid rgba(34, 211, 197, 0.12);
+  margin: 0 12px calc(10px + var(--safe-bottom, 0px));
+  padding: 6px 6px 6px 8px;
+  background: rgba(10, 42, 55, 0.96);
+  border: 1px solid rgba(34, 211, 197, 0.28);
+  border-radius: 30px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
 }
 .ai-composer__input {
   flex: 1;
@@ -77,23 +80,21 @@ const onEnter = (e) => {
   min-height: 48px;
   max-height: 132px;
   resize: none;
-  padding: 13px 18px;
+  padding: 13px 12px;
   font: inherit;
   font-size: 16px; /* avoids iOS zoom on focus */
   line-height: 22px;
   color: var(--kf-text);
-  background: rgba(20, 60, 73, 0.68);
-  border: 1px solid rgba(34, 211, 197, 0.18);
-  border-radius: 24px;
+  background: transparent;
+  border: 0;
   outline: none;
-  transition: border-color var(--kf-motion) var(--kf-ease);
 }
 .ai-composer__input::placeholder { color: var(--kf-text-secondary); }
-.ai-composer__input:focus { border-color: var(--kf-primary); }
+.ai-composer:focus-within { border-color: var(--kf-primary); }
 .ai-composer__send {
   flex: none;
-  width: 52px;
-  height: 52px;
+  width: 48px;
+  height: 48px;
   border: 0;
   border-radius: 50%;
   display: grid;

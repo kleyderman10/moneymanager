@@ -181,6 +181,7 @@
       <v-card-text>
         <template v-if="canSpeak">
         <NativeSelectField
+          v-if="!isNative"
           :model-value="activeVoiceURI"
           :items="voiceOptions"
           :label="t('assistant.voiceChoose')"
@@ -256,6 +257,7 @@ import { useI18n } from 'vue-i18n'
 import { useRouter, useRoute } from 'vue-router'
 import { useDisplay } from 'vuetify'
 import { Capacitor } from '@capacitor/core'
+import { TextToSpeech } from '@capacitor-community/text-to-speech'
 import { useAssistantStore, ROUTE_PATHS } from '@/stores/assistant'
 import { useWakeWordStore } from '@/stores/wakeword'
 import { usePushStore } from '@/stores/push'
@@ -351,7 +353,6 @@ const listenAgain = async () => {
   if (!continuous.value || !viaVoice.value || !assistant.visible || !isSupported.value) return
   if (listening.value || assistant.state === 'thinking' || result.value?.type === 'error') return
   // Without speech synthesis (native app) give the user a moment to read the reply first.
-  if (Capacitor.isNativePlatform() && !availableVoicesFor().length) await new Promise((resolve) => setTimeout(resolve, 700))
   if (!assistant.visible || listening.value) return
   assistant.state = 'listening'
   start()
@@ -406,16 +407,39 @@ const speaking = ref(false)
 const voicePrefs = ref(readPrefs())
 const speechLanguage = computed(() => (locale.value === 'en' ? 'en' : 'es'))
 let speechToken = 0
+// The WebView has no speechSynthesis voices on Android (and an unreliable one on iOS): native TTS instead.
+const isNative = Capacitor.isNativePlatform()
+
+const speakNative = async (text) => {
+  const sentences = splitSentences(humanizeForSpeech(text, speechLanguage.value))
+  if (!sentences.length) return
+  const token = ++speechToken
+  const lang = speechLanguage.value === 'en' ? 'en-US' : 'es-CO'
+  speaking.value = true
+  const beat = setInterval(() => { pulse.value += 1 }, 180)
+  try {
+    for (const sentence of sentences) {
+      if (token !== speechToken) return
+      await TextToSpeech.speak({ text: sentence, lang, rate: voicePrefs.value.rate, volume: 1, category: 'playback', queueStrategy: 1 }).catch(() => {})
+    }
+  } finally {
+    clearInterval(beat)
+    if (token === speechToken) speaking.value = false
+  }
+}
 
 const cancelSpeech = () => {
   speechToken += 1
-  if ('speechSynthesis' in window) window.speechSynthesis.cancel()
+  if (isNative) TextToSpeech.stop().catch(() => {})
+  else if ('speechSynthesis' in window) window.speechSynthesis.cancel()
   speaking.value = false
 }
 
 // Speaks sentence by sentence with the best voice the device has; resolves when finished or cancelled.
 const speak = async (text) => {
-  if (!text || !('speechSynthesis' in window)) return
+  if (!text) return
+  if (isNative) return speakNative(text)
+  if (!('speechSynthesis' in window)) return
   await whenVoicesReady()
   if (!availableVoicesFor().length) return
   const sentences = splitSentences(humanizeForSpeech(text, speechLanguage.value))
@@ -445,7 +469,7 @@ const speak = async (text) => {
 // Voice settings (menu in the header).
 const availableVoices = ref([])
 const availableVoicesFor = () => voicesFor(speechLanguage.value)
-const canSpeak = computed(() => availableVoices.value.length > 0)
+const canSpeak = computed(() => isNative || availableVoices.value.length > 0)
 const voiceOptions = computed(() => availableVoices.value.map((voice) => ({ title: `${voice.name} (${voice.lang})`, value: voice.voiceURI })))
 const activeVoiceURI = computed(() => voicePrefs.value.voiceURI || pickVoice(speechLanguage.value)?.voiceURI || null)
 const loadVoices = async () => {
@@ -615,7 +639,7 @@ const markGreeted = () => {
 // show the greeting as text and the mic opens straight away.
 const onOpen = async () => {
   ensureLists()
-  const speakGreeting = 'speechSynthesis' in window && availableVoicesFor().length > 0 && isSupported.value && !greetedToday()
+  const speakGreeting = (isNative || ('speechSynthesis' in window && availableVoicesFor().length > 0)) && isSupported.value && !greetedToday()
   if (!speakGreeting) {
     assistant.greet()
     if (isSupported.value && assistant.state === 'idle') toggleMic()

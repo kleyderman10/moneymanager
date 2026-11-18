@@ -70,31 +70,21 @@ const active = computed(() => {
 <style scoped>
 .kf-bottom-nav {
   position: fixed;
-  right: 0;
-  bottom: 0;
-  left: 0;
+  right: 10px;
+  bottom: calc(var(--safe-bottom, 0px) + 8px);
+  left: 10px;
   z-index: 1004;
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  align-items: end;
-  height: calc(var(--kf-nav-height) + var(--safe-bottom, 0px));
-  padding: 0 6px var(--safe-bottom, 0px);
-  border-top: 1px solid var(--kf-border-subtle);
-  background: rgba(8, 31, 43, 0.97);
-  box-shadow: 0 -12px 32px rgba(0, 0, 0, 0.28);
-}
-
-/* Some iOS WKWebView builds under-report the bottom safe area; bleed the bar's color
-   below its edge so no sliver of page shows under it. */
-.kf-bottom-nav::after {
-  position: absolute;
-  right: 0;
-  bottom: -40px;
-  left: 0;
-  height: 40px;
-  background: inherit;
-  content: '';
-  pointer-events: none;
+  align-items: center;
+  height: var(--kf-nav-height);
+  padding: 0 6px;
+  border: 1px solid rgba(34, 211, 197, 0.28);
+  border-radius: 28px;
+  background: linear-gradient(180deg, rgba(12, 44, 58, 0.96), rgba(6, 28, 39, 0.98));
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45), 0 0 18px rgba(34, 211, 197, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
 }
 
 .kf-bottom-nav__item {
@@ -131,33 +121,19 @@ const active = computed(() => {
   }
 }
 
-.kf-bottom-nav__item--active {
-  position: relative;
-  color: var(--kf-primary);
-}
-
-.kf-bottom-nav__item--active::before {
-  position: absolute;
-  top: 0;
-  width: 26px;
-  height: 3px;
-  border-radius: 0 0 4px 4px;
-  background: var(--kf-primary);
-  box-shadow: 0 0 12px rgba(0, 229, 208, 0.6);
-  content: '';
-}
+.kf-bottom-nav__item--active { color: var(--kf-primary); }
+.kf-bottom-nav__item--active .v-icon { filter: drop-shadow(0 0 8px rgba(34, 211, 197, 0.75)); }
 
 .kf-bottom-nav__item:focus-visible {
   outline: 2px solid var(--kf-primary);
   outline-offset: -4px;
-  border-radius: 12px;
+  border-radius: 18px;
 }
 
 .kf-bottom-nav__voice {
   display: flex;
   justify-content: center;
   height: var(--kf-nav-height);
-  align-items: flex-end;
-  padding-bottom: 6px;
+  align-items: center;
 }
 </style>

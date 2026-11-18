@@ -92,23 +92,21 @@ const statusLabel = computed(() => status.value === 'idle' ? '' : t(`assistant.v
   outline-offset: 3px;
 }
 
-/* Bottom navigation: raised circle above the bar with a label underneath. */
+/* Bottom navigation: dark disc with a glowing teal ring and the microphone, slightly raised. */
 .kf-voice-btn--nav {
-  transform: translateY(-14px);
+  transform: translateY(-10px);
 }
 
 .kf-voice-btn--nav .kf-voice-btn__orb {
-  width: 62px;
-  height: 62px;
-  border: 4px solid var(--kf-bg-deep);
-}
-
-.kf-voice-btn__label {
+  width: 64px;
+  height: 64px;
+  border: 3px solid var(--kf-primary);
+  background: radial-gradient(circle, rgba(4, 34, 43, 0.96) 55%, rgba(8, 44, 58, 0.9) 100%);
   color: var(--kf-primary);
-  font-size: 11px;
-  font-weight: 700;
-  line-height: 1;
+  box-shadow: 0 0 22px rgba(34, 211, 197, 0.6), inset 0 0 16px rgba(34, 211, 197, 0.3);
 }
+.kf-voice-btn--nav .kf-voice-btn__orb .v-icon { color: var(--kf-primary); filter: drop-shadow(0 0 8px rgba(34, 211, 197, 0.8)); }
+.kf-voice-btn--nav .kf-voice-btn__label { display: none; }
 
 /* Desktop top bar. */
 .kf-voice-btn--compact .kf-voice-btn__orb {

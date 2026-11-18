@@ -1,12 +1,12 @@
 <template>
   <article class="ai-msg">
-    <header class="ai-msg__head">
-      <span class="ai-msg__avatar"><img :src="symbol" alt="" /></span>
-      <span class="ai-msg__name">Knexura Flow</span>
+    <span class="ai-msg__avatar"><img :src="symbol" alt="" /></span>
+    <div class="ai-msg__bubble">
+      <span class="ai-msg__name">Flow</span>
+      <!-- Sanitized by renderAiMarkdown (markdown-it html:false + DOMPurify) -->
+      <div class="kf-ai-markdown" v-html="html" />
       <time v-if="time" class="ai-msg__time">{{ time }}</time>
-    </header>
-    <!-- Sanitized by renderAiMarkdown (markdown-it html:false + DOMPurify) -->
-    <div class="kf-ai-markdown" v-html="html" />
+    </div>
   </article>
 </template>
 
@@ -25,33 +25,36 @@ const html = computed(() => renderAiMarkdown(props.content))
 
 <style scoped>
 .ai-msg {
-  max-width: 100%;
-  padding: 14px 16px 16px;
-  background: rgba(10, 45, 58, 0.86);
-  border: 1px solid rgba(50, 220, 210, 0.14);
-  border-radius: 22px;
-  color: var(--kf-text);
-  overflow-wrap: anywhere;
-}
-.ai-msg__head {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 10px;
+  align-items: flex-end;
+  gap: 8px;
+  max-width: 100%;
+  color: var(--kf-text);
 }
 .ai-msg__avatar {
-  width: 32px;
-  height: 32px;
+  width: 38px;
+  height: 38px;
   flex: none;
   border-radius: 50%;
   display: grid;
   place-items: center;
-  background: rgba(0, 229, 208, 0.1);
-  border: 1px solid rgba(0, 229, 208, 0.25);
+  background: rgba(7, 32, 44, 0.95);
+  border: 1px solid rgba(0, 229, 208, 0.35);
+  box-shadow: 0 0 12px rgba(0, 229, 208, 0.18);
 }
-.ai-msg__avatar img { width: 20px; height: 20px; object-fit: contain; }
-.ai-msg__name { font-weight: 700; font-size: 0.95rem; flex: 1; min-width: 0; }
-.ai-msg__time { font-size: 0.75rem; color: var(--kf-text-secondary); }
+.ai-msg__avatar img { width: 24px; height: 24px; object-fit: contain; }
+/* Bubble with its tail towards the avatar */
+.ai-msg__bubble {
+  min-width: 0;
+  padding: 10px 14px 8px;
+  background: rgba(14, 52, 66, 0.92);
+  border: 1px solid rgba(50, 220, 210, 0.16);
+  border-radius: 22px 22px 22px 6px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+  overflow-wrap: anywhere;
+}
+.ai-msg__name { display: block; margin-bottom: 4px; font-weight: 700; font-size: 0.85rem; color: var(--kf-primary); }
+.ai-msg__time { display: block; margin-top: 4px; text-align: right; font-size: 0.75rem; color: var(--kf-text-secondary); }
 
 .kf-ai-markdown { font-size: 0.95rem; line-height: 1.55; user-select: text; }
 .kf-ai-markdown :deep(> :first-child) { margin-top: 0; }
