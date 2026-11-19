@@ -72,6 +72,10 @@ export const humanizeForSpeech = (text, language = 'es') => {
   const pesos = language === 'en' ? 'dollars' : 'pesos'
   return String(text || '')
     .replace(/[•▪◦●]/g, '')
+    .replace(/[*`#>]+/g, '')
+    .replace(/▲/g, language === 'en' ? 'up' : 'sube')
+    .replace(/▼/g, language === 'en' ? 'down' : 'baja')
+    .replace(/\bUSD\b/g, language === 'en' ? 'dollars' : 'dólares')
     .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, '')
     .replace(/\$\s?(\d[\d.,]*\d|\d)/g, `$1 ${pesos}`)
     .replace(/\bCOP\b/g, pesos)

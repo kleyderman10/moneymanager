@@ -1,5 +1,6 @@
 import api from './client'
 import { getDeviceId, getTrustToken } from '@/utils/device'
+import { getClientPlatform, APP_VERSION } from '@/utils/clientInfo'
 
 // Flows that verify an email code on this device send its id, so the server can remember
 // it as trusted and stop asking for the two-step verification code on later logins.
@@ -180,8 +181,37 @@ export const recurringAPI = {
   processRecurring: () => api.post('/recurring/process'),
 }
 
+// conversationId continues that conversation; newConversation (Pro) starts another one.
+const chatBody = (message, { brief = false, conversationId = null, newConversation = false } = {}) => ({
+  message,
+  brief: brief === true,
+  ...(conversationId ? { conversationId } : {}),
+  ...(newConversation ? { newConversation: true } : {}),
+})
+
 export const aiAPI = {
-  chat: (message) => api.post('/ai/chat', { message }),
+  chat: (message, options = {}) => api.post('/ai/chat', chatBody(message, options)),
+  // Streaming (SSE) con fetch: axios no entrega el cuerpo por partes en el navegador. Devuelve la
+  // Response sin interpretar; si no es 2xx el llamador cae a chat() para reutilizar los
+  // interceptores de axios (renovar sesión, aviso de Pro, límites).
+  chatStream: (message, { brief = false, signal, conversationId = null, newConversation = false } = {}) => {
+    const token = localStorage.getItem('accessToken')
+    return fetch(`${api.defaults.baseURL}/ai/chat/stream`, {
+      method: 'POST',
+      signal,
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'text/event-stream',
+        'X-Client-Platform': getClientPlatform(),
+        'X-App-Version': APP_VERSION,
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(chatBody(message, { brief, conversationId, newConversation })),
+    })
+  },
+  getConversations: () => api.get('/ai/conversations'),
+  getConversation: (id) => api.get(`/ai/conversations/${id}`),
+  deleteConversation: (id) => api.delete(`/ai/conversations/${id}`),
   getChatHistory: () => api.get('/ai/chat'),
   clearChat: () => api.delete('/ai/chat'),
   generateIcon: (data) => api.post('/ai/generate-icon', data),
@@ -202,6 +232,7 @@ export const assistantAPI = {
   insights: () => api.get('/assistant/insights'),
   getMemory: () => api.get('/assistant/memory'),
   clearMemory: () => api.delete('/assistant/memory'),
+  deleteMemoryNote: (id) => api.delete(`/assistant/memory/notes/${id}`),
   confirm: (id, params) => api.post(`/assistant/actions/${id}/confirm`, params ? { params } : {}),
   cancel: (id) => api.delete(`/assistant/actions/${id}`),
   undo: () => api.post('/assistant/undo'),

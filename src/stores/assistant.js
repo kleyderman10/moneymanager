@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { assistantAPI } from '@/api'
+import { assistantAPI, aiAPI } from '@/api'
+import { readSSE } from '@/utils/sse'
 import { useCategoriesStore } from '@/stores/categories'
 
 // Global voice/text assistant. The backend interprets what the user said and returns one of:
@@ -43,6 +44,8 @@ export const useAssistantStore = defineStore('assistant', () => {
   // state the server needs back together with the answer.
   const question = ref(null)
   const pending = ref(null)
+  // «Nueva conversación» por voz: la próxima pregunta abierta empieza un hilo nuevo en el chat.
+  const nextAskNew = ref(false)
 
   // --- Proactive notices ---
   const INSIGHTS_TTL_MS = 5 * 60 * 1000
@@ -128,6 +131,43 @@ export const useAssistantStore = defineStore('assistant', () => {
     }
   }
 
+  // Pregunta abierta: la responde el mismo motor del chat (herramientas, memoria) en streaming.
+  // `onDelta` recibe cada trozo de texto para poder leerlo en voz alta mientras llega.
+  const ask = async (text, { onDelta } = {}) => {
+    state.value = 'thinking'
+    let reply = ''
+    try {
+      const response = await aiAPI.chatStream(text, { brief: true, newConversation: nextAskNew.value })
+      nextAskNew.value = false
+      if (!response.ok) {
+        const body = await response.json().catch(() => null)
+        throw Object.assign(new Error(body?.message || ''), { fromServer: true })
+      }
+      for await (const event of readSSE(response)) {
+        if (event.type === 'text') {
+          if (!reply) {
+            thread.value = [...thread.value, { role: 'assistant', content: '' }].slice(-20)
+            state.value = 'result'
+          }
+          reply += event.delta
+          thread.value[thread.value.length - 1].content = reply
+          onDelta?.(event.delta)
+        } else if (event.type === 'error') {
+          throw new Error(event.message || '')
+        }
+      }
+      if (!reply.trim()) throw new Error('')
+      history.value = [...history.value, { role: 'assistant', content: reply }].slice(-6)
+      result.value = { type: 'answer', reply }
+      state.value = 'result'
+      return reply
+    } catch (e) {
+      result.value = { type: 'error', reply: e.message || null }
+      state.value = 'error'
+      return null
+    }
+  }
+
   const confirm = async (params) => {
     if (result.value?.type !== 'confirm') return null
     busy.value = true
@@ -197,7 +237,7 @@ export const useAssistantStore = defineStore('assistant', () => {
 
   return {
     visible, state, transcript, result, busy, dataVersion, lastDone, history, thread, question, pending,
-    open, close, reset, clearConversation, interpret, confirm, cancel, discardPending, greet, undo,
+    nextAskNew, open, close, reset, clearConversation, interpret, ask, confirm, cancel, discardPending, greet, undo,
     insights, visibleInsights, fetchInsights, dismissInsight,
   }
 })

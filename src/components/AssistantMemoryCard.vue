@@ -7,8 +7,31 @@
           <v-btn variant="text" @click="load">{{ t('common.retry') }}</v-btn>
         </template>
       </v-alert>
-      <p v-else-if="!habits.length" class="text-body-2 text-medium-emphasis">{{ t('profile.assistantMemory.empty') }}</p>
-      <v-list v-else density="compact" bg-color="transparent">
+      <p v-else-if="!habits.length && !notes.length" class="text-body-2 text-medium-emphasis">{{ t('profile.assistantMemory.empty') }}</p>
+      <template v-else>
+        <div v-if="notes.length" class="text-subtitle-2 mt-1">{{ t('profile.assistantMemory.notesTitle') }}</div>
+        <v-list v-if="notes.length" density="compact" bg-color="transparent" data-testid="memory-notes">
+          <v-list-item
+            v-for="note in notes"
+            :key="note.id"
+            :prepend-icon="noteIcon[note.category] || 'mdi-note-text-outline'"
+            :title="note.content"
+            :title-wrap="true"
+          >
+            <template #append>
+              <v-btn
+                icon="mdi-close"
+                size="small"
+                variant="text"
+                :aria-label="t('profile.assistantMemory.forgetNote')"
+                @click="removeNote(note)"
+              />
+            </template>
+          </v-list-item>
+        </v-list>
+        <div v-if="habits.length" class="text-subtitle-2 mt-2">{{ t('profile.assistantMemory.habitsTitle') }}</div>
+      </template>
+      <v-list v-if="habits.length" density="compact" bg-color="transparent">
         <v-list-item
           v-for="habit in habits"
           :key="`${habit.kind}:${habit.term}:${habit.target}`"
@@ -18,7 +41,7 @@
         />
       </v-list>
       <v-btn
-        v-if="habits.length"
+        v-if="habits.length || notes.length"
         variant="outlined"
         color="error"
         class="mt-2"
@@ -49,6 +72,8 @@ const { t } = useI18n()
 const snackbar = useSnackbar()
 
 const habits = ref([])
+const notes = ref([])
+const noteIcon = { preference: 'mdi-tune-variant', goal: 'mdi-flag-outline', fact: 'mdi-note-text-outline' }
 const loading = ref(true)
 const failed = ref(false)
 const confirmOpen = ref(false)
@@ -58,7 +83,9 @@ const load = async () => {
   loading.value = true
   failed.value = false
   try {
-    habits.value = (await assistantAPI.getMemory()).data.habits || []
+    const data = (await assistantAPI.getMemory()).data
+    habits.value = data.habits || []
+    notes.value = data.notes || []
   } catch {
     failed.value = true
   }
@@ -70,12 +97,22 @@ const clear = async () => {
   try {
     await assistantAPI.clearMemory()
     habits.value = []
+    notes.value = []
     confirmOpen.value = false
     snackbar.success(t('profile.assistantMemory.cleared'))
   } catch {
     snackbar.error(t('common.error'))
   }
   clearing.value = false
+}
+
+const removeNote = async (note) => {
+  try {
+    await assistantAPI.deleteMemoryNote(note.id)
+    notes.value = notes.value.filter((n) => n.id !== note.id)
+  } catch {
+    snackbar.error(t('common.error'))
+  }
 }
 
 onMounted(load)

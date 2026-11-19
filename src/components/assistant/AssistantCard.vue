@@ -82,10 +82,10 @@ const barClass = (percent) => (percent >= 100 ? 'ac__bar--over' : percent >= 85 
   color: var(--kf-text);
 }
 .ac__title { margin-bottom: 10px; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.06em; opacity: 0.72; }
-.ac__kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
+.ac__kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 8px; margin-bottom: 12px; }
 .ac__kpis div { display: flex; flex-direction: column; min-width: 0; }
 .ac__kpis span { font-size: 0.72rem; opacity: 0.72; }
-.ac__kpis strong { font-size: 0.95rem; overflow-wrap: anywhere; }
+.ac__kpis strong { font-size: 0.95rem; overflow-wrap: normal; white-space: nowrap; }
 .ac__income { color: #28d9a5; }
 .ac__expense { color: #ff626d; }
 .ac__rows { display: grid; gap: 10px; }

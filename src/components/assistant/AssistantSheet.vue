@@ -269,6 +269,7 @@ import VoiceOrb from '@/components/assistant/VoiceOrb.vue'
 import AssistantCard from '@/components/assistant/AssistantCard.vue'
 import NativeSelectField from '@/components/NativeSelectField.vue'
 import { playCue, soundsEnabled, setSoundsEnabled } from '@/utils/sounds'
+import { parseVoiceCommand, createSentenceStream } from '@/utils/voiceCommands'
 import { readPrefs, savePrefs, pickVoice, voicesFor, whenVoicesReady, humanizeForSpeech, splitSentences } from '@/utils/voice'
 import { useSpeechRecognition } from '@/composables/useSpeechRecognition'
 
@@ -339,7 +340,39 @@ const handleSpoken = async (text) => {
     if (YES.test(text.trim())) { await onConfirm(); return }
     if (NO.test(text.trim()) && isShort(text)) { await discardPreview(); return }
   }
+  const command = parseVoiceCommand(text)
+  if (command) { await runCommand(command); return }
   interpret(text)
+}
+
+// Comandos que controlan al asistente en vez de ser una pregunta.
+const lastReply = () => [...assistant.thread].reverse().find((turn) => turn.role === 'assistant')?.content || ''
+const runCommand = async (command) => {
+  if (command === 'stop') cancelSpeech()
+  else if (command === 'voice_off') { muted.value = true; cancelSpeech() }
+  else if (command === 'voice_on') { muted.value = false; await speak(t('assistant.voiceOnReply')) }
+  else if (command === 'repeat') await speak(lastReply())
+  else if (command === 'new') {
+    cancelSpeech()
+    assistant.clearConversation()
+    assistant.reset()
+    assistant.nextAskNew = true
+    await speak(t('assistant.newConversationReply'))
+  }
+  assistant.state = 'idle'
+  listenAgain()
+}
+
+// Respuesta a una pregunta abierta: el texto llega por partes y cada frase completa se lee ya.
+const answerAsk = async (text) => {
+  const speakIt = viaVoice.value
+  const sentences = createSentenceStream()
+  await assistant.ask(text, { onDelta: (delta) => { if (speakIt) sentences.push(delta).forEach(enqueueSpeech) } })
+  if (speakIt) {
+    sentences.flush().forEach(enqueueSpeech)
+    await speechChain
+  }
+  listenAgain()
 }
 
 const discardPreview = async () => {
@@ -366,6 +399,7 @@ const interpret = async (text) => {
     assistant.close()
     return
   }
+  if (data.type === 'ask') { await answerAsk(text); return }
   if (!viaVoice.value) return
   // With a card on screen the voice gives the headline only; the details are in the card.
   if (['answer', 'clarify'].includes(data.type)) await speak(data.card ? String(data.reply).split('\n')[0] : data.reply)
@@ -428,7 +462,18 @@ const speakNative = async (text) => {
   }
 }
 
+// Las frases de una respuesta en streaming se leen en orden; cancelSpeech descarta las pendientes.
+const muted = ref(false)
+let cancelEpoch = 0
+let speechChain = Promise.resolve()
+const enqueueSpeech = (sentence) => {
+  const epoch = cancelEpoch
+  speechChain = speechChain.then(() => (epoch === cancelEpoch ? speak(sentence) : undefined))
+  return speechChain
+}
+
 const cancelSpeech = () => {
+  cancelEpoch += 1
   speechToken += 1
   if (isNative) TextToSpeech.stop().catch(() => {})
   else if ('speechSynthesis' in window) window.speechSynthesis.cancel()
@@ -437,7 +482,7 @@ const cancelSpeech = () => {
 
 // Speaks sentence by sentence with the best voice the device has; resolves when finished or cancelled.
 const speak = async (text) => {
-  if (!text) return
+  if (!text || muted.value) return
   if (isNative) return speakNative(text)
   if (!('speechSynthesis' in window)) return
   await whenVoicesReady()

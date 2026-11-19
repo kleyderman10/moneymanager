@@ -3,22 +3,47 @@
     <span class="ai-msg__avatar"><img :src="symbol" alt="" /></span>
     <div class="ai-msg__bubble">
       <span class="ai-msg__name">Flow</span>
+      <AssistantCard v-for="(card, i) in blocks" :key="i" :card="card" class="ai-msg__card" />
       <!-- Sanitized by renderAiMarkdown (markdown-it html:false + DOMPurify) -->
       <div class="kf-ai-markdown" v-html="html" />
-      <time v-if="time" class="ai-msg__time">{{ time }}</time>
+      <div v-if="actions" class="ai-msg__footer">
+        <div class="ai-msg__actions">
+          <button type="button" :aria-label="t('aiChat.copy')" :title="t('aiChat.copy')" @click="emit('copy')">
+            <v-icon size="18">{{ copied ? 'mdi-check' : 'mdi-content-copy' }}</v-icon>
+          </button>
+          <button type="button" :aria-label="speaking ? t('aiChat.stopListening') : t('aiChat.listen')" :title="speaking ? t('aiChat.stopListening') : t('aiChat.listen')" :aria-pressed="speaking" @click="emit('listen')">
+            <v-icon size="18">{{ speaking ? 'mdi-stop-circle-outline' : 'mdi-volume-high' }}</v-icon>
+          </button>
+          <button v-if="canRetry" type="button" :aria-label="t('aiChat.regenerate')" :title="t('aiChat.regenerate')" @click="emit('retry')">
+            <v-icon size="18">mdi-refresh</v-icon>
+          </button>
+        </div>
+        <time v-if="time" class="ai-msg__time">{{ time }}</time>
+      </div>
+      <time v-else-if="time" class="ai-msg__time">{{ time }}</time>
     </div>
   </article>
 </template>
 
 <script setup>
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
+import AssistantCard from '@/components/assistant/AssistantCard.vue'
 import symbol from '@/assets/branding/knexura-flow-symbol.webp'
 import { renderAiMarkdown } from '@/utils/aiMarkdown'
 
 const props = defineProps({
   content: { type: String, default: '' },
   time: { type: String, default: '' },
+  blocks: { type: Array, default: () => [] },
+  // Acciones (copiar, escuchar, repetir): solo en respuestas ya terminadas.
+  actions: { type: Boolean, default: false },
+  canRetry: { type: Boolean, default: false },
+  speaking: { type: Boolean, default: false },
+  copied: { type: Boolean, default: false },
 })
+const emit = defineEmits(['copy', 'listen', 'retry'])
+const { t } = useI18n()
 
 const html = computed(() => renderAiMarkdown(props.content))
 </script>
@@ -54,6 +79,23 @@ const html = computed(() => renderAiMarkdown(props.content))
   overflow-wrap: anywhere;
 }
 .ai-msg__name { display: block; margin-bottom: 4px; font-weight: 700; font-size: 0.85rem; color: var(--kf-primary); }
+.ai-msg__card { width: 100%; margin: 4px 0 8px; box-sizing: border-box; }
+.ai-msg__footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 2px; }
+.ai-msg__actions { display: flex; gap: 2px; margin-left: -8px; }
+.ai-msg__actions button {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  color: var(--kf-text-secondary);
+  background: none;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+}
+.ai-msg__actions button:hover,
+.ai-msg__actions button[aria-pressed='true'] { color: var(--kf-primary); }
+.ai-msg__actions button:focus-visible { outline: 2px solid var(--kf-primary); outline-offset: -2px; }
 .ai-msg__time { display: block; margin-top: 4px; text-align: right; font-size: 0.75rem; color: var(--kf-text-secondary); }
 
 .kf-ai-markdown { font-size: 0.95rem; line-height: 1.55; user-select: text; }
